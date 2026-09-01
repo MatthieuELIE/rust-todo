@@ -1,1 +1,3 @@
-# rust-todo
+# todo
+
+CLI to edit a todo.txt file.

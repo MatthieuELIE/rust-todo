@@ -1,7 +1,13 @@
+use time::Date;
+
 pub struct Todo {
     pub description: String,
     pub done: bool,
     pub priority: Option<char>,
+    #[expect(dead_code)]
+    pub created: Option<Date>,
+    #[expect(dead_code)]
+    pub completed: Option<Date>,
 }
 
 impl Todo {
@@ -32,6 +38,8 @@ impl Todo {
             description: description.to_string(),
             done,
             priority,
+            created: None,
+            completed: None,
         }
     }
 

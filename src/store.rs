@@ -26,6 +26,8 @@ impl Store {
             description,
             done: false,
             priority,
+            created: None,
+            completed: None,
         });
     }
 

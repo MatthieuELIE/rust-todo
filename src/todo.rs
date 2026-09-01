@@ -43,6 +43,18 @@ impl Todo {
         }
     }
 
+    pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
+        let mut todo = Todo::from_line(text);
+        if todo.done {
+            return Err("cannot add a task that is already done".to_string());
+        }
+        if todo.description.trim().is_empty() {
+            return Err("a task needs a description".to_string());
+        }
+        todo.created.get_or_insert(today);
+        Ok(todo)
+    }
+
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
     }
@@ -139,5 +151,27 @@ mod tests {
         let task = Todo::from_line("2026-99-99 Lorem ipsum");
         assert_eq!(task.created, None);
         assert_eq!(task.description, "2026-99-99 Lorem ipsum");
+    }
+
+    #[test]
+    fn a_new_task_is_stamped_with_todays_date_unless_it_carries_one() {
+        let today = date!(2026 - 09 - 01);
+
+        let stamped = Todo::new_from_input("Lorem ipsum", today).unwrap();
+        assert_eq!(stamped.created, Some(today));
+
+        let dated = Todo::new_from_input("2026-08-01 Lorem ipsum", today).unwrap();
+        assert_eq!(dated.created, Some(date!(2026 - 08 - 01)));
+    }
+
+    #[test]
+    fn a_new_task_cannot_be_already_done() {
+        assert!(Todo::new_from_input("x Lorem ipsum", date!(2026 - 09 - 01)).is_err());
+    }
+
+    #[test]
+    fn a_new_task_cannot_have_an_empty_description() {
+        assert!(Todo::new_from_input("   ", date!(2026 - 09 - 01)).is_err());
+        assert!(Todo::new_from_input("(A) ", date!(2026 - 09 - 01)).is_err());
     }
 }

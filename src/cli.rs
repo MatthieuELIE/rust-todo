@@ -17,9 +17,9 @@ pub enum Commands {
         #[arg(short, long)]
         all: bool,
     },
-    /// Add a task
+    /// Add a task, optionally as a todo.txt fragment ("(A) Buy milk +grocery")
     Add {
-        description: String,
+        text: String,
 
         /// Priority letter, A to E
         #[arg(short, long, value_parser = parse_priority)]

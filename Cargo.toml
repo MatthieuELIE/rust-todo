@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 clap = { version = "4.6.6", features = ["derive"] }
-time = { version = "0.3.55", features = ["parsing", "macros", "formatting"] }
+time = { version = "0.3.55", features = ["parsing", "macros", "formatting", "local-offset"] }

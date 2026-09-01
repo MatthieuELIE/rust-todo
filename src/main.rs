@@ -7,6 +7,7 @@ use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::Parser;
+use time::{Date, OffsetDateTime};
 
 use cli::{Cli, Commands};
 use store::Store;
@@ -29,7 +30,13 @@ fn main() -> ExitCode {
             print_tasks(&store, all);
             return ExitCode::SUCCESS;
         }
-        Commands::Add { description, priority } => store.add(description, priority),
+        Commands::Add { text, priority } => match build_task(&text, priority) {
+            Ok(todo) => store.add(todo),
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+        },
         Commands::Remove { number } => {
             if !store.remove(number) {
                 eprintln!("no task numbered {number}");
@@ -50,6 +57,21 @@ fn main() -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+// Only the CLI can supply a priority twice (flag and inline), so this reconciliation stays out of Todo.
+fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
+    let mut todo = Todo::new_from_input(text, today())?;
+    match (todo.priority, flag_priority) {
+        (Some(_), Some(_)) => return Err("priority given twice".to_string()),
+        (None, Some(priority)) => todo.priority = Some(priority),
+        _ => {}
+    }
+    Ok(todo)
+}
+
+fn today() -> Date {
+    OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date()
 }
 
 fn todo_path() -> PathBuf {

@@ -21,14 +21,8 @@ impl Store {
             .map(|(i, todo)| (i + 1, todo))
     }
 
-    pub fn add(&mut self, description: String, priority: Option<char>) {
-        self.todos.push(Todo {
-            description,
-            done: false,
-            priority,
-            created: None,
-            completed: None,
-        });
+    pub fn add(&mut self, todo: Todo) {
+        self.todos.push(todo);
     }
 
     pub fn remove(&mut self, number: usize) -> bool {
@@ -62,16 +56,6 @@ mod tests {
 
     fn store_of(lines: &[&str]) -> Store {
         Store::new(lines.iter().map(|l| Todo::from_line(l)).collect())
-    }
-
-    #[test]
-    fn add_appends_a_task_to_the_list() {
-        let mut store = store_of(&["Lorem ipsum"]);
-
-        store.add("Consectetur adipiscing".into(), Some('B'));
-
-        assert_eq!(store.list_all().len(), 2);
-        assert_eq!(store.list_all()[1].to_line(), "(B) Consectetur adipiscing");
     }
 
     #[test]

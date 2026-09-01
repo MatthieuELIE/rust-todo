@@ -55,6 +55,12 @@ impl Todo {
         Ok(todo)
     }
 
+    pub fn complete(&mut self, today: Date) {
+        self.done = true;
+        self.completed.get_or_insert(today);
+        self.priority = None;
+    }
+
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
     }

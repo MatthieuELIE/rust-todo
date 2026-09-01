@@ -44,7 +44,7 @@ fn main() -> ExitCode {
             }
         }
         Commands::Done { number } => {
-            if !store.done(number) {
+            if !store.done(number, today()) {
                 eprintln!("no task numbered {number}");
                 return ExitCode::FAILURE;
             }

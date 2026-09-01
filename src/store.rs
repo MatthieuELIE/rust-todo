@@ -1,3 +1,5 @@
+use time::Date;
+
 use crate::todo::Todo;
 
 pub struct Store {
@@ -35,10 +37,10 @@ impl Store {
         }
     }
 
-    pub fn done(&mut self, number: usize) -> bool {
+    pub fn done(&mut self, number: usize, today: Date) -> bool {
         match self.index_of(number) {
             Some(index) => {
-                self.todos[index].done = true;
+                self.todos[index].complete(today);
                 true
             }
             None => false,
@@ -53,6 +55,7 @@ impl Store {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::macros::date;
 
     fn store_of(lines: &[&str]) -> Store {
         Store::new(lines.iter().map(|l| Todo::from_line(l)).collect())
@@ -69,13 +72,22 @@ mod tests {
     }
 
     #[test]
-    fn done_marks_the_task_at_that_number() {
-        let mut store = store_of(&["Lorem ipsum", "Consectetur adipiscing"]);
+    fn done_completes_the_task_at_that_number() {
+        let mut store = store_of(&["(A) 2026-08-01 Lorem ipsum", "Consectetur adipiscing"]);
 
-        assert!(store.done(1));
+        assert!(store.done(1, date!(2026 - 09 - 01)));
 
-        assert!(store.list_all()[0].done);
+        assert_eq!(store.list_all()[0].to_line(), "x 2026-09-01 2026-08-01 Lorem ipsum");
         assert!(!store.list_all()[1].done);
+    }
+
+    #[test]
+    fn completing_a_task_without_a_creation_date_records_only_the_completion() {
+        let mut store = store_of(&["Lorem ipsum"]);
+
+        store.done(1, date!(2026 - 09 - 01));
+
+        assert_eq!(store.list_all()[0].to_line(), "x 2026-09-01 Lorem ipsum");
     }
 
     #[test]
@@ -84,7 +96,7 @@ mod tests {
 
         assert!(!store.remove(0));
         assert!(!store.remove(2));
-        assert!(!store.done(2));
+        assert!(!store.done(2, date!(2026 - 09 - 01)));
         assert_eq!(store.list_all().len(), 1);
     }
 

@@ -2,8 +2,10 @@ use time::Date;
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
 
+/// A date format for parsing and formatting dates in the todo.txt format (YYYY-MM-DD).
 const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]");
 
+/// A todo item, with optional priority and dates.
 pub struct Todo {
     pub description: String,
     pub done: bool,
@@ -12,7 +14,9 @@ pub struct Todo {
     pub completed: Option<Date>,
 }
 
+/// A todo list, which is a collection of todo items.
 impl Todo {
+    /// Convert a todo item to a line of text in the todo.txt format.
     pub fn to_line(&self) -> String {
         let mut parts = Vec::new();
         if self.done {

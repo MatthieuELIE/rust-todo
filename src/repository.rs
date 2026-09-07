@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+/// Load the todo list from a file, returning an empty list if the file is missing.
 pub fn load(path: &Path) -> io::Result<Vec<Todo>> {
     let content = match fs::read_to_string(path) {
         Ok(content) => content,
@@ -13,6 +14,7 @@ pub fn load(path: &Path) -> io::Result<Vec<Todo>> {
     Ok(content.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect())
 }
 
+/// Save the todo list to a file, overwriting any existing content.
 pub fn save(path: &Path, todos: &[Todo]) -> io::Result<()> {
     let body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
 

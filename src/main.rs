@@ -13,6 +13,7 @@ use cli::{Cli, Commands};
 use store::Store;
 use todo::Todo;
 
+/// Entry point for the todo CLI application.
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
@@ -30,6 +31,7 @@ fn main() -> ExitCode {
             print_tasks(&store, all);
             return ExitCode::SUCCESS;
         }
+
         Commands::Add { text, priority } => match build_task(&text, priority) {
             Ok(todo) => store.add(todo),
             Err(e) => {
@@ -37,13 +39,15 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         },
+
         Commands::Remove { number } => {
             if !store.remove(number) {
                 eprintln!("no task numbered {number}");
                 return ExitCode::FAILURE;
             }
         }
-        Commands::Done { number } => {
+
+        Commands::Do { number } => {
             if !store.done(number, today()) {
                 eprintln!("no task numbered {number}");
                 return ExitCode::FAILURE;
@@ -70,18 +74,22 @@ fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
     Ok(todo)
 }
 
+/// Returns the current date in the local timezone, or UTC if local time is unavailable.
 fn today() -> Date {
     OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date()
 }
 
+/// Returns the path to the todo.txt file, either from the TODO_FILE environment variable or defaulting to $HOME/todo.txt.
 fn todo_path() -> PathBuf {
     if let Some(path) = std::env::var_os("TODO_FILE") {
         return PathBuf::from(path);
     }
+
     let home = std::env::var_os("HOME").expect("HOME is not set");
     PathBuf::from(home).join("todo.txt")
 }
 
+/// Prints the tasks in the store, either all or only pending ones.
 fn print_tasks(store: &Store, all: bool) {
     if all {
         for (index, todo) in store.list_all().iter().enumerate() {
@@ -94,6 +102,7 @@ fn print_tasks(store: &Store, all: bool) {
     }
 }
 
+/// Renders a todo item as a string, including its done status and optional priority.
 fn render(todo: &Todo) -> String {
     let mark = if todo.done { "x" } else { " " };
     match todo.priority {

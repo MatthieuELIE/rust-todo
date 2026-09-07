@@ -2,19 +2,24 @@ use time::Date;
 
 use crate::todo::Todo;
 
+/// In-memory store of todo items.
 pub struct Store {
     pub todos: Vec<Todo>,
 }
 
+/// Methods for managing the todo store.
 impl Store {
+    /// Create a new store with the given list of todos.
     pub fn new(todos: Vec<Todo>) -> Self {
         Store { todos }
     }
 
+    /// List all todos, including done ones.
     pub fn list_all(&self) -> &[Todo] {
         &self.todos
     }
 
+    /// List only pending todos, skipping done ones but keeping their numbers.
     pub fn list_pending(&self) -> impl Iterator<Item = (usize, &Todo)> {
         self.todos
             .iter()
@@ -23,10 +28,12 @@ impl Store {
             .map(|(i, todo)| (i + 1, todo))
     }
 
+    /// Add a new todo to the store.
     pub fn add(&mut self, todo: Todo) {
         self.todos.push(todo);
     }
 
+    /// Remove a todo by its number, returning true if it was found and removed.
     pub fn remove(&mut self, number: usize) -> bool {
         match self.index_of(number) {
             Some(index) => {
@@ -37,6 +44,7 @@ impl Store {
         }
     }
 
+    /// Mark a todo as done by its number, returning true if it was found and marked.
     pub fn done(&mut self, number: usize, today: Date) -> bool {
         match self.index_of(number) {
             Some(index) => {
@@ -47,6 +55,7 @@ impl Store {
         }
     }
 
+    /// Convert a 1-based task number to a 0-based index, returning None if out of range.
     fn index_of(&self, number: usize) -> Option<usize> {
         (1..=self.todos.len()).contains(&number).then(|| number - 1)
     }

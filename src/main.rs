@@ -3,6 +3,7 @@ mod repository;
 mod store;
 mod todo;
 
+use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::process::ExitCode;
 
@@ -32,8 +33,10 @@ fn main() -> ExitCode {
             if tasks.is_empty() {
                 eprintln!("{}", if terms.is_empty() { "nothing to do" } else { "no matching task" });
             }
+            let colour = std::io::stdout().is_terminal();
             for (number, todo) in tasks {
-                println!("{number:>3}  {}", todo.to_line());
+                let line = format!("{number:>3}  {}", todo.to_line());
+                println!("{}", if colour { paint(line, todo) } else { line });
             }
             return ExitCode::SUCCESS;
         }
@@ -80,6 +83,14 @@ fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
     Ok(todo)
 }
 
+fn paint(line: String, todo: &Todo) -> String {
+    match (todo.done, todo.priority) {
+        (true, _) => format!("\x1b[2m{line}\x1b[0m"),
+        (false, Some(_)) => format!("\x1b[1m{line}\x1b[0m"),
+        (false, None) => line,
+    }
+}
+
 /// Returns the current date in the local timezone, or UTC if local time is unavailable.
 fn today() -> Date {
     OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date()
@@ -93,4 +104,18 @@ fn todo_path() -> PathBuf {
 
     let home = std::env::var_os("HOME").expect("HOME is not set");
     PathBuf::from(home).join("todo.txt")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn done_tasks_are_dimmed_and_prioritised_ones_bold() {
+        let paint_line = |line: &str| paint(line.to_string(), &Todo::from_line(line));
+
+        assert_eq!(paint_line("Buy milk"), "Buy milk");
+        assert_eq!(paint_line("(A) Call the bank"), "\x1b[1m(A) Call the bank\x1b[0m");
+        assert_eq!(paint_line("x 2026-09-03 Buy milk"), "\x1b[2mx 2026-09-03 Buy milk\x1b[0m");
+    }
 }

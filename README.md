@@ -52,7 +52,7 @@ An empty listing says so on stderr and still exits 0.
 x 2026-09-03 2026-09-01 Buy milk
 ```
 
-A line is an optional `x ` marker, an optional `(A)`–`(E)` priority, then dates:
+A line is an optional `x` marker, an optional `(A)`–`(E)` priority, then dates:
 the creation date on a pending task, the completion date followed by the creation date on a done one.
 Everything after that is the description — `+project`, `@context` and `key:value` are kept verbatim.
 

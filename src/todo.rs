@@ -7,10 +7,15 @@ const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[
 
 /// A todo item, with optional priority and dates.
 pub struct Todo {
+    /// Task text after the marker, priority and dates, with `+project`, `@context` and `key:value` kept verbatim.
     pub description: String,
+    /// Whether the line starts with the `x` marker.
     pub done: bool,
+    /// Priority letter, `A` to `E`, dropped once the task is done.
     pub priority: Option<char>,
+    /// Creation date.
     pub created: Option<Date>,
+    /// Completion date, only on a done task.
     pub completed: Option<Date>,
 }
 
@@ -30,6 +35,7 @@ impl Todo {
         parts.join(" ")
     }
 
+    /// Parse a todo.txt line, leaving anything unrecognised in the description.
     pub fn from_line(line: &str) -> Self {
         let done = line.starts_with("x ");
         let mut rest = if done { &line[2..] } else { line };
@@ -47,6 +53,7 @@ impl Todo {
         }
     }
 
+    /// Build a pending task from user input, stamped with `today` unless it carries a creation date.
     pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
         let mut todo = Todo::from_line(text);
         if todo.done {
@@ -59,17 +66,20 @@ impl Todo {
         Ok(todo)
     }
 
+    /// Mark the task done on `today`, keeping an existing completion date and dropping the priority.
     pub fn complete(&mut self, today: Date) {
         self.done = true;
         self.completed.get_or_insert(today);
         self.priority = None;
     }
 
+    /// Whether `c` is a priority letter, `A` to `E`.
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
     }
 }
 
+/// Take a leading `(A) ` off `rest` and return its letter.
 fn strip_priority(rest: &mut &str) -> Option<char> {
     let mut chars = rest.chars();
     let priority = match (chars.next(), chars.next(), chars.next(), chars.next()) {
@@ -80,6 +90,7 @@ fn strip_priority(rest: &mut &str) -> Option<char> {
     Some(priority)
 }
 
+/// Take a leading `YYYY-MM-DD ` off `rest` and return the date.
 fn strip_date(rest: &mut &str) -> Option<Date> {
     let (token, remainder) = rest.split_once(' ')?;
     let date = Date::parse(token, DATE_FORMAT).ok()?;
@@ -87,6 +98,7 @@ fn strip_date(rest: &mut &str) -> Option<Date> {
     Some(date)
 }
 
+/// Format a date as `YYYY-MM-DD`.
 fn format_date(date: Date) -> String {
     date.format(DATE_FORMAT).expect("YYYY-MM-DD formatting is infallible")
 }

@@ -72,7 +72,8 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-// Only the CLI can supply a priority twice (flag and inline), so this reconciliation stays out of Todo.
+/// Builds the task to add from its text and the `--priority` flag, refusing a priority given both ways.
+/// Lives here rather than in `Todo`: only the CLI can supply a priority twice.
 fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
     let mut todo = Todo::new_from_input(text, today())?;
     match (todo.priority, flag_priority) {
@@ -83,6 +84,7 @@ fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
     Ok(todo)
 }
 
+/// Wraps a listed line in ANSI bold when the task has a priority, dim when it is done.
 fn paint(line: String, todo: &Todo) -> String {
     match (todo.done, todo.priority) {
         (true, _) => format!("\x1b[2m{line}\x1b[0m"),

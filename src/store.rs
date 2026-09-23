@@ -4,6 +4,7 @@ use crate::todo::Todo;
 
 /// In-memory store of todo items.
 pub struct Store {
+    /// Tasks in file order; a task's number is its index plus one.
     pub todos: Vec<Todo>,
 }
 

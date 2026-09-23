@@ -45,6 +45,7 @@ pub enum Commands {
     },
 
     /// Mark a task done by its number
+    #[command(alias = "done")]
     Do {
         /// Task number to mark as done
         number: usize,
@@ -69,6 +70,16 @@ mod tests {
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "A"]).is_ok());
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "Z"]).is_err());
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "AB"]).is_err());
+    }
+
+    #[test]
+    fn commands_answer_to_their_short_and_former_names() {
+        let command = |args: &[&str]| Cli::try_parse_from(args).unwrap().command;
+
+        assert!(matches!(command(&["todo", "ls"]), Commands::List { .. }));
+        assert!(matches!(command(&["todo", "a", "Lorem"]), Commands::Add { .. }));
+        assert!(matches!(command(&["todo", "rm", "1"]), Commands::Remove { number: 1 }));
+        assert!(matches!(command(&["todo", "done", "1"]), Commands::Do { number: 1 }));
     }
 
     #[test]

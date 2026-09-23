@@ -14,12 +14,16 @@ pub struct Cli {
 /// Subcommands for the todo CLI.
 #[derive(Subcommand)]
 pub enum Commands {
-    /// List pending tasks (--all to include done ones)
+    /// List pending tasks (--all to include done ones), filtered by terms (-term excludes)
     #[command(alias = "ls")]
     List {
         /// Show all tasks, including done ones
         #[arg(short, long)]
         all: bool,
+
+        /// Case-insensitive terms every listed task must contain, or lack with a leading -
+        #[arg(allow_hyphen_values = true)]
+        terms: Vec<String>,
     },
 
     /// Add a task, optionally as a todo.txt fragment ("(A) Buy milk +grocery")
@@ -65,5 +69,22 @@ mod tests {
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "A"]).is_ok());
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "Z"]).is_err());
         assert!(Cli::try_parse_from(["todo", "add", "Lorem", "-p", "AB"]).is_err());
+    }
+
+    #[test]
+    fn list_flags_come_before_terms_which_may_start_with_a_dash() {
+        let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
+            Commands::List { all, terms } => (all, terms),
+            _ => panic!("not a list command"),
+        };
+
+        assert_eq!(
+            terms_of(&["todo", "list", "--all", "+work", "-@home"]),
+            (true, vec!["+work".into(), "-@home".into()])
+        );
+        assert_eq!(
+            terms_of(&["todo", "list", "+work", "--all"]),
+            (false, vec!["+work".into(), "--all".into()])
+        );
     }
 }

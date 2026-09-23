@@ -14,18 +14,19 @@ impl Store {
         Store { todos }
     }
 
-    /// List all todos, including done ones.
-    pub fn list_all(&self) -> &[Todo] {
-        &self.todos
-    }
-
-    /// List only pending todos, skipping done ones but keeping their numbers.
-    pub fn list_pending(&self) -> impl Iterator<Item = (usize, &Todo)> {
-        self.todos
+    /// List tasks numbered by file position, filtered by status and terms, sorted by priority with done ones last.
+    pub fn list(&self, all: bool, terms: &[String]) -> Vec<(usize, &Todo)> {
+        let terms: Vec<String> = terms.iter().map(|t| t.to_lowercase()).collect();
+        let mut tasks: Vec<(usize, &Todo)> = self
+            .todos
             .iter()
             .enumerate()
-            .filter(|(_, todo)| !todo.done)
             .map(|(i, todo)| (i + 1, todo))
+            .filter(|(_, todo)| all || !todo.done)
+            .filter(|(_, todo)| matches(&todo.to_line().to_lowercase(), &terms))
+            .collect();
+        tasks.sort_by_key(|(_, todo)| (todo.done, todo.priority.is_none(), todo.priority));
+        tasks
     }
 
     /// Add a new todo to the store.
@@ -61,6 +62,14 @@ impl Store {
     }
 }
 
+/// Whether the line contains every term, or lacks it when the term starts with a dash.
+fn matches(line: &str, terms: &[String]) -> bool {
+    terms.iter().all(|term| match term.strip_prefix('-') {
+        Some(term) => !line.contains(term),
+        None => line.contains(term.as_str()),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,7 +85,7 @@ mod tests {
 
         assert!(store.remove(2));
 
-        let lines: Vec<String> = store.list_all().iter().map(Todo::to_line).collect();
+        let lines: Vec<String> = store.todos.iter().map(Todo::to_line).collect();
         assert_eq!(lines, ["Lorem ipsum", "Sed do eiusmod"]);
     }
 
@@ -86,8 +95,8 @@ mod tests {
 
         assert!(store.done(1, date!(2026 - 09 - 01)));
 
-        assert_eq!(store.list_all()[0].to_line(), "x 2026-09-01 2026-08-01 Lorem ipsum");
-        assert!(!store.list_all()[1].done);
+        assert_eq!(store.todos[0].to_line(), "x 2026-09-01 2026-08-01 Lorem ipsum");
+        assert!(!store.todos[1].done);
     }
 
     #[test]
@@ -96,7 +105,7 @@ mod tests {
 
         store.done(1, date!(2026 - 09 - 01));
 
-        assert_eq!(store.list_all()[0].to_line(), "x 2026-09-01 Lorem ipsum");
+        assert_eq!(store.todos[0].to_line(), "x 2026-09-01 Lorem ipsum");
     }
 
     #[test]
@@ -106,15 +115,53 @@ mod tests {
         assert!(!store.remove(0));
         assert!(!store.remove(2));
         assert!(!store.done(2, date!(2026 - 09 - 01)));
-        assert_eq!(store.list_all().len(), 1);
+        assert_eq!(store.todos.len(), 1);
+    }
+
+    fn listed(store: &Store, all: bool, terms: &[&str]) -> Vec<(usize, String)> {
+        let terms: Vec<String> = terms.iter().map(|t| t.to_string()).collect();
+        store.list(all, &terms).into_iter().map(|(n, t)| (n, t.to_line())).collect()
     }
 
     #[test]
-    fn list_pending_skips_done_tasks_but_keeps_their_numbers() {
-        let store = store_of(&["x Lorem ipsum", "Consectetur adipiscing", "x Sed do", "Tempor incididunt"]);
+    fn list_hides_done_tasks_unless_all_but_keeps_their_numbers() {
+        let store = store_of(&["x Lorem ipsum", "Consectetur adipiscing", "Tempor incididunt"]);
 
-        let pending: Vec<(usize, String)> = store.list_pending().map(|(n, t)| (n, t.to_line())).collect();
+        assert_eq!(
+            listed(&store, false, &[]),
+            [(2, "Consectetur adipiscing".into()), (3, "Tempor incididunt".into())]
+        );
+        assert_eq!(listed(&store, true, &[]).len(), 3);
+    }
 
-        assert_eq!(pending, [(2, "Consectetur adipiscing".into()), (4, "Tempor incididunt".into())]);
+    #[test]
+    fn every_term_must_appear_in_the_line() {
+        let store = store_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
+
+        assert_eq!(listed(&store, false, &["+finance", "Call"]), [(1, "Call the bank +finance".into())]);
+    }
+
+    #[test]
+    fn a_leading_dash_excludes_lines_containing_the_term() {
+        let store = store_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
+
+        assert_eq!(listed(&store, false, &["+finance", "-@home"]), [(1, "Call the bank +finance".into())]);
+    }
+
+    #[test]
+    fn terms_ignore_case() {
+        let store = store_of(&["Call the BANK", "Pay rent @Home"]);
+
+        assert_eq!(listed(&store, false, &["bank"]), [(1, "Call the BANK".into())]);
+        assert_eq!(listed(&store, false, &["-@HOME"]), [(1, "Call the BANK".into())]);
+    }
+
+    #[test]
+    fn list_puts_priorities_first_then_unprioritised_then_done_each_in_file_order() {
+        let store = store_of(&["Lorem", "x Ipsum", "(B) Dolor", "Sit", "(A) Amet", "(B) Elit"]);
+
+        let numbers: Vec<usize> = listed(&store, true, &[]).into_iter().map(|(n, _)| n).collect();
+
+        assert_eq!(numbers, [5, 3, 6, 1, 4, 2]);
     }
 }

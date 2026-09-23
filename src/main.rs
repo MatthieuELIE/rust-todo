@@ -27,8 +27,10 @@ fn main() -> ExitCode {
     };
 
     match cli.command {
-        Commands::List { all } => {
-            print_tasks(&store, all);
+        Commands::List { all, terms } => {
+            for (number, todo) in store.list(all, &terms) {
+                println!("{number:>3}  {}", todo.to_line());
+            }
             return ExitCode::SUCCESS;
         }
 
@@ -87,26 +89,4 @@ fn todo_path() -> PathBuf {
 
     let home = std::env::var_os("HOME").expect("HOME is not set");
     PathBuf::from(home).join("todo.txt")
-}
-
-/// Prints the tasks in the store, either all or only pending ones.
-fn print_tasks(store: &Store, all: bool) {
-    if all {
-        for (index, todo) in store.list_all().iter().enumerate() {
-            println!("{:>3}  {}", index + 1, render(todo));
-        }
-    } else {
-        for (number, todo) in store.list_pending() {
-            println!("{number:>3}  {}", render(todo));
-        }
-    }
-}
-
-/// Renders a todo item as a string, including its done status and optional priority.
-fn render(todo: &Todo) -> String {
-    let mark = if todo.done { "x" } else { " " };
-    match todo.priority {
-        Some(priority) => format!("[{mark}] ({priority}) {}", todo.description),
-        None => format!("[{mark}] {}", todo.description),
-    }
 }

@@ -28,7 +28,11 @@ fn main() -> ExitCode {
 
     match cli.command {
         Commands::List { all, terms } => {
-            for (number, todo) in store.list(all, &terms) {
+            let tasks = store.list(all, &terms);
+            if tasks.is_empty() {
+                eprintln!("{}", if terms.is_empty() { "nothing to do" } else { "no matching task" });
+            }
+            for (number, todo) in tasks {
                 println!("{number:>3}  {}", todo.to_line());
             }
             return ExitCode::SUCCESS;

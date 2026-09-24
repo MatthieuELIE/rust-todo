@@ -6,9 +6,9 @@ use crate::todo::Todo;
 #[derive(Parser)]
 #[command(version, about)]
 pub struct Cli {
-    /// List of commands to execute
+    /// Command to run; without one, the task list opens interactively
     #[command(subcommand)]
-    pub command: Commands,
+    pub command: Option<Commands>,
 }
 
 /// Subcommands for the todo CLI.
@@ -74,7 +74,7 @@ mod tests {
 
     #[test]
     fn commands_answer_to_their_short_and_former_names() {
-        let command = |args: &[&str]| Cli::try_parse_from(args).unwrap().command;
+        let command = |args: &[&str]| Cli::try_parse_from(args).unwrap().command.unwrap();
 
         assert!(matches!(command(&["todo", "ls"]), Commands::List { .. }));
         assert!(matches!(command(&["todo", "a", "Lorem"]), Commands::Add { .. }));
@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn list_flags_come_before_terms_which_may_start_with_a_dash() {
         let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
-            Commands::List { all, terms } => (all, terms),
+            Some(Commands::List { all, terms }) => (all, terms),
             _ => panic!("not a list command"),
         };
 

@@ -1,7 +1,7 @@
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style, Stylize};
-use ratatui::text::Line;
+use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
@@ -55,7 +55,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
             list_area,
         );
     } else {
-        let lines = tasks.into_iter().map(|(number, todo)| Line::styled(line(number, todo), style(todo)));
+        let lines = tasks.into_iter().map(|(number, todo)| line(number, todo));
         let list = List::new(lines).highlight_symbol("▸ ").highlight_style(Style::new().bg(Color::DarkGray));
         scroll.select(Some(app.cursor));
         frame.render_stateful_widget(list, list_area, scroll);
@@ -124,21 +124,42 @@ pub fn draw_error(frame: &mut Frame, message: &str) {
     frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
 
-/// A listed task: its number, then its todo.txt line.
-pub fn line(number: usize, todo: &Todo) -> String {
-    format!("{number:>3}  {}", todo.to_line())
+/// A listed task, its number then its todo.txt line: a done task all dimmed, a pending one with its priority styled, its
+/// creation date dimmed, `+projects` magenta and `@contexts` cyan.
+pub fn line(number: usize, todo: &Todo) -> Line<'static> {
+    let number = format!("{number:>3}  ");
+    if todo.done {
+        return Line::from(format!("{number}{}", todo.to_line()).dim());
+    }
+    let mut spans = vec![Span::raw(number)];
+    if let Some(letter) = todo.priority {
+        spans.extend([Span::styled(format!("({letter})"), priority(letter)), " ".into()]);
+    }
+    if let Some(created) = todo.created {
+        spans.extend([created.to_string().dim(), " ".into()]);
+    }
+    for (i, word) in todo.description.split(' ').enumerate() {
+        if i > 0 {
+            spans.push(" ".into());
+        }
+        let style = match word.chars().next() {
+            Some('+') if word.len() > 1 => Style::new().magenta(),
+            Some('@') if word.len() > 1 => Style::new().cyan(),
+            _ => Style::new(),
+        };
+        spans.push(Span::styled(word.to_string(), style));
+    }
+    Line::from(spans)
 }
 
-/// Bold when the task has a priority, tinted for A to C as `todo.sh` does, dim when it is done.
-pub fn style(todo: &Todo) -> Style {
+/// A priority bold, tinted yellow, green and blue for A to C as `todo.sh` does.
+fn priority(letter: char) -> Style {
     let bold = Style::new().bold();
-    match (todo.done, todo.priority) {
-        (true, _) => Style::new().dim(),
-        (false, Some('A')) => bold.yellow(),
-        (false, Some('B')) => bold.green(),
-        (false, Some('C')) => bold.blue(),
-        (false, Some(_)) => bold,
-        (false, None) => Style::new(),
+    match letter {
+        'A' => bold.yellow(),
+        'B' => bold.green(),
+        'C' => bold.blue(),
+        _ => bold,
     }
 }
 
@@ -250,15 +271,43 @@ mod tests {
         assert!(self::rows(&render(&app))[4].starts_with(" NORMAL"));
     }
 
-    #[test]
-    fn done_tasks_are_dimmed_and_prioritised_ones_bold_with_a_to_c_tinted() {
-        let style_of = |line: &str| style(&Todo::from_line(line));
+    fn style_of(line_text: &str, token: &str) -> Style {
+        let line = line(1, &Todo::from_line(line_text));
+        line.iter().find(|span| span.content == token).expect(token).style
+    }
 
-        assert_eq!(style_of("Buy milk"), Style::new());
-        assert_eq!(style_of("(A) Call the bank"), Style::new().bold().yellow());
-        assert_eq!(style_of("(B) Pay rent"), Style::new().bold().green());
-        assert_eq!(style_of("(C) Book dentist"), Style::new().bold().blue());
-        assert_eq!(style_of("(D) Read book"), Style::new().bold());
-        assert_eq!(style_of("x 2026-09-03 Buy milk"), Style::new().dim());
+    #[test]
+    fn a_pending_line_keeps_its_text_and_styles_priority_date_projects_and_contexts() {
+        let text = "(A) 2026-09-26 Call  +bank @phone due:2026-10-01 a+b + @";
+
+        assert_eq!(line(12, &Todo::from_line(text)).to_string(), format!(" 12  {text}"));
+        assert_eq!(style_of(text, "(A)"), Style::new().bold().yellow());
+        assert_eq!(style_of(text, "2026-09-26"), Style::new().dim());
+        assert_eq!(style_of(text, "+bank"), Style::new().magenta());
+        assert_eq!(style_of(text, "@phone"), Style::new().cyan());
+        for plain in ["Call", "due:2026-10-01", "a+b", "+", "@"] {
+            assert_eq!(style_of(text, plain), Style::new(), "{plain}");
+        }
+        assert_eq!(style_of("(B) x", "(B)"), Style::new().bold().green());
+        assert_eq!(style_of("(C) x", "(C)"), Style::new().bold().blue());
+        assert_eq!(style_of("(D) x", "(D)"), Style::new().bold());
+    }
+
+    #[test]
+    fn a_done_line_is_dimmed_all_through() {
+        let line = line(3, &Todo::from_line("x 2026-09-26 2026-09-20 Call +bank @phone"));
+
+        assert_eq!(line.to_string(), "  3  x 2026-09-26 2026-09-20 Call +bank @phone");
+        assert!(line.iter().all(|span| span.style == Style::new().dim()));
+    }
+
+    #[test]
+    fn projects_and_contexts_are_coloured_on_screen() {
+        let buffer = render(&app_of(&["Call +bank @phone"]));
+
+        assert_eq!(rows(&buffer)[0], " all              1│▸   1  Call +bank @phone");
+        assert_eq!(buffer[(32, 0)].fg, Color::Magenta);
+        assert_eq!(buffer[(38, 0)].fg, Color::Cyan);
+        assert_eq!(buffer[(27, 0)].fg, Color::Reset);
     }
 }

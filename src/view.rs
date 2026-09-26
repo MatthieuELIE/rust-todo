@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::todo::Todo;
 use crate::tui::{App, Prompt};
@@ -87,6 +87,12 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_widget(Clear, area);
         frame.render_widget(Paragraph::new(HELP).block(Block::bordered().title(" keys ")), area);
     }
+}
+
+/// Draws an error that stops the list from opening, and how to leave.
+pub fn draw_error(frame: &mut Frame, message: &str) {
+    let text = vec![Line::from(format!(" {message}")).red(), Line::from(" press any key to quit").dim()];
+    frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
 
 /// A listed task: its number, then its todo.txt line.

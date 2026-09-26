@@ -272,6 +272,20 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
     })
 }
 
+/// Shows `message` full screen until a key is pressed, so a popup that closes when the program exits does not swallow it.
+pub fn show_error(message: &str) -> io::Result<()> {
+    ratatui::run(|terminal| {
+        terminal.draw(|frame| view::draw_error(frame, message))?;
+        loop {
+            if let Event::Key(key) = event::read()?
+                && key.kind == KeyEventKind::Press
+            {
+                return Ok(());
+            }
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

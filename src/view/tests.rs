@@ -117,23 +117,25 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
     let mut app = app_of(&["c", "(B) b", "(A) a"]);
     app.cursor = 1;
 
-    let buffer = render_in(&app, 50, 8);
+    let buffer = render_in(&app, 50, 10);
     let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
 
     assert_eq!(
-        list[..6],
+        list[..8],
         [
             format!("   (1)  PRIORITY A  {}", "─".repeat(10)),
             "    3  (A) a".to_string(),
+            String::new(),
             format!("   (1)  PRIORITY B  {}", "─".repeat(10)),
             "▸   2  (B) b".to_string(),
+            String::new(),
             format!("   (1)  NO PRIORITY  {}", "─".repeat(9)),
             "    1  c".to_string(),
         ]
     );
-    assert_eq!(buffer[(30, 3)].bg, Color::DarkGray);
-    assert_eq!((buffer[(28, 0)].fg, buffer[(28, 2)].fg), (Color::Yellow, Color::Green));
-    assert!(buffer[(28, 4)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(30, 4)].bg, Color::DarkGray);
+    assert_eq!((buffer[(28, 0)].fg, buffer[(28, 3)].fg), (Color::Yellow, Color::Green));
+    assert!(buffer[(28, 6)].modifier.contains(Modifier::DIM));
     assert!(buffer[(49, 0)].modifier.contains(Modifier::DIM));
 }
 
@@ -147,15 +149,17 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
     let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
 
     assert_eq!(
-        list[..4],
+        list[..6],
         [
             format!("   (2)  PRIORITY A  {} ▸", "─".repeat(8)),
+            String::new(),
             format!("▸  (1)  PRIORITY B  {} ▸", "─".repeat(8)),
+            String::new(),
             format!("   (1)  NO PRIORITY  {} ▸", "─".repeat(7)),
             String::new(),
         ]
     );
-    assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
+    assert_eq!(buffer[(30, 2)].bg, Color::DarkGray);
 }
 
 #[test]

@@ -293,21 +293,46 @@ fn esc_in_the_panel_goes_back_to_all_and_esc_in_the_list_drops_filter_and_search
 }
 
 #[test]
-fn a_task_added_under_a_panel_filter_gets_its_term_unless_it_already_matches() {
+fn a_task_added_under_a_panel_filter_gets_its_term_unless_it_has_that_exact_word() {
     let mut app = app_of(&["Pay +rent"]);
     let enter = KeyEvent::from(KeyCode::Enter);
     app.filter = Some("+rent".to_string());
 
     press(&mut app, "o(A) Call landlord");
     app.handle_key(enter, TODAY);
-    press(&mut app, "oFix +Rent form");
+    press(&mut app, "oFix +rental form");
+    app.handle_key(enter, TODAY);
+    press(&mut app, "oPay +rent again");
     app.handle_key(enter, TODAY);
     press(&mut app, "o");
     app.handle_key(enter, TODAY);
 
     let lines: Vec<String> = app.store.todos.iter().map(Todo::to_line).collect();
-    assert_eq!(lines, ["Pay +rent", "(A) 2026-09-26 Call landlord +rent", "2026-09-26 Fix +Rent form"]);
-    assert_eq!(app.cursor, 2);
+    let added = [
+        "(A) 2026-09-26 Call landlord +rent",
+        "2026-09-26 Fix +rental form +rent",
+        "2026-09-26 Pay +rent again",
+    ];
+    assert_eq!(lines[1..], added);
+    assert_eq!(app.cursor, 3);
+}
+
+#[test]
+fn a_panel_entry_counts_and_shows_the_tasks_with_that_exact_word() {
+    let mut app = app_of(&[
+        "Learn +rust",
+        "Fix +rust-todo",
+        "Call @home",
+        "Mail x@homes.com",
+        "Read +Books",
+        "Sell +books",
+    ]);
+
+    let counts = [("all", 6), ("+Books", 1), ("+books", 1), ("+rust", 1), ("+rust-todo", 1), ("@home", 1)];
+    assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
+
+    app.filter = Some("+rust".to_string());
+    assert_eq!(shown(&app), ["Learn +rust"]);
 }
 
 #[test]

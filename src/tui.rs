@@ -123,9 +123,12 @@ impl App {
 
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
-        let mut terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-        terms.extend(self.filter.clone());
-        self.store.list(self.show_done, &terms)
+        let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
+        let mut tasks = self.store.list(self.show_done, &terms);
+        if let Some(filter) = &self.filter {
+            tasks.retain(|(_, todo)| has_word(todo, filter));
+        }
+        tasks
     }
 
     /// Groups of the tasks on screen with how many tasks each holds, in display order and without empty ones; none at all when
@@ -199,7 +202,7 @@ impl App {
         };
         let mut filters = vec![("all".to_string(), shown.len())];
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
-            let count = self.store.list(self.show_done, std::slice::from_ref(&term)).len();
+            let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
             filters.push((term, count));
         }
         filters
@@ -454,7 +457,7 @@ impl App {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
                 if let Some(term) = &self.filter
-                    && !todo.to_line().to_lowercase().contains(&term.to_lowercase())
+                    && !has_word(&todo, term)
                 {
                     todo.description = format!("{} {term}", todo.description);
                 }
@@ -527,6 +530,11 @@ impl App {
             self.message = Some("reloaded, edit cancelled".to_string());
         }
     }
+}
+
+/// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.
+fn has_word(todo: &Todo, term: &str) -> bool {
+    todo.description.split_whitespace().any(|word| word == term)
 }
 
 /// Runs the interactive list until the user quits, saving to `path` after every change.

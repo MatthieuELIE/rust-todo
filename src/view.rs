@@ -1,6 +1,6 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout, Rect};
-use ratatui::style::{Color, Style, Stylize};
+use ratatui::layout::{Constraint, Layout, Position, Rect};
+use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
@@ -35,6 +35,8 @@ Enter        save
 Esc          normal mode
 Ctrl-w       erase a word
 Ctrl-u       erase to the start
+Tab          complete + or @ word
+↓ ↑ Ctrl-n p pick a completion
 
 in normal mode
 h l  0 $     move
@@ -71,7 +73,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     draw_status(frame, app, status_area);
     match &app.focus {
         Focus::Help => draw_help(frame, main_area),
-        Focus::Popup(popup) => draw_popup(frame, popup, app.filter.as_deref(), main_area),
+        Focus::Popup(popup) => draw_popup(frame, app, popup, main_area),
         _ => {}
     }
 }
@@ -126,7 +128,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, colour, keys) = match &app.focus {
         Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
         Focus::Popup(popup) => match popup.editor.mode {
-            Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
+            Mode::Insert if app.completions().0.is_empty() => ("INSERT", Color::Green, "esc normal · ⏎ save"),
+            Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save · tab complete"),
             Mode::Normal => ("NORMAL", Color::Blue, "i insert · p priority · ⏎ save · esc cancel"),
         },
         Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all tasks · tab back"),
@@ -166,9 +169,10 @@ fn draw_help(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(HELP_EDIT), edit);
 }
 
-/// Draws the popup centred in `area`, its title naming the task edited or the panel `filter` an added task gets.
-fn draw_popup(frame: &mut Frame, popup: &Popup, filter: Option<&str>, area: Rect) {
-    let title = match (&popup.target, filter) {
+/// Draws the popup centred in `bounds`, its title naming the task edited or the panel filter an added task gets, and the
+/// completions of the tag typed.
+fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
+    let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => format!(" edit {number} "),
         (Target::Add, Some(term)) => format!(" add ({term}) "),
         (Target::Add, None) => " add ".to_string(),
@@ -176,11 +180,43 @@ fn draw_popup(frame: &mut Frame, popup: &Popup, filter: Option<&str>, area: Rect
     let field = Paragraph::new(field(&popup.editor))
         .wrap(Wrap { trim: false })
         .block(Block::bordered().title(title));
-    let width = area.width * 4 / 5;
+    let width = bounds.width * 4 / 5;
     let height = field.line_count(width.saturating_sub(2)) as u16;
-    let area = area.centered(Constraint::Length(width), Constraint::Length(height));
+    let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
     frame.render_widget(Clear, area);
     frame.render_widget(field, area);
+    // The cursor's cell is read back from the buffer: the paragraph does not tell where it wrapped the text.
+    let cursor = area
+        .positions()
+        .find(|&cell| frame.buffer_mut()[cell].modifier.contains(Modifier::REVERSED));
+    if let (Some(tag), Some(cursor)) = (popup.editor.tag(), cursor) {
+        let (names, selected) = app.completions();
+        let start = Position::new(cursor.x.saturating_sub(tag.chars().count() as u16), cursor.y);
+        draw_completions(frame, &names, selected, start, bounds);
+    }
+}
+
+/// Draws the completion `names` in a box of five rows at most under the tag starting at `tag`, or above it when there is no
+/// room below, the `selected` one highlighted.
+fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usize, tag: Position, bounds: Rect) {
+    if names.is_empty() {
+        return;
+    }
+    let width = names.iter().map(|(name, _)| name.chars().count()).max().unwrap_or_default();
+    let rows = names.iter().map(|(name, count)| {
+        let colour = if name.starts_with('+') { Color::Magenta } else { Color::Cyan };
+        Line::from_iter([Span::styled(format!("{name:<width$}"), colour), format!(" {count:>3}").dim()])
+    });
+    let height = names.len().min(5) as u16 + 2;
+    let y = if tag.y + 1 + height <= bounds.bottom() {
+        tag.y + 1
+    } else {
+        tag.y.saturating_sub(height)
+    };
+    let area = Rect::new(tag.x.saturating_sub(1), y, width as u16 + 6, height).intersection(bounds);
+    let list = List::new(rows).highlight_style(Style::new().bg(Color::DarkGray)).block(Block::bordered());
+    frame.render_widget(Clear, area);
+    frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
 }
 
 /// The popup's text with the character under the cursor, or a space past the end, in reverse video.

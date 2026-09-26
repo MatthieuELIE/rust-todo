@@ -73,6 +73,29 @@ impl Editor {
         }
     }
 
+    /// The `+project` or `@context` being typed: in insert mode, the word before the cursor when it starts with `+` or `@`.
+    pub fn tag(&self) -> Option<&str> {
+        let word = self.text[..self.byte(self.cursor)].rsplit(char::is_whitespace).next()?;
+        (self.mode == Mode::Insert && word.starts_with(['+', '@'])).then_some(word)
+    }
+
+    /// Writes `name` over the whole word at the cursor, then a space unless one follows, the cursor after it.
+    pub fn complete(&mut self, name: &str) {
+        let chars: Vec<char> = self.text.chars().collect();
+        let start = chars[..self.cursor].iter().rposition(|c| c.is_whitespace()).map_or(0, |i| i + 1);
+        let end = chars[self.cursor..]
+            .iter()
+            .position(|c| c.is_whitespace())
+            .map_or(chars.len(), |i| self.cursor + i);
+        self.remove(start, end);
+        self.paste(name);
+        if chars.get(end).is_some_and(|c| c.is_whitespace()) {
+            self.cursor += 1;
+        } else {
+            self.paste(" ");
+        }
+    }
+
     /// Applies a key typed in insert mode.
     fn insert(&mut self, key: KeyEvent) {
         let len = self.text.chars().count();

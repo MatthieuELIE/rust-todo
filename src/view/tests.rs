@@ -229,7 +229,11 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let mut editor = Editor::default();
     editor.text = "Call the bank about the loan and ask for a quote".to_string();
     editor.cursor = 5;
-    app.focus = Focus::Popup(Popup { editor, target: Target::Add });
+    app.focus = Focus::Popup(Popup {
+        editor,
+        target: Target::Add,
+        selected: 0,
+    });
 
     let buffer = render(&app);
     let rows = rows(&buffer);
@@ -250,6 +254,55 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let buffer = render_in(&app, 70, 5);
     assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · p priority · ⏎ save · esc cancel");
     assert_eq!(buffer[(1, 4)].bg, Color::Blue);
+}
+
+fn add_popup(app: &mut App, text: &str, selected: usize) {
+    let mut editor = Editor::default();
+    editor.text = text.to_string();
+    editor.cursor = text.chars().count();
+    app.focus = Focus::Popup(Popup {
+        editor,
+        target: Target::Add,
+        selected,
+    });
+}
+
+fn cells(row: &str, x: usize, width: usize) -> String {
+    row.chars().skip(x).take(width).collect()
+}
+
+#[test]
+fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highlighted() {
+    let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
+    add_popup(&mut app, "Buy +b", 1);
+
+    let buffer = render_in(&app, 50, 12);
+    let rows = rows(&buffer);
+    let y = rows.iter().position(|row| row.contains("Buy +b")).expect("popup line");
+
+    assert_eq!(
+        (y + 1..y + 5).map(|y| cells(&rows[y], 9, 12)).collect::<Vec<_>>(),
+        ["┌──────────┐", "│+bank    2│", "│+books   1│", "└──────────┘"]
+    );
+    let y = y as u16;
+    assert_eq!(buffer[(10, y + 2)].fg, Color::Magenta);
+    assert!(buffer[(19, y + 2)].modifier.contains(Modifier::DIM));
+    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (Color::Reset, Color::DarkGray));
+    assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
+}
+
+#[test]
+fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
+    let mut app = app_of(&["Pay +bank", "Call @phone"]);
+    add_popup(&mut app, "Call the bank about the loan and ask @ph", 0);
+
+    let rows = rows(&render_in(&app, 50, 7));
+    let y = rows.iter().position(|row| row.contains("│@ph ")).expect("tag line");
+
+    assert_eq!(
+        (y - 3..y).map(|y| cells(&rows[y], 5, 12)).collect::<Vec<_>>(),
+        ["┌──────────┐", "│@phone   1│", "└──────────┘"]
+    );
 }
 
 fn style_of(line_text: &str, token: &str) -> Style {

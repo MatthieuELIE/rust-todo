@@ -50,21 +50,27 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         );
     } else {
         let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo));
-        let (mut lines, mut row, mut start) = (Vec::new(), app.cursor, 0);
+        let (mut lines, mut rows) = (Vec::new(), Vec::new());
         for (group, count) in app.groups() {
-            lines.push(header(group, count, list_area.width.saturating_sub(2) as usize));
-            if app.cursor >= start {
-                row += 1;
+            let folded = app.folded.contains(&group);
+            if folded {
+                rows.push(lines.len());
             }
-            lines.extend(tasks.by_ref().take(count));
-            start += count;
+            lines.push(header(group, count, folded, list_area.width.saturating_sub(2) as usize));
+            for task in tasks.by_ref().take(count).filter(|_| !folded) {
+                rows.push(lines.len());
+                lines.push(task);
+            }
         }
-        lines.extend(tasks);
+        for task in tasks {
+            rows.push(lines.len());
+            lines.push(task);
+        }
         let list = List::new(lines)
             .highlight_symbol("▸ ")
             .highlight_style(Style::new().bg(Color::DarkGray))
             .scroll_padding(1);
-        scroll.select(Some(row));
+        scroll.select(rows.get(app.cursor).copied());
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
@@ -187,16 +193,17 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     Line::from(spans)
 }
 
-/// Header of a group of the list: its count, its title, then a rule filling `width`.
-fn header(group: Group, count: usize, width: usize) -> Line<'static> {
+/// Header of a group of the list: its count, its title, then a rule filling `width`, ended by ` ▸` when the group is folded.
+fn header(group: Group, count: usize, folded: bool, width: usize) -> Line<'static> {
     let (title, style) = match group {
         Group::Priority(letter) => (format!("PRIORITY {letter}"), priority(letter)),
         Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().dim()),
         Group::Done => ("DONE".to_string(), Style::new().bold().dim()),
     };
     let count = format!(" ({count})");
-    let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4));
-    Line::from_iter([count.dim(), "  ".into(), Span::styled(title, style), "  ".into(), rule.dim()])
+    let end = if folded { " ▸" } else { "" };
+    let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4 + end.chars().count()));
+    Line::from_iter([count.dim(), "  ".into(), Span::styled(title, style), "  ".into(), rule.dim(), end.into()])
 }
 
 /// A priority bold, tinted yellow, green and blue for A to C as `todo.sh` does.
@@ -336,6 +343,27 @@ mod tests {
         assert_eq!((buffer[(28, 0)].fg, buffer[(28, 2)].fg), (Color::Yellow, Color::Green));
         assert!(buffer[(28, 4)].modifier.contains(Modifier::DIM));
         assert!(buffer[(49, 0)].modifier.contains(Modifier::DIM));
+    }
+
+    #[test]
+    fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand_on_it() {
+        let mut app = app_of(&["(A) a", "(A) b", "(B) c", "d"]);
+        app.folded = vec![Group::Priority('A'), Group::Priority('B'), Group::Unprioritised];
+        app.cursor = 1;
+
+        let buffer = render_in(&app, 50, 8);
+        let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
+
+        assert_eq!(
+            list[..4],
+            [
+                format!("   (2)  PRIORITY A  {} ▸", "─".repeat(8)),
+                format!("▸  (1)  PRIORITY B  {} ▸", "─".repeat(8)),
+                format!("   (1)  NO PRIORITY  {} ▸", "─".repeat(7)),
+                String::new(),
+            ]
+        );
+        assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
     }
 
     #[test]

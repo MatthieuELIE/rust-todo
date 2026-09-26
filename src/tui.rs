@@ -39,13 +39,33 @@ pub enum Group {
     Done,
 }
 
+impl Group {
+    /// The group `todo` is listed under.
+    fn of(todo: &Todo) -> Group {
+        match (todo.done, todo.priority) {
+            (true, _) => Group::Done,
+            (false, Some(letter)) => Group::Priority(letter),
+            (false, None) => Group::Unprioritised,
+        }
+    }
+}
+
+/// A row of the list the cursor can stand on.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Row {
+    /// The task with this number.
+    Task(usize),
+    /// A folded group, shown as its header.
+    Group(Group),
+}
+
 /// State of the interactive list: the tasks and where the user stands in them.
 pub struct App {
     /// The tasks being browsed.
     store: Store,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`, `dd`, `p` and a letter) waiting for its second key.
+    /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`) waiting for its second key.
     pending: Option<char>,
     /// Whether done tasks are listed too.
     pub show_done: bool,
@@ -65,6 +85,8 @@ pub struct App {
     pub panel: bool,
     /// Set while the key help is shown over the list.
     pub help: bool,
+    /// Groups shown folded, as their header alone.
+    pub folded: Vec<Group>,
     /// Tasks as they were before each change, the latest last.
     undo: Vec<Vec<Todo>>,
     /// Tasks as they were before each `u`, the latest last.
@@ -87,6 +109,7 @@ impl App {
             filter: None,
             panel: false,
             help: false,
+            folded: Vec::new(),
             undo: Vec::new(),
             redo: Vec::new(),
         }
@@ -104,11 +127,7 @@ impl App {
     pub fn groups(&self) -> Vec<(Group, usize)> {
         let mut groups: Vec<(Group, usize)> = Vec::new();
         for (_, todo) in self.tasks() {
-            let group = match (todo.done, todo.priority) {
-                (true, _) => Group::Done,
-                (false, Some(letter)) => Group::Priority(letter),
-                (false, None) => Group::Unprioritised,
-            };
+            let group = Group::of(todo);
             match groups.last_mut() {
                 Some((last, count)) if *last == group => *count += 1,
                 _ => groups.push((group, 1)),
@@ -118,6 +137,36 @@ impl App {
             groups.clear();
         }
         groups
+    }
+
+    /// Rows the cursor can stand on, in display order: the tasks, except those of a folded group, which is one row.
+    fn rows(&self) -> Vec<Row> {
+        let mut rows: Vec<Row> = Vec::new();
+        for (number, todo) in self.tasks() {
+            let group = Group::of(todo);
+            if !self.folded.contains(&group) {
+                rows.push(Row::Task(number));
+            } else if rows.last() != Some(&Row::Group(group)) {
+                rows.push(Row::Group(group));
+            }
+        }
+        rows
+    }
+
+    /// Puts the cursor on `row`, or on its group when that is folded, and tells whether either is on screen.
+    fn select(&mut self, row: Row) -> bool {
+        let group = match row {
+            Row::Task(number) => Row::Group(Group::of(&self.store.todos[number - 1])),
+            Row::Group(_) => row,
+        };
+        let rows = self.rows();
+        match rows.iter().position(|r| *r == row).or_else(|| rows.iter().position(|r| *r == group)) {
+            Some(position) => {
+                self.cursor = position;
+                true
+            }
+            None => false,
+        }
     }
 
     /// Panel entries with how many tasks each shows, the search left out: `all`, then the `+projects` and `@contexts` of the
@@ -153,6 +202,7 @@ impl App {
         let before = self.store.todos.clone();
         let history = (self.undo.len(), self.redo.len());
         let write = self.apply(key, today);
+        self.forget_gone_folds();
         if write && history == (self.undo.len(), self.redo.len()) {
             self.undo.push(before);
             self.redo.clear();
@@ -160,11 +210,21 @@ impl App {
         write
     }
 
+    /// Unfolds the groups no longer on screen, so they come back unfolded.
+    fn forget_gone_folds(&mut self) {
+        let groups = self.groups();
+        self.folded.retain(|folded| groups.iter().any(|(group, _)| group == folded));
+    }
+
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
     fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
-        let tasks = self.tasks();
-        let last = tasks.len().saturating_sub(1);
-        let selected = tasks.get(self.cursor).map(|(number, _)| *number);
+        let rows = self.rows();
+        let last = rows.len().saturating_sub(1);
+        let row = rows.get(self.cursor).copied();
+        let selected = match row {
+            Some(Row::Task(number)) => Some(number),
+            _ => None,
+        };
         let pending = self.pending.take();
         self.message = None;
         if self.help {
@@ -186,7 +246,7 @@ impl App {
                 (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text),
                 _ => false,
             };
-            self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+            self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
             return write;
         }
         if self.searching {
@@ -242,6 +302,23 @@ impl App {
                 }
             }
             KeyCode::Char('p') => self.pending = Some('p'),
+            KeyCode::Char('M') if pending == Some('z') && !self.groups().is_empty() => {
+                self.folded = self.groups().into_iter().map(|(group, _)| group).collect();
+                if let Some(row) = row {
+                    self.select(row);
+                }
+            }
+            KeyCode::Char('R') if pending == Some('z') => {
+                self.folded.clear();
+                let target = match row {
+                    Some(Row::Group(group)) => self.tasks().iter().find(|(_, todo)| Group::of(todo) == group).map(|(n, _)| Row::Task(*n)),
+                    row => row,
+                };
+                if let Some(target) = target {
+                    self.select(target);
+                }
+            }
+            KeyCode::Char('z') => self.pending = Some('z'),
             KeyCode::Char('u') => write = self.step(true),
             KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
@@ -292,7 +369,7 @@ impl App {
             }
             _ => {}
         }
-        self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+        self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
         write
     }
 
@@ -333,11 +410,10 @@ impl App {
         true
     }
 
-    /// Puts the cursor on task `number`, or says `hidden` when it is not on screen.
+    /// Puts the cursor on task `number`, or on its folded group, or says `hidden` when neither is on screen.
     fn follow(&mut self, number: usize, hidden: &str) {
-        match self.tasks().iter().position(|(n, _)| *n == number) {
-            Some(row) => self.cursor = row,
-            None => self.message = Some(hidden.to_string()),
+        if !self.select(Row::Task(number)) {
+            self.message = Some(hidden.to_string());
         }
     }
 
@@ -368,7 +444,8 @@ impl App {
         self.store = store;
         self.undo.clear();
         self.redo.clear();
-        self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+        self.forget_gone_folds();
+        self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
         self.message = Some("reloaded".to_string());
         if let Some(Popup { target: Target::Edit(_), .. }) = self.popup {
             self.popup = None;
@@ -900,6 +977,82 @@ mod tests {
         app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
 
         assert_eq!(app.groups(), []);
+    }
+
+    fn grouped() -> App {
+        app_of(&["(A) a", "(A) b", "(B) c", "d"])
+    }
+
+    #[test]
+    fn capital_z_m_folds_every_group_into_a_row_j_and_k_step_through() {
+        let mut app = grouped();
+
+        press(&mut app, "jzM");
+        assert_eq!(
+            app.rows(),
+            [
+                Row::Group(Group::Priority('A')),
+                Row::Group(Group::Priority('B')),
+                Row::Group(Group::Unprioritised)
+            ]
+        );
+        assert_eq!(app.cursor, 0);
+
+        press(&mut app, "jjj");
+        assert_eq!(app.cursor, 2);
+        press(&mut app, "k");
+        assert_eq!(app.cursor, 1);
+    }
+
+    #[test]
+    fn a_folded_header_ignores_the_task_keys() {
+        let mut app = grouped();
+
+        press(&mut app, "zM");
+        assert!(!press(&mut app, "xddpb"));
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+
+        assert!(app.popup.is_none());
+        assert_eq!(shown(&app), ["(A) a", "(A) b", "(B) c", "d"]);
+    }
+
+    #[test]
+    fn capital_z_r_unfolds_back_onto_the_task_or_the_first_task_of_the_folded_group() {
+        let mut app = grouped();
+
+        press(&mut app, "jjzM");
+        assert_eq!(app.cursor, 1);
+        press(&mut app, "zR");
+        assert_eq!(app.rows()[app.cursor], Row::Task(3));
+
+        press(&mut app, "zMkzR");
+        assert_eq!(app.rows()[app.cursor], Row::Task(1));
+        assert_eq!(app.rows().len(), 4);
+    }
+
+    #[test]
+    fn z_followed_by_another_key_is_dropped_and_zm_without_groups_does_nothing() {
+        let mut app = grouped();
+        press(&mut app, "zj");
+        assert_eq!((app.cursor, app.rows().len()), (1, 4));
+
+        let mut app = app_of(&["one", "two"]);
+        press(&mut app, "jzM");
+        assert_eq!(app.rows(), [Row::Task(1), Row::Task(2)]);
+        assert_eq!(app.cursor, 1);
+    }
+
+    #[test]
+    fn a_filter_keeps_the_folds_but_a_group_that_leaves_the_screen_comes_back_unfolded() {
+        let mut app = grouped();
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        press(&mut app, "zM/a");
+        assert_eq!(app.rows(), [Row::Group(Group::Priority('A'))]);
+        app.handle_key(enter, TODAY);
+        app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+
+        assert_eq!(app.rows(), [Row::Group(Group::Priority('A')), Row::Task(3), Row::Task(4)]);
     }
 
     #[test]

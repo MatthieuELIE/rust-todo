@@ -6,7 +6,7 @@ use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
-use crate::tui::App;
+use crate::tui::{App, Target};
 
 /// Keys shown by `?`, one per line.
 const HELP: &str = "\
@@ -94,9 +94,10 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     }
 
     if let Some(popup) = &app.popup {
-        let title = match &app.filter {
-            Some(term) => format!(" add ({term}) "),
-            None => " add ".to_string(),
+        let title = match (&popup.target, &app.filter) {
+            (Target::Edit(number), _) => format!(" edit {number} "),
+            (Target::Add, Some(term)) => format!(" add ({term}) "),
+            (Target::Add, None) => " add ".to_string(),
         };
         let field = Paragraph::new(field(&popup.editor))
             .wrap(Wrap { trim: false })
@@ -145,7 +146,7 @@ pub fn style(todo: &Todo) -> Style {
 mod tests {
     use super::*;
     use crate::store::Store;
-    use crate::tui::{Popup, Target};
+    use crate::tui::Popup;
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use ratatui::buffer::Buffer;

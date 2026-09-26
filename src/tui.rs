@@ -6,7 +6,7 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 use ratatui::widgets::ListState;
 use time::Date;
 
-use crate::editor::{Editor, Outcome};
+use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
 use crate::store::Store;
 use crate::todo::Todo;
@@ -16,6 +16,8 @@ use crate::view;
 pub enum Target {
     /// A new task.
     Add,
+    /// A new line for the task with this number.
+    Edit(usize),
 }
 
 /// The centred field where a task is typed.
@@ -128,10 +130,13 @@ impl App {
                 return false;
             }
             let popup = self.popup.take().expect("the popup is open");
-            return match (outcome, popup.target) {
+            let write = match (outcome, popup.target) {
                 (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
+                (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text),
                 _ => false,
             };
+            self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+            return write;
         }
         if self.searching {
             match key.code {
@@ -205,6 +210,14 @@ impl App {
                 self.filter = None;
                 self.cursor = 0;
             }
+            KeyCode::Enter => {
+                if let Some(number) = selected {
+                    self.popup = Some(Popup {
+                        editor: Editor::new(self.store.todos[number - 1].to_line(), Mode::Normal),
+                        target: Target::Edit(number),
+                    })
+                }
+            }
             KeyCode::Tab => self.panel = true,
             KeyCode::Char('?') => self.help = true,
             KeyCode::Char('H') => {
@@ -228,11 +241,7 @@ impl App {
                     todo.description = format!("{} {term}", todo.description);
                 }
                 self.store.add(todo);
-                let number = self.store.todos.len();
-                match self.tasks().iter().position(|(n, _)| *n == number) {
-                    Some(row) => self.cursor = row,
-                    None => self.message = Some("added, hidden by the filter".to_string()),
-                }
+                self.follow(self.store.todos.len(), "added, hidden by the filter");
                 true
             }
             Err(e) => {
@@ -242,11 +251,40 @@ impl App {
         }
     }
 
+    /// Replaces task `number` with the line `text` as typed, with the cursor on it; an empty description only leaves a message,
+    /// and an unchanged line changes nothing.
+    fn edit(&mut self, number: usize, text: &str) -> bool {
+        let todo = Todo::from_line(text);
+        if todo.description.trim().is_empty() {
+            self.message = Some("a task needs a description".to_string());
+            return false;
+        }
+        if text == self.store.todos[number - 1].to_line() {
+            return false;
+        }
+        self.store.todos[number - 1] = todo;
+        self.follow(number, "edited, hidden by the filter");
+        true
+    }
+
+    /// Puts the cursor on task `number`, or says `hidden` when it is not on screen.
+    fn follow(&mut self, number: usize, hidden: &str) {
+        match self.tasks().iter().position(|(n, _)| *n == number) {
+            Some(row) => self.cursor = row,
+            None => self.message = Some(hidden.to_string()),
+        }
+    }
+
     /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row.
+    /// An edit is cancelled, since its task number may now name another task.
     pub fn reload(&mut self, store: Store) {
         self.store = store;
         self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
         self.message = Some("reloaded".to_string());
+        if let Some(Popup { target: Target::Edit(_), .. }) = self.popup {
+            self.popup = None;
+            self.message = Some("reloaded, edit cancelled".to_string());
+        }
     }
 }
 
@@ -304,7 +342,6 @@ pub fn show_error(message: &str) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::editor::Mode;
     use time::macros::date;
 
     const TODAY: Date = date!(2026 - 09 - 26);
@@ -390,6 +427,100 @@ mod tests {
         assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
         assert_eq!(app.store.todos[3].to_line(), "2026-09-26 qxdd");
+    }
+
+    #[test]
+    fn enter_opens_the_task_line_in_normal_mode_and_the_cursor_follows_the_edited_task() {
+        let mut app = app_of(&["one", "two", "three"]);
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        assert!(!press(&mut app, "jj"));
+        app.handle_key(enter, TODAY);
+        let editor = &app.popup.as_ref().unwrap().editor;
+        assert_eq!((editor.text.as_str(), editor.cursor, editor.mode), ("three", 0, Mode::Normal));
+
+        press(&mut app, "i(A) ");
+        assert!(app.handle_key(enter, TODAY));
+
+        assert_eq!(shown(&app), ["(A) three", "one", "two"]);
+        assert_eq!(app.cursor, 0);
+        assert!(app.popup.is_none());
+    }
+
+    #[test]
+    fn an_edited_line_is_saved_as_typed_and_one_leaving_the_list_is_said_hidden() {
+        let mut app = app_of(&["one", "two"]);
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        press(&mut app, "j");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "ix 2026-09-20 ");
+        assert!(app.handle_key(enter, TODAY));
+
+        assert_eq!(app.store.todos[1].to_line(), "x 2026-09-20 two");
+        assert_eq!(app.cursor, 0);
+        assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
+    }
+
+    #[test]
+    fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
+        let mut app = app_of(&["one", "two", "three"]);
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        press(&mut app, "/t");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "j");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "Cfree");
+        assert!(app.handle_key(enter, TODAY));
+
+        assert_eq!(shown(&app), ["two"]);
+        assert_eq!(app.cursor, 0);
+        assert_eq!(app.store.todos[2].to_line(), "free");
+        assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
+    }
+
+    #[test]
+    fn an_edit_emptied_or_left_unchanged_writes_nothing() {
+        let mut app = app_of(&["(A) one"]);
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        app.handle_key(enter, TODAY);
+        assert!(!app.handle_key(enter, TODAY));
+        assert_eq!(app.message, None);
+
+        app.handle_key(enter, TODAY);
+        press(&mut app, "WD");
+        assert_eq!(app.popup.as_ref().unwrap().editor.text, "(A) ");
+        assert!(!app.handle_key(enter, TODAY));
+        assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+        assert!(app.popup.is_none());
+        assert_eq!(shown(&app), ["(A) one"]);
+    }
+
+    #[test]
+    fn enter_on_an_empty_list_opens_nothing() {
+        let mut app = app_of(&[]);
+
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+
+        assert!(app.popup.is_none());
+    }
+
+    #[test]
+    fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
+        let mut app = app();
+        let reread = || Store::new(vec![Todo::from_line("one"), Todo::from_line("two")]);
+
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+        app.reload(reread());
+        assert!(app.popup.is_none());
+        assert_eq!(app.message.as_deref(), Some("reloaded, edit cancelled"));
+
+        press(&mut app, "onew");
+        app.reload(reread());
+        assert_eq!(app.popup.as_ref().unwrap().editor.text, "new");
+        assert_eq!(app.message.as_deref(), Some("reloaded"));
     }
 
     #[test]

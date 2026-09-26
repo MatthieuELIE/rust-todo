@@ -74,8 +74,8 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     }
 }
 
-/// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset from one frame to the
-/// next.
+/// Draws the tasks on screen under their group headers, a blank row before each group but the first, or says there is none;
+/// `scroll` keeps the offset from one frame to the next.
 fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     let tasks = app.tasks();
     if tasks.is_empty() {
@@ -93,6 +93,9 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
         let (mut lines, mut rows) = (Vec::new(), Vec::new());
         for (group, count) in app.groups() {
             let folded = app.folded.contains(&group);
+            if !lines.is_empty() {
+                lines.push(Line::default());
+            }
             if folded {
                 rows.push(lines.len());
             }

@@ -6,7 +6,7 @@ use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
-use crate::tui::{App, Group, Target};
+use crate::tui::{App, Focus, Group, Target};
 
 /// Keys of the list shown by `?`, one per line.
 const HELP_LIST: &str = "\
@@ -57,7 +57,11 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
 
     let (entries, row) = panel(app);
-    let highlight = if app.panel { Style::new().bg(Color::DarkGray) } else { Style::new() };
+    let highlight = if matches!(app.focus, Focus::Panel) {
+        Style::new().bg(Color::DarkGray)
+    } else {
+        Style::new()
+    };
     let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(Some(row)));
 
@@ -98,23 +102,20 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
-    let (mode, colour, keys) = if app.searching {
-        ("SEARCH", Color::Yellow, "⏎ keep · esc clear")
-    } else if let Some(popup) = &app.popup {
-        match popup.editor.mode {
+    let (mode, colour, keys) = match &app.focus {
+        Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
+        Focus::Popup(popup) => match popup.editor.mode {
             Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
             Mode::Normal => ("NORMAL", Color::Blue, "i/a insert · w/b/e word · x delete · ⏎ save · esc cancel"),
-        }
-    } else if app.panel {
-        ("PANEL", Color::Magenta, "j/k filter · esc all · tab back")
-    } else {
-        (
+        },
+        Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all · tab back"),
+        Focus::List | Focus::Help => (
             "LIST",
             Color::Blue,
             "⏎ edit · o add · x done · dd delete · p priority · u undo · zM fold · / search · ? help",
-        )
+        ),
     };
-    let filters = if app.searching {
+    let filters = if matches!(app.focus, Focus::Search) {
         format!("/{}▌", app.search)
     } else {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
@@ -131,7 +132,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), status_area);
     }
 
-    if app.help {
+    if matches!(app.focus, Focus::Help) {
         let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 2;
         let area = main_area.centered(Constraint::Length(76), Constraint::Length(height));
         let block = Block::bordered().title(" keys ");
@@ -142,7 +143,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_widget(Paragraph::new(HELP_EDIT), edit);
     }
 
-    if let Some(popup) = &app.popup {
+    if let Focus::Popup(popup) = &app.focus {
         let title = match (&popup.target, &app.filter) {
             (Target::Edit(number), _) => format!(" edit {number} "),
             (Target::Add, Some(term)) => format!(" add ({term}) "),

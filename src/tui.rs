@@ -28,6 +28,20 @@ pub struct Popup {
     pub target: Target,
 }
 
+/// Where the keys go.
+pub enum Focus {
+    /// The task list.
+    List,
+    /// The filter panel.
+    Panel,
+    /// The search line, in the status bar.
+    Search,
+    /// The key help over the list, closed by any key.
+    Help,
+    /// The popup where a task is typed.
+    Popup(Popup),
+}
+
 /// A group of the list, in display order.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Group {
@@ -73,18 +87,12 @@ pub struct App {
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
     pub message: Option<String>,
-    /// Set while the status bar is the search input line.
-    pub searching: bool,
-    /// Set while a task is typed in the popup.
-    pub popup: Option<Popup>,
+    /// Where the keys go.
+    pub focus: Focus,
     /// Search terms, separated by whitespace, as `todo list` takes them.
     pub search: String,
     /// Term picked in the panel, `None` for `all`.
     pub filter: Option<String>,
-    /// Set while keys go to the panel rather than the list.
-    pub panel: bool,
-    /// Set while the key help is shown over the list.
-    pub help: bool,
     /// Groups shown folded, as their header alone.
     pub folded: Vec<Group>,
     /// Tasks as they were before each change, the latest last.
@@ -103,12 +111,9 @@ impl App {
             show_done: false,
             quit: false,
             message: None,
-            searching: false,
-            popup: None,
+            focus: Focus::List,
             search: String::new(),
             filter: None,
-            panel: false,
-            help: false,
             folded: Vec::new(),
             undo: Vec::new(),
             redo: Vec::new(),
@@ -226,6 +231,84 @@ impl App {
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
     fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
+        let pending = self.pending.take();
+        self.message = None;
+        if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL && !matches!(self.focus, Focus::Help) {
+            self.quit = true;
+            return false;
+        }
+        let write = match self.focus {
+            Focus::Help => {
+                self.focus = Focus::List;
+                false
+            }
+            Focus::Popup(ref mut popup) => match popup.editor.handle_key(key) {
+                Outcome::Continue => false,
+                outcome => self.close_popup(outcome, today),
+            },
+            Focus::Search => {
+                self.search_key(key);
+                false
+            }
+            Focus::Panel => {
+                self.panel_key(key);
+                false
+            }
+            Focus::List => self.list_key(key, pending, today),
+        };
+        self.clamp_cursor();
+        write
+    }
+
+    /// Closes the popup, adding or editing the task when its text was submitted, and tells whether the file must be rewritten.
+    fn close_popup(&mut self, outcome: Outcome, today: Date) -> bool {
+        let Focus::Popup(popup) = std::mem::replace(&mut self.focus, Focus::List) else {
+            unreachable!("the popup is open");
+        };
+        match (outcome, popup.target) {
+            (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
+            (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text),
+            _ => false,
+        }
+    }
+
+    /// Applies a key typed in the search line, the list back on its first row.
+    fn search_key(&mut self, key: KeyEvent) {
+        match key.code {
+            KeyCode::Char(c) => self.search.push(c),
+            KeyCode::Backspace => _ = self.search.pop(),
+            KeyCode::Esc => {
+                self.search.clear();
+                self.focus = Focus::List;
+            }
+            KeyCode::Enter => self.focus = Focus::List,
+            _ => {}
+        }
+        self.cursor = 0;
+    }
+
+    /// Applies a key typed in the panel, the list back on its first row when the filter changes.
+    fn panel_key(&mut self, key: KeyEvent) {
+        let filters = self.filters();
+        let row = self.filter_row(&filters);
+        let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
+        let before = self.filter.clone();
+        match key.code {
+            KeyCode::Char('q') => self.quit = true,
+            KeyCode::Char('j') | KeyCode::Down => self.filter = pick((row + 1).min(filters.len() - 1)),
+            KeyCode::Char('k') | KeyCode::Up => self.filter = pick(row.saturating_sub(1)),
+            KeyCode::Esc => self.filter = None,
+            KeyCode::Tab | KeyCode::Enter => self.focus = Focus::List,
+            _ => {}
+        }
+        if self.filter != before {
+            self.cursor = 0;
+        }
+    }
+
+    /// Applies a key typed in the list, after the first key of a two-key command when `pending`, and tells whether the file must
+    /// be rewritten.
+    fn list_key(&mut self, key: KeyEvent, pending: Option<char>, today: Date) -> bool {
         let rows = self.rows();
         let last = rows.len().saturating_sub(1);
         let row = rows.get(self.cursor).copied();
@@ -233,67 +316,8 @@ impl App {
             Some(Row::Task(number)) => Some(number),
             _ => None,
         };
-        let pending = self.pending.take();
-        self.message = None;
-        if self.help {
-            self.help = false;
-            return false;
-        }
-        if let Some(popup) = &mut self.popup {
-            if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
-                self.quit = true;
-                return false;
-            }
-            let outcome = popup.editor.handle_key(key);
-            if outcome == Outcome::Continue {
-                return false;
-            }
-            let popup = self.popup.take().expect("the popup is open");
-            let write = match (outcome, popup.target) {
-                (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
-                (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text),
-                _ => false,
-            };
-            self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
-            return write;
-        }
-        if self.searching {
-            match key.code {
-                KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
-                KeyCode::Char(c) => self.search.push(c),
-                KeyCode::Backspace => _ = self.search.pop(),
-                KeyCode::Esc => {
-                    self.search.clear();
-                    self.searching = false;
-                }
-                KeyCode::Enter => self.searching = false,
-                _ => {}
-            }
-            self.cursor = 0;
-            return false;
-        }
-        if self.panel {
-            let filters = self.filters();
-            let row = self.filter_row(&filters);
-            let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
-            let before = self.filter.clone();
-            match key.code {
-                KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
-                KeyCode::Char('q') => self.quit = true,
-                KeyCode::Char('j') | KeyCode::Down => self.filter = pick((row + 1).min(filters.len() - 1)),
-                KeyCode::Char('k') | KeyCode::Up => self.filter = pick(row.saturating_sub(1)),
-                KeyCode::Esc => self.filter = None,
-                KeyCode::Tab | KeyCode::Enter => self.panel = false,
-                _ => {}
-            }
-            if self.filter != before {
-                self.cursor = 0;
-            }
-            return false;
-        }
         let mut write = false;
         match key.code {
-            KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
             KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
@@ -310,35 +334,9 @@ impl App {
                 }
             }
             KeyCode::Char('p') => self.pending = Some('p'),
-            KeyCode::Char('M') if pending == Some('z') && !self.groups().is_empty() => {
-                self.folded = self.groups().into_iter().map(|(group, _)| group).collect();
-                if let Some(row) = row {
-                    self.select(row);
-                }
-            }
-            KeyCode::Char('R') if pending == Some('z') => {
-                self.folded.clear();
-                let target = match row {
-                    Some(Row::Group(group)) => self.first_task(group),
-                    row => row,
-                };
-                if let Some(target) = target {
-                    self.select(target);
-                }
-            }
-            KeyCode::Char('a') if pending == Some('z') => match row {
-                Some(Row::Task(number)) if !self.groups().is_empty() => {
-                    self.folded.push(Group::of(&self.store.todos[number - 1]));
-                    self.select(Row::Task(number));
-                }
-                Some(Row::Group(group)) => {
-                    self.folded.retain(|folded| *folded != group);
-                    if let Some(first) = self.first_task(group) {
-                        self.select(first);
-                    }
-                }
-                _ => {}
-            },
+            KeyCode::Char('M') if pending == Some('z') => self.fold_all(row),
+            KeyCode::Char('R') if pending == Some('z') => self.unfold_all(row),
+            KeyCode::Char('a') if pending == Some('z') => self.toggle_fold(row),
             KeyCode::Char('z') => self.pending = Some('z'),
             KeyCode::Char('u') => write = self.step(true),
             KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
@@ -359,14 +357,14 @@ impl App {
             KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
             KeyCode::Char('d') => self.pending = Some('d'),
             KeyCode::Char('o') => {
-                self.popup = Some(Popup {
+                self.focus = Focus::Popup(Popup {
                     editor: Editor::default(),
                     target: Target::Add,
                 })
             }
             KeyCode::Char('/') => {
                 self.search.clear();
-                self.searching = true;
+                self.focus = Focus::Search;
                 self.cursor = 0;
             }
             KeyCode::Esc => {
@@ -376,22 +374,63 @@ impl App {
             }
             KeyCode::Enter => {
                 if let Some(number) = selected {
-                    self.popup = Some(Popup {
+                    self.focus = Focus::Popup(Popup {
                         editor: Editor::new(self.store.todos[number - 1].to_line(), Mode::Normal),
                         target: Target::Edit(number),
                     })
                 }
             }
-            KeyCode::Tab => self.panel = true,
-            KeyCode::Char('?') => self.help = true,
+            KeyCode::Tab => self.focus = Focus::Panel,
+            KeyCode::Char('?') => self.focus = Focus::Help,
             KeyCode::Char('H') => {
                 self.show_done = !self.show_done;
                 self.cursor = 0;
             }
             _ => {}
         }
-        self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
         write
+    }
+
+    /// Folds every group on screen, the cursor on the header of the group of `row`.
+    fn fold_all(&mut self, row: Option<Row>) {
+        self.folded = self.groups().into_iter().map(|(group, _)| group).collect();
+        if let Some(row) = row {
+            self.select(row);
+        }
+    }
+
+    /// Unfolds every group, the cursor back on the task of `row`, or on the first task of its group when `row` is a header.
+    fn unfold_all(&mut self, row: Option<Row>) {
+        self.folded.clear();
+        let target = match row {
+            Some(Row::Group(group)) => self.first_task(group),
+            row => row,
+        };
+        if let Some(target) = target {
+            self.select(target);
+        }
+    }
+
+    /// Folds the group of the task of `row` onto its header, or unfolds the header `row` onto its first task.
+    fn toggle_fold(&mut self, row: Option<Row>) {
+        match row {
+            Some(Row::Task(number)) if !self.groups().is_empty() => {
+                self.folded.push(Group::of(&self.store.todos[number - 1]));
+                self.select(Row::Task(number));
+            }
+            Some(Row::Group(group)) => {
+                self.folded.retain(|folded| *folded != group);
+                if let Some(first) = self.first_task(group) {
+                    self.select(first);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// Keeps the cursor on a row, on the last one when it was past the end.
+    fn clamp_cursor(&mut self) {
+        self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
     }
 
     /// Adds the task typed as `text`, dated `today`, with the cursor on it; a rejected text only leaves a message.
@@ -466,10 +505,10 @@ impl App {
         self.undo.clear();
         self.redo.clear();
         self.forget_gone_folds();
-        self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
+        self.clamp_cursor();
         self.message = Some("reloaded".to_string());
-        if let Some(Popup { target: Target::Edit(_), .. }) = self.popup {
-            self.popup = None;
+        if let Focus::Popup(Popup { target: Target::Edit(_), .. }) = self.focus {
+            self.focus = Focus::List;
             self.message = Some("reloaded, edit cancelled".to_string());
         }
     }

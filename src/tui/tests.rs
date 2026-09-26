@@ -16,6 +16,13 @@ fn press(app: &mut App, keys: &str) -> bool {
         .fold(false, |write, c| app.handle_key(KeyEvent::from(KeyCode::Char(c)), TODAY) | write)
 }
 
+fn popup(app: &App) -> &Popup {
+    match &app.focus {
+        Focus::Popup(popup) => popup,
+        _ => panic!("the popup is closed"),
+    }
+}
+
 fn shown(app: &App) -> Vec<String> {
     app.tasks().into_iter().map(|(_, todo)| todo.to_line()).collect()
 }
@@ -41,7 +48,7 @@ fn o_types_a_task_that_enter_adds_with_the_cursor_on_it() {
     assert_eq!(shown(&app), ["(A) 2026-09-26 Ask for a quote", "one", "two", "three"]);
     assert_eq!(app.cursor, 0);
     assert!(!app.quit);
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
 }
 
 #[test]
@@ -52,12 +59,12 @@ fn backspace_edits_the_input_and_esc_twice_drops_it() {
     press(&mut app, "oab");
     app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
     press(&mut app, "c");
-    assert_eq!(app.popup.as_ref().unwrap().editor.text, "ac");
+    assert_eq!(popup(&app).editor.text, "ac");
 
     assert!(!app.handle_key(esc, TODAY));
-    assert_eq!(app.popup.as_ref().unwrap().editor.mode, Mode::Normal);
+    assert_eq!(popup(&app).editor.mode, Mode::Normal);
     assert!(!app.handle_key(esc, TODAY));
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(shown(&app), ["one", "two", "three"]);
 }
 
@@ -93,7 +100,7 @@ fn enter_opens_the_task_line_in_normal_mode_and_the_cursor_follows_the_edited_ta
 
     assert!(!press(&mut app, "jj"));
     app.handle_key(enter, TODAY);
-    let editor = &app.popup.as_ref().unwrap().editor;
+    let editor = &popup(&app).editor;
     assert_eq!((editor.text.as_str(), editor.cursor, editor.mode), ("three", 0, Mode::Normal));
 
     press(&mut app, "i(A) ");
@@ -101,7 +108,7 @@ fn enter_opens_the_task_line_in_normal_mode_and_the_cursor_follows_the_edited_ta
 
     assert_eq!(shown(&app), ["(A) three", "one", "two"]);
     assert_eq!(app.cursor, 0);
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
 }
 
 #[test]
@@ -148,10 +155,10 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
 
     app.handle_key(enter, TODAY);
     press(&mut app, "WD");
-    assert_eq!(app.popup.as_ref().unwrap().editor.text, "(A) ");
+    assert_eq!(popup(&app).editor.text, "(A) ");
     assert!(!app.handle_key(enter, TODAY));
     assert_eq!(app.message.as_deref(), Some("a task needs a description"));
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(shown(&app), ["(A) one"]);
 }
 
@@ -161,7 +168,7 @@ fn enter_on_an_empty_list_opens_nothing() {
 
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
 
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
 }
 
 #[test]
@@ -171,12 +178,12 @@ fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
 
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
     app.reload(reread());
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(app.message.as_deref(), Some("reloaded, edit cancelled"));
 
     press(&mut app, "onew");
     app.reload(reread());
-    assert_eq!(app.popup.as_ref().unwrap().editor.text, "new");
+    assert_eq!(popup(&app).editor.text, "new");
     assert_eq!(app.message.as_deref(), Some("reloaded"));
 }
 
@@ -275,7 +282,7 @@ fn esc_in_the_panel_goes_back_to_all_and_esc_in_the_list_drops_filter_and_search
     press(&mut app, "j");
     app.handle_key(esc, TODAY);
     assert_eq!(app.filter, None);
-    assert!(app.panel);
+    assert!(matches!(app.focus, Focus::Panel));
 
     press(&mut app, "j");
     app.handle_key(tab, TODAY);
@@ -308,10 +315,10 @@ fn question_mark_opens_the_help_and_the_next_key_only_closes_it() {
     let mut app = app();
 
     press(&mut app, "?");
-    assert!(app.help);
+    assert!(matches!(app.focus, Focus::Help));
 
     assert!(!press(&mut app, "x"));
-    assert!(!app.help);
+    assert!(!matches!(app.focus, Focus::Help));
     assert_eq!(shown(&app), ["one", "two", "three"]);
 
     press(&mut app, "?q");
@@ -503,7 +510,7 @@ fn a_folded_header_ignores_the_task_keys() {
     assert!(!press(&mut app, "xddpb"));
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
 
-    assert!(app.popup.is_none());
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(shown(&app), ["(A) a", "(A) b", "(B) c", "d"]);
 }
 

@@ -3,19 +3,20 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-/// Load the todo list from a file, returning an empty list if the file is missing.
-pub fn load(path: &Path) -> io::Result<Vec<Todo>> {
+/// Load the todo list from a file along with its raw text, both empty if the file is missing.
+pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
     let content = match fs::read_to_string(path) {
         Ok(content) => content,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
         Err(e) => return Err(e),
     };
 
-    Ok(content.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect())
+    let todos = content.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect();
+    Ok((content, todos))
 }
 
-/// Save the todo list to a file, overwriting any existing content.
-pub fn save(path: &Path, todos: &[Todo]) -> io::Result<()> {
+/// Save the todo list to a file, overwriting any existing content, and return the text written.
+pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     let body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
 
     // Write to a sibling file and rename over the target so a crash can't leave a half-written todo file.
@@ -23,8 +24,9 @@ pub fn save(path: &Path, todos: &[Todo]) -> io::Result<()> {
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
 
-    fs::write(&tmp, body)?;
-    fs::rename(&tmp, path)
+    fs::write(&tmp, &body)?;
+    fs::rename(&tmp, path)?;
+    Ok(body)
 }
 
 #[cfg(test)]
@@ -41,18 +43,22 @@ mod tests {
         let path = temp_path("roundtrip");
         let todos = vec![Todo::from_line("(A) Lorem ipsum dolor"), Todo::from_line("x Consectetur adipiscing")];
 
-        save(&path, &todos).unwrap();
-        let lines: Vec<String> = load(&path).unwrap().iter().map(Todo::to_line).collect();
+        let written = save(&path, &todos).unwrap();
+        let (text, loaded) = load(&path).unwrap();
 
+        let lines: Vec<String> = loaded.iter().map(Todo::to_line).collect();
         assert_eq!(lines, ["(A) Lorem ipsum dolor", "x Consectetur adipiscing"]);
+        assert_eq!(text, written);
     }
 
     #[test]
-    fn load_drops_blank_lines() {
+    fn load_drops_blank_lines_from_the_tasks_but_not_from_the_raw_text() {
         let path = temp_path("blank");
         std::fs::write(&path, "Lorem ipsum\n\n   \nConsectetur adipiscing\n").unwrap();
 
-        assert_eq!(load(&path).unwrap().len(), 2);
+        let (text, todos) = load(&path).unwrap();
+        assert_eq!(todos.len(), 2);
+        assert_eq!(text, "Lorem ipsum\n\n   \nConsectetur adipiscing\n");
     }
 
     #[test]
@@ -60,6 +66,8 @@ mod tests {
         let path = temp_path("missing");
         let _ = std::fs::remove_file(&path);
 
-        assert_eq!(load(&path).unwrap().len(), 0);
+        let (text, todos) = load(&path).unwrap();
+        assert_eq!(text, "");
+        assert_eq!(todos.len(), 0);
     }
 }

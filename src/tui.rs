@@ -1,5 +1,6 @@
 use std::io;
 use std::path::Path;
+use std::time::Duration;
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::widgets::ListState;
@@ -82,21 +83,46 @@ impl App {
         self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
         write
     }
+
+    /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row.
+    pub fn reload(&mut self, store: Store) {
+        self.store = store;
+        self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+        self.message = Some("reloaded".to_string());
+    }
 }
 
 /// Runs the interactive list until the user quits, saving to `path` after every change.
-pub fn run(store: Store, path: &Path) -> io::Result<()> {
+/// `text` is the file as last read or written: when the file no longer matches it, the list is reloaded and the key ignored.
+pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
     let mut app = App::new(store);
     let mut scroll = ListState::default();
     ratatui::run(|terminal| {
         while !app.quit {
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll))?;
-            if let Event::Key(key) = event::read()?
+            let event = if event::poll(Duration::from_millis(250))? {
+                Some(event::read()?)
+            } else {
+                None
+            };
+            if let Ok((current, todos)) = repository::load(path)
+                && current != text
+            {
+                text = current;
+                app.reload(Store::new(todos));
+            } else if let Some(Event::Key(key)) = event
                 && key.kind == KeyEventKind::Press
                 && app.handle_key(key, crate::today())
-                && let Err(e) = repository::save(path, &app.store.todos)
             {
-                app.message = Some(format!("could not save: {e} (file left unchanged)"));
+                match repository::save(path, &app.store.todos) {
+                    Ok(written) => text = written,
+                    Err(e) => {
+                        if let Ok((_, todos)) = repository::load(path) {
+                            app.reload(Store::new(todos));
+                        }
+                        app.message = Some(format!("could not save: {e} (file left unchanged)"));
+                    }
+                }
             }
         }
         Ok(())
@@ -136,6 +162,20 @@ mod tests {
         assert_eq!(shown(&app), ["one", "three"]);
         assert_eq!(app.cursor, 1);
         assert_eq!(app.store.todos[1].to_line(), "x 2026-09-26 two");
+    }
+
+    #[test]
+    fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
+        let mut app = app();
+        press(&mut app, "G");
+
+        app.reload(Store::new(vec![Todo::from_line("one"), Todo::from_line("four")]));
+
+        assert_eq!(shown(&app), ["one", "four"]);
+        assert_eq!(app.cursor, 1);
+        assert_eq!(app.message.as_deref(), Some("reloaded"));
+        press(&mut app, "k");
+        assert_eq!(app.message, None);
     }
 
     #[test]

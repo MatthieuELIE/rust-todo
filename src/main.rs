@@ -22,8 +22,8 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
 
-    let mut store = match repository::load(&path) {
-        Ok(todos) => Store::new(todos),
+    let (text, mut store) = match repository::load(&path) {
+        Ok((text, todos)) => (text, Store::new(todos)),
         Err(e) => {
             eprintln!("could not read {}: {e}", path.display());
             return ExitCode::FAILURE;
@@ -31,7 +31,7 @@ fn main() -> ExitCode {
     };
 
     let Some(command) = cli.command else {
-        return match tui::run(store, &path) {
+        return match tui::run(store, text, &path) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");

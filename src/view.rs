@@ -2,19 +2,37 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{List, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, List, ListState, Paragraph};
 
 use crate::todo::Todo;
 use crate::tui::{App, Prompt};
 
-/// Draws the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the next.
+/// Draws the filter panel and the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the
+/// next.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
-    let [list_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
+    let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
+    let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
+
+    let filters = app.filters();
+    let row = app.filter_row(&filters);
+    let entries = filters.iter().map(|(term, count)| format!(" {term:<14.14} {count:>3}"));
+    let highlight = if app.panel {
+        Style::new().bg(Color::DarkGray)
+    } else {
+        Style::new().bold()
+    };
+    let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
+    frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(Some(row)));
 
     let tasks = app.tasks();
     if tasks.is_empty() {
         frame.render_widget(
-            Paragraph::new(if app.search.is_empty() { "nothing to do" } else { "no matching task" }).dim(),
+            Paragraph::new(if app.search.is_empty() && app.filter.is_none() {
+                "nothing to do"
+            } else {
+                "no matching task"
+            })
+            .dim(),
             list_area,
         );
     } else {
@@ -25,16 +43,21 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     }
 
     let status = match app.prompt {
-        Some(Prompt::Add) => Line::from(format!(" add: {}▌", app.input)),
+        Some(Prompt::Add) => match &app.filter {
+            Some(term) => Line::from(format!(" add ({term}): {}▌", app.input)),
+            None => Line::from(format!(" add: {}▌", app.input)),
+        },
         Some(Prompt::Search) => Line::from(format!(" /{}▌", app.search)),
         None => {
-            let search = if app.search.is_empty() {
-                String::new()
-            } else {
-                format!("  /{}", app.search)
-            };
-            let done = if app.show_done { "  +done" } else { "" };
-            Line::from_iter([" LIST".bold(), search.into(), done.into()])
+            let mode = if app.panel { " PANEL" } else { " LIST" };
+            let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
+            let done = app.show_done.then(|| "+done".to_string());
+            let filters: String = [app.filter.clone(), search, done]
+                .into_iter()
+                .flatten()
+                .map(|f| format!("  {f}"))
+                .collect();
+            Line::from_iter([mode.bold(), filters.into()])
         }
     };
     frame.render_widget(Paragraph::new(status), status_area);

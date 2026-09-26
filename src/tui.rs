@@ -40,6 +40,10 @@ pub struct App {
     pub input: String,
     /// Search terms, separated by whitespace, as `todo list` takes them.
     pub search: String,
+    /// Term picked in the panel, `None` for `all`.
+    pub filter: Option<String>,
+    /// Set while keys go to the panel rather than the list.
+    pub panel: bool,
 }
 
 impl App {
@@ -55,13 +59,43 @@ impl App {
             prompt: None,
             input: String::new(),
             search: String::new(),
+            filter: None,
+            panel: false,
         }
     }
 
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
-        let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
+        let mut terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
+        terms.extend(self.filter.clone());
         self.store.list(self.show_done, &terms)
+    }
+
+    /// Panel entries with how many tasks each shows, the search left out: `all`, then the `+projects` and `@contexts` of the
+    /// tasks shown, each alphabetical.
+    pub fn filters(&self) -> Vec<(String, usize)> {
+        let shown = self.store.list(self.show_done, &[]);
+        let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
+            let mut terms: Vec<String> = shown
+                .iter()
+                .flat_map(|(_, todo)| names(todo))
+                .map(|name| format!("{sigil}{name}"))
+                .collect();
+            terms.sort_by_key(|term| (term.to_lowercase(), term.clone()));
+            terms.dedup();
+            terms
+        };
+        let mut filters = vec![("all".to_string(), shown.len())];
+        for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
+            let count = self.store.list(self.show_done, std::slice::from_ref(&term)).len();
+            filters.push((term, count));
+        }
+        filters
+    }
+
+    /// Row of the active filter among the panel `filters`, `all` when it is not among them.
+    pub fn filter_row(&self, filters: &[(String, usize)]) -> usize {
+        filters.iter().position(|(term, _)| Some(term) == self.filter.as_ref()).unwrap_or(0)
     }
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
@@ -97,6 +131,25 @@ impl App {
             }
             return false;
         }
+        if self.panel {
+            let filters = self.filters();
+            let row = self.filter_row(&filters);
+            let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
+            let before = self.filter.clone();
+            match key.code {
+                KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
+                KeyCode::Char('q') => self.quit = true,
+                KeyCode::Char('j') | KeyCode::Down => self.filter = pick((row + 1).min(filters.len() - 1)),
+                KeyCode::Char('k') | KeyCode::Up => self.filter = pick(row.saturating_sub(1)),
+                KeyCode::Esc => self.filter = None,
+                KeyCode::Tab | KeyCode::Enter => self.panel = false,
+                _ => {}
+            }
+            if self.filter != before {
+                self.cursor = 0;
+            }
+            return false;
+        }
         let mut write = false;
         match key.code {
             KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
@@ -127,8 +180,10 @@ impl App {
             }
             KeyCode::Esc => {
                 self.search.clear();
+                self.filter = None;
                 self.cursor = 0;
             }
+            KeyCode::Tab => self.panel = true,
             KeyCode::Char('H') => {
                 self.show_done = !self.show_done;
                 self.cursor = 0;
@@ -140,9 +195,15 @@ impl App {
     }
 
     /// Adds the task typed as `text`, dated `today`, with the cursor on it; a rejected text only leaves a message.
+    /// Under a panel filter the term is appended when the task would not match it.
     fn add(&mut self, text: &str, today: Date) -> bool {
         match Todo::new_from_input(text, today) {
-            Ok(todo) => {
+            Ok(mut todo) => {
+                if let Some(term) = &self.filter
+                    && !todo.to_line().to_lowercase().contains(&term.to_lowercase())
+                {
+                    todo.description = format!("{} {term}", todo.description);
+                }
                 self.store.add(todo);
                 let number = self.store.todos.len();
                 match self.tasks().iter().position(|(n, _)| *n == number) {
@@ -318,6 +379,74 @@ mod tests {
         assert_eq!(shown(&app), ["two", "three"]);
         assert_eq!(app.cursor, 1);
         assert_eq!(app.message.as_deref(), Some("added, hidden by the filter"));
+    }
+
+    #[test]
+    fn the_panel_lists_all_then_projects_then_contexts_alphabetically_with_their_shown_count() {
+        let mut app = app_of(&["Pay +rent @home", "Call +bank @phone +rent", "x Old +archive", "Read +Books"]);
+
+        let expected = [("all", 3), ("+bank", 1), ("+Books", 1), ("+rent", 2), ("@home", 1), ("@phone", 1)];
+        assert_eq!(app.filters(), expected.map(|(name, count)| (name.to_string(), count)));
+
+        press(&mut app, "H/call");
+        assert_eq!(app.filters()[..2], [("all".to_string(), 4), ("+archive".to_string(), 1)]);
+    }
+
+    #[test]
+    fn in_the_panel_j_and_k_filter_the_list_from_the_top_and_tab_goes_back_keeping_the_filter() {
+        let mut app = app_of(&["Pay +rent", "Call +bank", "Buy milk +rent"]);
+        let tab = KeyEvent::from(KeyCode::Tab);
+
+        press(&mut app, "j");
+        app.handle_key(tab, TODAY);
+        press(&mut app, "jj");
+        assert_eq!(app.filter.as_deref(), Some("+rent"));
+        assert_eq!(shown(&app), ["Pay +rent", "Buy milk +rent"]);
+        assert_eq!(app.cursor, 0);
+
+        app.handle_key(tab, TODAY);
+        press(&mut app, "j");
+        assert_eq!(app.cursor, 1);
+        app.handle_key(tab, TODAY);
+        press(&mut app, "k");
+        assert_eq!(app.filter.as_deref(), Some("+bank"));
+    }
+
+    #[test]
+    fn esc_in_the_panel_goes_back_to_all_and_esc_in_the_list_drops_filter_and_search() {
+        let mut app = app_of(&["Pay +rent", "Call +bank"]);
+        let (tab, esc) = (KeyEvent::from(KeyCode::Tab), KeyEvent::from(KeyCode::Esc));
+
+        app.handle_key(tab, TODAY);
+        press(&mut app, "j");
+        app.handle_key(esc, TODAY);
+        assert_eq!(app.filter, None);
+        assert!(app.panel);
+
+        press(&mut app, "j");
+        app.handle_key(tab, TODAY);
+        press(&mut app, "/pay");
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+        app.handle_key(esc, TODAY);
+        assert_eq!(shown(&app), ["Pay +rent", "Call +bank"]);
+    }
+
+    #[test]
+    fn a_task_added_under_a_panel_filter_gets_its_term_unless_it_already_matches() {
+        let mut app = app_of(&["Pay +rent"]);
+        let enter = KeyEvent::from(KeyCode::Enter);
+        app.filter = Some("+rent".to_string());
+
+        press(&mut app, "o(A) Call landlord");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "oFix +Rent form");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "o");
+        app.handle_key(enter, TODAY);
+
+        let lines: Vec<String> = app.store.todos.iter().map(Todo::to_line).collect();
+        assert_eq!(lines, ["Pay +rent", "(A) 2026-09-26 Call landlord +rent", "2026-09-26 Fix +Rent form"]);
+        assert_eq!(app.cursor, 2);
     }
 
     #[test]

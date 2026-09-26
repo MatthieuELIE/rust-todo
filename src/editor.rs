@@ -11,6 +11,8 @@ pub enum Outcome {
     Submit,
     /// The text is to be dropped.
     Cancel,
+    /// The key after `p` was not a priority, and did nothing.
+    NotPriority,
 }
 
 /// How keys act on the text, as in vim.
@@ -49,6 +51,10 @@ impl Editor {
 
     /// Applies one key press to the text and tells whether editing goes on.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
+        if self.pending == Some('p') && !matches!(key.code, KeyCode::Char('a'..='e' | ' ')) {
+            self.pending = None;
+            return Outcome::NotPriority;
+        }
         match (self.mode, key.code) {
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,

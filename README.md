@@ -25,8 +25,37 @@ todo do 2                     # mark task 2 as done
 todo remove 2                 # delete task 2
 ```
 
-Only `add`, `do` and `remove` write the file, and the write is atomic.
+Only `add`, `do`, `remove` and the interactive list write the file, and the write is atomic.
 `ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` still works for `do`.
+
+## Interactive list
+
+`todo` with no command opens the list full screen, meant for a terminal popup kept open a few seconds.
+Every change is written at once, and `q` quits without asking.
+
+| Key | Action |
+| --- | --- |
+| `j` `k`, `↓` `↑` | move |
+| `gg`, `G` | top, bottom |
+| `x` | mark done, or pending again |
+| `o` | add a task, typed as for `todo add` |
+| `dd` | delete |
+| `/` | search, filtering at each letter |
+| `H` | show or hide done tasks |
+| `Tab` | move to the filter panel |
+| `Esc` | drop the filter and the search |
+| `?` | show the keys |
+| `q`, `Ctrl-C` | quit |
+
+The rows are those of `todo list`: same numbers, order and styling.
+`gg` and `dd` wait for their second key without a timer, and any other key drops them.
+A task marked pending again loses its completion date and does not get back the priority dropped when it was done.
+
+The panel on the left lists `all`, then every `+project` and `@context` of the tasks shown, with how many tasks each shows.
+Moving through it with `j` and `k` filters the list, `Esc` goes back to `all`, and `Tab` or `Enter` returns to the list.
+The panel filter and the search are terms as for `todo list`, and a task added under a panel filter gets its term appended when it lacks it.
+
+When the file changes on disk while the list is open, the list is reloaded and the key pressed at that moment is ignored.
 
 ## Listing
 

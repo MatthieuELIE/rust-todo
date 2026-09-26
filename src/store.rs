@@ -8,7 +8,6 @@ pub struct Store {
     pub todos: Vec<Todo>,
 }
 
-/// Methods for managing the todo store.
 impl Store {
     /// Create a new store with the given list of todos.
     pub fn new(todos: Vec<Todo>) -> Self {

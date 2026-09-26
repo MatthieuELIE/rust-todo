@@ -68,7 +68,7 @@ Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
 A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.
 
-An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks it.
+An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task.
 
@@ -88,7 +88,8 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 The panel on the left lists `all`, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
 Moving through it with `j` and `k` filters the list, `Esc` goes back to `all`, and `Tab` or `Enter` returns to the list.
-The panel filter and the search are terms as for `todo list`.
+A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
+The search is terms as for `todo list`.
 
 When the file changes on disk while the list is open, the list is reloaded and the key pressed at that moment is ignored.
 

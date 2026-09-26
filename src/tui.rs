@@ -304,6 +304,7 @@ pub fn show_error(message: &str) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::editor::Mode;
     use time::macros::date;
 
     const TODAY: Date = date!(2026 - 09 - 26);
@@ -350,17 +351,33 @@ mod tests {
     }
 
     #[test]
-    fn backspace_edits_the_input_and_esc_drops_it() {
+    fn backspace_edits_the_input_and_esc_twice_drops_it() {
         let mut app = app();
+        let esc = KeyEvent::from(KeyCode::Esc);
 
         press(&mut app, "oab");
         app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
         press(&mut app, "c");
         assert_eq!(app.popup.as_ref().unwrap().editor.text, "ac");
 
-        app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+        assert!(!app.handle_key(esc, TODAY));
+        assert_eq!(app.popup.as_ref().unwrap().editor.mode, Mode::Normal);
+        assert!(!app.handle_key(esc, TODAY));
         assert!(app.popup.is_none());
         assert_eq!(shown(&app), ["one", "two", "three"]);
+    }
+
+    #[test]
+    fn enter_in_normal_mode_adds_the_task_too() {
+        let mut app = app();
+
+        press(&mut app, "oCall bank");
+        app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+        press(&mut app, "bithe ");
+        app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+
+        assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+        assert_eq!(app.store.todos[3].to_line(), "2026-09-26 Call the bank");
     }
 
     #[test]

@@ -48,7 +48,7 @@ fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted()
         ]
     );
     assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
-    assert_eq!(buffer[(30, 0)].bg, Color::Reset);
+    assert_eq!(buffer[(30, 0)].bg, BACKGROUND);
     assert!(buffer[(2, 0)].modifier.contains(Modifier::BOLD));
     assert!(!buffer[(2, 3)].modifier.contains(Modifier::BOLD));
 }
@@ -61,7 +61,7 @@ fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_f
     let buffer = render_in(&app, 50, 8);
     assert!(rows(&buffer)[0].starts_with("  All tasks "));
     assert!(rows(&buffer)[4].starts_with("▸ +rent "));
-    assert_eq!(buffer[(5, 4)].bg, Color::Reset);
+    assert_eq!(buffer[(5, 4)].bg, BACKGROUND);
 
     app.focus = Focus::Panel;
     assert_eq!(render_in(&app, 50, 8)[(5, 4)].bg, Color::DarkGray);
@@ -75,7 +75,7 @@ fn a_filter_gone_from_the_panel_marks_no_entry() {
 
     let buffer = render_in(&app, 50, 8);
     assert!(rows(&buffer).iter().all(|row| !row.starts_with('▸')));
-    assert_eq!(buffer[(5, 0)].bg, Color::Reset);
+    assert_eq!(buffer[(5, 0)].bg, BACKGROUND);
 }
 
 #[test]
@@ -178,6 +178,18 @@ fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
 }
 
 #[test]
+fn every_cell_left_unpainted_takes_the_background_even_under_a_cleared_box() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.focus = Focus::Help;
+
+    let buffer = render_in(&app, 80, 30);
+
+    assert_eq!(buffer[(79, 1)].bg, BACKGROUND);
+    assert_eq!(buffer[(40, 15)].bg, BACKGROUND);
+    assert!(buffer.content.iter().all(|cell| cell.bg != Color::Reset));
+}
+
+#[test]
 fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
     let mut app = app_of(&["Pay +rent"]);
     app.filter = Some("+rent".to_string());
@@ -191,7 +203,7 @@ fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
     assert!(status.ends_with(" reloaded"), "{status}");
     assert_eq!((buffer[(1, 4)].bg, buffer[(1, 4)].fg), (Color::Blue, Color::Black));
     assert!(buffer[(1, 4)].modifier.contains(Modifier::BOLD));
-    assert_eq!(buffer[(7, 4)].bg, Color::Reset);
+    assert_eq!(buffer[(7, 4)].bg, BACKGROUND);
 }
 
 #[test]
@@ -287,7 +299,7 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
     let y = y as u16;
     assert_eq!(buffer[(10, y + 2)].fg, Color::Magenta);
     assert!(buffer[(19, y + 2)].modifier.contains(Modifier::DIM));
-    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (Color::Reset, Color::DarkGray));
+    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (BACKGROUND, Color::DarkGray));
     assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
 }
 

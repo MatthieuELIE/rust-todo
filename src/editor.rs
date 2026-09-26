@@ -1,5 +1,7 @@
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+use crate::todo::Todo;
+
 /// What a key did to the line being edited.
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum Outcome {
@@ -31,7 +33,7 @@ pub struct Editor {
     pub cursor: usize,
     /// Whether keys are typed or are commands.
     pub mode: Mode,
-    /// Operator (`d`, `c`) waiting for its motion.
+    /// Key (`d`, `c`, `p`) waiting for its motion or priority.
     pending: Option<char>,
 }
 
@@ -112,7 +114,8 @@ impl Editor {
                 self.remove(at, end);
                 self.mode = Mode::Insert;
             }
-            KeyCode::Char(op @ ('d' | 'c')) => self.pending = Some(op),
+            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
+            KeyCode::Char(op @ ('d' | 'c' | 'p')) => self.pending = Some(op),
             KeyCode::Char('h') => self.cursor = at.saturating_sub(1),
             KeyCode::Char('l') => self.cursor = (at + 1).min(last),
             KeyCode::Char('0') => self.cursor = 0,
@@ -144,6 +147,27 @@ impl Editor {
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
+    }
+
+    /// Writes the priority `c`, `a` to `e`, at the start of a pending line in place of the one there, or drops it for a space;
+    /// the cursor stays on its character.
+    fn set_priority(&mut self, c: char) {
+        let todo = Todo::from_line(&self.text);
+        if todo.done {
+            return;
+        }
+        let old = if todo.priority.is_some() { 4 } else { 0 };
+        let new = if c == ' ' {
+            String::new()
+        } else {
+            format!("({}) ", c.to_ascii_uppercase())
+        };
+        self.text.replace_range(..old, &new);
+        self.cursor = if self.cursor < old {
+            self.cursor.min(new.len())
+        } else {
+            self.cursor - old + new.len()
+        };
     }
 
     /// Erases the characters from position `start` up to `end`, leaving the cursor at `start`.

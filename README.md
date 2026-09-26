@@ -65,6 +65,7 @@ The status bar shows the mode in a coloured block, the active filters, and the k
 
 In insert mode, characters go in at the cursor, and `←` `→`, `Home` `End`, `Backspace` `Delete`, `Ctrl-W` (the word before the cursor) and `Ctrl-U` (back to the start) edit the line.
 Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `E`, `x`, `D`, `C`, `dw` `cw` `dW` `cW`, `i` `a` `I` `A`.
+`p` then `a` to `e` writes or replaces the priority at the start of the line, and `p` then `Space` drops it, as in the list; a done line is left alone.
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
 A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.
 

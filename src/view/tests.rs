@@ -174,6 +174,7 @@ fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
     assert!(rows.iter().any(|row| row.contains("za           fold, unfold group")));
     assert!(rows.iter().any(|row| row.contains("Tab  Enter   back to the list")));
     assert!(rows.iter().any(|row| row.contains("Esc          all tasks")));
+    assert_eq!(rows.iter().filter(|row| row.contains("p Space      no priority")).count(), 2);
 }
 
 #[test]
@@ -246,8 +247,8 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = Mode::Normal;
     }
-    let buffer = render(&app);
-    assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · ⏎ save · esc cancel");
+    let buffer = render_in(&app, 70, 5);
+    assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · p priority · ⏎ save · esc cancel");
     assert_eq!(buffer[(1, 4)].bg, Color::Blue);
 }
 

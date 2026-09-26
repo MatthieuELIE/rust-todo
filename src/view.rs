@@ -43,6 +43,8 @@ W B E        blank-separated word
 x  D  C      delete, to end, change
 dw cw dW cW  delete, change a word
 i a  I A     insert
+p a…e        priority
+p Space      no priority
 Esc          cancel
 
 in the panel
@@ -125,7 +127,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
         Focus::Popup(popup) => match popup.editor.mode {
             Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
-            Mode::Normal => ("NORMAL", Color::Blue, "i insert · ⏎ save · esc cancel"),
+            Mode::Normal => ("NORMAL", Color::Blue, "i insert · p priority · ⏎ save · esc cancel"),
         },
         Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all tasks · tab back"),
         Focus::List | Focus::Help => ("LIST", Color::Blue, "⏎ edit · o add · x done · p priority · ? help"),

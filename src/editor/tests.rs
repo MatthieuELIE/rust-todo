@@ -275,3 +275,34 @@ fn a_paste_in_normal_mode_leaves_the_cursor_on_a_character() {
 
     assert_eq!(state(&ed), ("Call", 3));
 }
+
+#[test]
+fn p_then_a_letter_writes_or_replaces_the_priority_keeping_the_cursor_on_its_character() {
+    let mut ed = normal("Call +bank", 5);
+
+    keys(&mut ed, "pb");
+    assert_eq!(state(&ed), ("(B) Call +bank", 9));
+    assert_eq!(ed.mode, Mode::Normal);
+    keys(&mut ed, "pa");
+    assert_eq!(state(&ed), ("(A) Call +bank", 9));
+    keys(&mut ed, "p ");
+    assert_eq!(state(&ed), ("Call +bank", 5));
+
+    let mut ed = normal(LINE, 1);
+    keys(&mut ed, "pe");
+    assert_eq!(state(&ed), ("(E) 2026-09-26 Call +bank due:2026-10-01", 1));
+    keys(&mut ed, "p ");
+    assert_eq!(state(&ed), ("2026-09-26 Call +bank due:2026-10-01", 0));
+}
+
+#[test]
+fn p_leaves_a_done_line_alone_and_is_a_letter_in_insert_mode() {
+    let mut ed = normal("x 2026-09-26 Call", 3);
+    keys(&mut ed, "pa");
+    assert_eq!(state(&ed), ("x 2026-09-26 Call", 3));
+    assert_eq!(ed.mode, Mode::Normal);
+
+    let mut ed = editor("", 0);
+    keys(&mut ed, "pa");
+    assert_eq!(state(&ed), ("pa", 2));
+}

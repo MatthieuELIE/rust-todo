@@ -1,6 +1,6 @@
 use crate::todo::Todo;
 use std::fs;
-use std::io;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 /// Load the todo list from a file along with its raw text, both empty if the file is missing.
@@ -18,14 +18,20 @@ pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
 /// Save the todo list to a file, overwriting any existing content, and return the text written.
 pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     let body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
+    let path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
 
     // Write to a sibling file and rename over the target so a crash can't leave a half-written todo file.
-    let mut tmp = PathBuf::from(path).into_os_string();
+    let mut tmp = path.clone().into_os_string();
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
 
-    fs::write(&tmp, &body)?;
-    fs::rename(&tmp, path)?;
+    let mut file = fs::File::create(&tmp)?;
+    file.write_all(body.as_bytes())?;
+    if let Ok(metadata) = fs::metadata(&path) {
+        file.set_permissions(metadata.permissions())?;
+    }
+    file.sync_all()?;
+    fs::rename(&tmp, &path)?;
     Ok(body)
 }
 
@@ -49,6 +55,22 @@ mod tests {
         let lines: Vec<String> = loaded.iter().map(Todo::to_line).collect();
         assert_eq!(lines, ["(A) Lorem ipsum dolor", "x Consectetur adipiscing"]);
         assert_eq!(text, written);
+    }
+
+    #[test]
+    fn save_writes_through_a_symlink_and_keeps_the_file_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let (target, link) = (temp_path("target"), temp_path("link"));
+        std::fs::write(&target, "Lorem ipsum\n").unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+        let _ = std::fs::remove_file(&link);
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        save(&link, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "Consectetur adipiscing\n");
+        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o600);
     }
 
     #[test]

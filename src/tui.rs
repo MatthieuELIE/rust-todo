@@ -13,6 +13,9 @@ use crate::store::Store;
 use crate::todo::Todo;
 use crate::view;
 
+/// Said when the key after `p` is not a priority.
+const NOT_PRIORITY: &str = "priority is a to e, or space";
+
 /// What the popup's text becomes once submitted.
 pub enum Target {
     /// A new task.
@@ -262,6 +265,10 @@ impl App {
             }
             Focus::Popup(ref mut popup) => match popup.editor.handle_key(key) {
                 Outcome::Continue => false,
+                Outcome::NotPriority => {
+                    self.message = Some(NOT_PRIORITY.to_string());
+                    false
+                }
                 outcome => self.close_popup(outcome, today),
             },
             Focus::Search => {
@@ -336,9 +343,6 @@ impl App {
         };
         let mut write = false;
         match key.code {
-            KeyCode::Char('q') => self.quit = true,
-            KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
-            KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
                 let priority = (c != ' ').then(|| c.to_ascii_uppercase());
                 if let Some(number) = selected
@@ -351,6 +355,10 @@ impl App {
                     write = true;
                 }
             }
+            _ if pending == Some('p') => self.message = Some(NOT_PRIORITY.to_string()),
+            KeyCode::Char('q') => self.quit = true,
+            KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
+            KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
             KeyCode::Char('p') => self.pending = Some('p'),
             KeyCode::Char('M') if pending == Some('z') => self.fold_all(row),
             KeyCode::Char('R') if pending == Some('z') => self.unfold_all(row),

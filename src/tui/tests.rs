@@ -421,6 +421,32 @@ fn p_does_nothing_with_another_key_the_same_priority_or_a_done_task() {
     assert_eq!(shown(&app), ["(A) one", "x 2026-09-20 two"]);
 }
 
+#[test]
+fn a_key_after_p_other_than_a_to_e_or_space_says_so_and_is_swallowed() {
+    let mut app = app();
+    let enter = KeyEvent::from(KeyCode::Enter);
+
+    assert!(!press(&mut app, "pj"));
+    assert_eq!(app.message.as_deref(), Some("priority is a to e, or space"));
+    assert_eq!(app.cursor, 0);
+    press(&mut app, "pq");
+    assert!(!app.quit);
+    press(&mut app, "p");
+    app.handle_key(enter, TODAY);
+    assert!(matches!(app.focus, Focus::List));
+    press(&mut app, "j");
+    assert_eq!((app.message.as_deref(), app.cursor), (None, 1));
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "pA");
+    assert_eq!(app.message.as_deref(), Some("priority is a to e, or space"));
+    press(&mut app, "p");
+    app.handle_key(enter, TODAY);
+    assert_eq!(popup(&app).editor.text, "two");
+    press(&mut app, "pa");
+    assert_eq!((popup(&app).editor.text.as_str(), app.message.as_deref()), ("(A) two", None));
+}
+
 fn redo(app: &mut App) -> bool {
     app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY)
 }

@@ -41,7 +41,7 @@ fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted()
     assert_eq!(
         rows(&buffer)[..4],
         [
-            "▸ all             2│    1  Pay +rent",
+            "▸ All tasks       2│    1  Pay +rent",
             "                   │▸   2  Call +bank @phone",
             " PROJECTS          │",
             "  +bank           1│",
@@ -49,6 +49,8 @@ fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted()
     );
     assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
     assert_eq!(buffer[(30, 0)].bg, Color::Reset);
+    assert!(buffer[(2, 0)].modifier.contains(Modifier::BOLD));
+    assert!(!buffer[(2, 3)].modifier.contains(Modifier::BOLD));
 }
 
 #[test]
@@ -57,7 +59,7 @@ fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_f
     app.filter = Some("+rent".to_string());
 
     let buffer = render_in(&app, 50, 8);
-    assert!(rows(&buffer)[0].starts_with("  all "));
+    assert!(rows(&buffer)[0].starts_with("  All tasks "));
     assert!(rows(&buffer)[4].starts_with("▸ +rent "));
     assert_eq!(buffer[(5, 4)].bg, Color::Reset);
 
@@ -87,7 +89,7 @@ fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empt
     assert_eq!(
         panel[..8],
         [
-            "▸ all             2",
+            "▸ All tasks       2",
             "",
             " PROJECTS",
             "  +bank           1",
@@ -167,6 +169,7 @@ fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
     assert!(row.contains("in the popup"), "{row}");
     assert!(rows.iter().any(|row| row.contains("za           fold, unfold group")));
     assert!(rows.iter().any(|row| row.contains("Tab  Enter   back to the list")));
+    assert!(rows.iter().any(|row| row.contains("Esc          all tasks")));
 }
 
 #[test]
@@ -192,7 +195,7 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     app.focus = Focus::Panel;
 
     let buffer = render(&app);
-    assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all · tab back");
+    assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all tasks · tab back");
     assert_eq!(buffer[(1, 4)].bg, Color::Magenta);
     assert!(buffer[(8, 4)].modifier.contains(Modifier::BOLD));
     assert!(!buffer[(8, 4)].modifier.contains(Modifier::DIM));
@@ -278,7 +281,7 @@ fn a_done_line_is_dimmed_all_through() {
 fn projects_and_contexts_are_coloured_on_screen() {
     let buffer = render(&app_of(&["Call +bank @phone"]));
 
-    assert_eq!(rows(&buffer)[0], "▸ all             1│▸   1  Call +bank @phone");
+    assert_eq!(rows(&buffer)[0], "▸ All tasks       1│▸   1  Call +bank @phone");
     assert_eq!(buffer[(32, 0)].fg, Color::Magenta);
     assert_eq!(buffer[(38, 0)].fg, Color::Cyan);
     assert_eq!(buffer[(27, 0)].fg, Color::Reset);

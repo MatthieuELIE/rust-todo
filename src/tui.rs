@@ -92,7 +92,7 @@ pub struct App {
     pub focus: Focus,
     /// Search terms, separated by whitespace, as `todo list` takes them.
     pub search: String,
-    /// Term picked in the panel, `None` for `all`.
+    /// Term picked in the panel, `None` for `All tasks`.
     pub filter: Option<String>,
     /// Groups shown folded, as their header alone.
     pub folded: Vec<Group>,
@@ -186,8 +186,8 @@ impl App {
         }
     }
 
-    /// Panel entries with how many tasks each shows, the search left out: `all`, then the `+projects` and `@contexts` of the
-    /// tasks shown, each alphabetical.
+    /// Panel entries with how many tasks each shows, the search left out: `All tasks`, then the `+projects` and `@contexts` of
+    /// the tasks shown, each alphabetical.
     pub fn filters(&self) -> Vec<(String, usize)> {
         let shown = self.store.list(self.show_done, &[]);
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
@@ -200,7 +200,7 @@ impl App {
             terms.dedup();
             terms
         };
-        let mut filters = vec![("all".to_string(), shown.len())];
+        let mut filters = vec![("All tasks".to_string(), shown.len())];
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
             let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
             filters.push((term, count));

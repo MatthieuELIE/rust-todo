@@ -86,8 +86,8 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ### Filter panel
 
-The panel on the left lists `all`, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
-Moving through it with `j` and `k` filters the list, `Esc` goes back to `all`, and `Tab` or `Enter` returns to the list.
+The panel on the left lists `All tasks`, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
+Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
 The search is terms as for `todo list`.
 

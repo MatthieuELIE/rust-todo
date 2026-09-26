@@ -246,11 +246,11 @@ fn a_task_added_under_a_search_it_does_not_match_is_saved_but_said_hidden() {
 fn the_panel_lists_all_then_projects_then_contexts_alphabetically_with_their_shown_count() {
     let mut app = app_of(&["Pay +rent @home", "Call +bank @phone +rent", "x Old +archive", "Read +Books"]);
 
-    let expected = [("all", 3), ("+bank", 1), ("+Books", 1), ("+rent", 2), ("@home", 1), ("@phone", 1)];
+    let expected = [("All tasks", 3), ("+bank", 1), ("+Books", 1), ("+rent", 2), ("@home", 1), ("@phone", 1)];
     assert_eq!(app.filters(), expected.map(|(name, count)| (name.to_string(), count)));
 
     press(&mut app, "H/call");
-    assert_eq!(app.filters()[..2], [("all".to_string(), 4), ("+archive".to_string(), 1)]);
+    assert_eq!(app.filters()[..2], [("All tasks".to_string(), 4), ("+archive".to_string(), 1)]);
 }
 
 #[test]
@@ -328,7 +328,14 @@ fn a_panel_entry_counts_and_shows_the_tasks_with_that_exact_word() {
         "Sell +books",
     ]);
 
-    let counts = [("all", 6), ("+Books", 1), ("+books", 1), ("+rust", 1), ("+rust-todo", 1), ("@home", 1)];
+    let counts = [
+        ("All tasks", 6),
+        ("+Books", 1),
+        ("+books", 1),
+        ("+rust", 1),
+        ("+rust-todo", 1),
+        ("@home", 1),
+    ];
     assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
 
     app.filter = Some("+rust".to_string());

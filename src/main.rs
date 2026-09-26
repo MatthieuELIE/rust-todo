@@ -25,7 +25,11 @@ fn main() -> ExitCode {
     let (text, mut store) = match repository::load(&path) {
         Ok((text, todos)) => (text, Store::new(todos)),
         Err(e) => {
-            eprintln!("could not read {}: {e}", path.display());
+            let message = format!("could not read {}: {e}", path.display());
+            eprintln!("{message}");
+            if cli.command.is_none() {
+                let _ = tui::show_error(&message);
+            }
             return ExitCode::FAILURE;
         }
     };

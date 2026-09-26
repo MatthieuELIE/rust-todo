@@ -115,21 +115,17 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     }
 }
 
-/// Draws the status bar: the mode block, the active filters, then the mode's keys when they fit and no message is shown, which
-/// goes on the right.
+/// Draws the status bar: the mode block, the active filters, then the mode's keys, bold before their dimmed action, when they fit
+/// and no message is shown, which goes on the right.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, colour, keys) = match &app.focus {
         Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
         Focus::Popup(popup) => match popup.editor.mode {
             Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
-            Mode::Normal => ("NORMAL", Color::Blue, "i/a insert · w/b/e word · x delete · ⏎ save · esc cancel"),
+            Mode::Normal => ("NORMAL", Color::Blue, "i insert · ⏎ save · esc cancel"),
         },
         Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all · tab back"),
-        Focus::List | Focus::Help => (
-            "LIST",
-            Color::Blue,
-            "⏎ edit · o add · x done · dd delete · p priority · u undo · zM fold · / search · ? help",
-        ),
+        Focus::List | Focus::Help => ("LIST", Color::Blue, "⏎ edit · o add · x done · p priority · ? help"),
     };
     let filters = if matches!(app.focus, Focus::Search) {
         format!("/{}▌", app.search)
@@ -138,10 +134,14 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         let done = app.show_done.then(|| "+done".to_string());
         [app.filter.clone(), search, done].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
-    let keys = format!("{}{keys}", if filters.is_empty() { "" } else { "  " }).dim();
     let mut status = Line::from_iter([format!(" {mode} ").bold().black().bg(colour), format!(" {filters}").into()]);
-    if app.message.is_none() && status.width() + keys.width() <= area.width as usize {
-        status.push_span(keys);
+    let mut hints = Line::from(if filters.is_empty() { "" } else { "  " });
+    for (i, hint) in keys.split(" · ").enumerate() {
+        let (key, action) = hint.split_once(' ').unwrap_or_default();
+        hints.extend([if i > 0 { " · " } else { "" }.dim(), key.bold(), format!(" {action}").dim()]);
+    }
+    if app.message.is_none() && status.width() + hints.width() <= area.width as usize {
+        status.extend(hints);
     }
     frame.render_widget(Paragraph::new(status), area);
     if let Some(message) = &app.message {

@@ -194,7 +194,10 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     let buffer = render(&app);
     assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all · tab back");
     assert_eq!(buffer[(1, 4)].bg, Color::Magenta);
-    assert!(buffer[(9, 4)].modifier.contains(Modifier::DIM));
+    assert!(buffer[(8, 4)].modifier.contains(Modifier::BOLD));
+    assert!(!buffer[(8, 4)].modifier.contains(Modifier::DIM));
+    assert!(buffer[(12, 4)].modifier.contains(Modifier::DIM));
+    assert!(!buffer[(12, 4)].modifier.contains(Modifier::BOLD));
 
     app.message = Some("reloaded".to_string());
     assert!(!rows(&render(&app))[4].contains("j/k"));
@@ -202,7 +205,7 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     app.focus = Focus::List;
     app.message = None;
     assert_eq!(rows(&render(&app))[4], " LIST");
-    assert!(rows(&render_in(&app, 100, 5))[4].ends_with("/ search · ? help"));
+    assert_eq!(rows(&render_in(&app, 60, 5))[4], " LIST  ⏎ edit · o add · x done · p priority · ? help");
 
     app.focus = Focus::Search;
     app.search = "ca".to_string();
@@ -230,14 +233,14 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     assert_eq!(buffer[(11, 1)].symbol(), "t");
     assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
     assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
-    assert!(rows[4].starts_with(" INSERT"), "{}", rows[4]);
+    assert_eq!(rows[4], " INSERT  +rent  esc normal · ⏎ save");
     assert_eq!(buffer[(1, 4)].bg, Color::Green);
 
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = Mode::Normal;
     }
     let buffer = render(&app);
-    assert!(self::rows(&buffer)[4].starts_with(" NORMAL"));
+    assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · ⏎ save · esc cancel");
     assert_eq!(buffer[(1, 4)].bg, Color::Blue);
 }
 

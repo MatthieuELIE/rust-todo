@@ -56,6 +56,15 @@ impl Editor {
         Outcome::Continue
     }
 
+    /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.
+    pub fn paste(&mut self, text: &str) {
+        self.text.insert_str(self.byte(self.cursor), text);
+        self.cursor += text.chars().count();
+        if self.mode == Mode::Normal {
+            self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+        }
+    }
+
     /// Applies a key typed in insert mode.
     fn insert(&mut self, key: KeyEvent) {
         let len = self.text.chars().count();

@@ -2,7 +2,8 @@ use std::io;
 use std::path::Path;
 use std::time::Duration;
 
-use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
+use ratatui::crossterm::execute;
 use ratatui::widgets::ListState;
 use time::Date;
 
@@ -221,6 +222,17 @@ impl App {
             self.redo.clear();
         }
         write
+    }
+
+    /// Types pasted `text`, its lines joined by spaces, into the popup or the search line; anywhere else it does nothing, so a
+    /// pasted line never acts as keys.
+    pub fn paste(&mut self, text: &str) {
+        let text = text.lines().collect::<Vec<_>>().join(" ");
+        match &mut self.focus {
+            Focus::Popup(popup) => popup.editor.paste(&text),
+            Focus::Search => self.search.push_str(&text),
+            _ => {}
+        }
     }
 
     /// Unfolds the groups no longer on screen, so they come back unfolded.
@@ -520,6 +532,7 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
     let mut app = App::new(store);
     let mut scroll = ListState::default();
     ratatui::run(|terminal| {
+        execute!(io::stdout(), EnableBracketedPaste)?;
         while !app.quit {
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll))?;
             let event = if event::poll(Duration::from_millis(250))? {
@@ -545,9 +558,11 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
                         app.message = Some(format!("could not save: {e} (file left unchanged)"));
                     }
                 }
+            } else if let Some(Event::Paste(pasted)) = event {
+                app.paste(&pasted);
             }
         }
-        Ok(())
+        execute!(io::stdout(), DisableBracketedPaste)
     })
 }
 

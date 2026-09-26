@@ -266,3 +266,12 @@ fn enter_submits_and_other_control_keys_are_not_typed() {
     assert_eq!(state(&ed), ("ab", 2));
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Enter)), Outcome::Submit);
 }
+
+#[test]
+fn a_paste_in_normal_mode_leaves_the_cursor_on_a_character() {
+    let mut ed = normal("", 0);
+
+    ed.paste("Call");
+
+    assert_eq!(state(&ed), ("Call", 3));
+}

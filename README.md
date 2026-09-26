@@ -66,6 +66,7 @@ The status bar shows the mode in a coloured block, the active filters, and the k
 In insert mode, characters go in at the cursor, and `←` `→`, `Home` `End`, `Backspace` `Delete`, `Ctrl-W` (the word before the cursor) and `Ctrl-U` (back to the start) edit the line.
 Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `E`, `x`, `D`, `C`, `dw` `cw` `dW` `cW`, `i` `a` `I` `A`.
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
+A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.
 
 An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks it.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.

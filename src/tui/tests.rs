@@ -625,3 +625,22 @@ fn q_and_ctrl_c_quit() {
     by_ctrl_c.handle_key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL), TODAY);
     assert!(by_ctrl_c.quit);
 }
+
+#[test]
+fn a_paste_types_its_lines_as_one_into_the_popup_or_the_search_and_does_nothing_in_the_list() {
+    let mut app = app();
+
+    app.paste("dd");
+    assert_eq!(shown(&app), ["one", "two", "three"]);
+
+    press(&mut app, "oCall ");
+    app.paste("the\r\nbank\n");
+    assert_eq!(popup(&app).editor.text, "Call the bank");
+    assert_eq!(popup(&app).editor.cursor, 13);
+
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    press(&mut app, "/");
+    app.paste("tw\no");
+    assert_eq!(app.search, "tw o");
+}

@@ -47,7 +47,7 @@ Esc          cancel
 
 in the panel
 j k          pick a filter
-Esc          all
+Esc          all tasks
 Tab  Enter   back to the list";
 
 /// Draws the filter panel and the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the
@@ -124,7 +124,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
             Mode::Normal => ("NORMAL", Color::Blue, "i insert · ⏎ save · esc cancel"),
         },
-        Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all · tab back"),
+        Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all tasks · tab back"),
         Focus::List | Focus::Help => ("LIST", Color::Blue, "⏎ edit · o add · x done · p priority · ? help"),
     };
     let filters = if matches!(app.focus, Focus::Search) {
@@ -186,21 +186,21 @@ fn field(editor: &Editor) -> Line<'static> {
     Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
 }
 
-/// Rows of the filter panel and the one of the active filter when it is among them: `all`, then the projects and the contexts,
-/// each section after a blank row and a header, and left out when empty.
+/// Rows of the filter panel and the one of the active filter when it is among them: `All tasks` in bold, then the projects and
+/// the contexts, each section after a blank row and a header, and left out when empty.
 fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let filters = app.filters();
     let active = app.filter_row(&filters);
     let (mut lines, mut row) = (Vec::new(), None);
     for (i, (term, count)) in filters.iter().enumerate() {
         let sigil = term.chars().next();
-        let (header, colour) = match sigil {
-            Some('+') => (" PROJECTS", Color::Magenta),
-            Some('@') => (" CONTEXTS", Color::Cyan),
-            _ => ("", Color::Reset),
+        let (header, style) = match sigil {
+            Some('+') => (" PROJECTS", Style::new().magenta()),
+            Some('@') => (" CONTEXTS", Style::new().cyan()),
+            _ => ("", Style::new().bold()),
         };
         if i > 0 && filters[i - 1].0.chars().next() != sigil {
-            lines.extend([Line::default(), Line::from(header.bold().fg(colour))]);
+            lines.extend([Line::default(), Line::from(Span::styled(header, style.bold()))]);
         }
         let marker = if Some(i) == active {
             row = Some(lines.len());
@@ -208,7 +208,7 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         } else {
             "  "
         };
-        let name = Span::styled(format!("{term:<13.13}"), colour);
+        let name = Span::styled(format!("{term:<13.13}"), style);
         lines.push(Line::from_iter([marker.into(), name, " ".into(), format!("{count:>3}").dim()]));
     }
     (lines, row)

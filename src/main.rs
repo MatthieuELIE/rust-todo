@@ -55,7 +55,11 @@ fn main() -> ExitCode {
             for (number, todo) in tasks {
                 let line = view::line(number, todo);
                 if colour {
-                    println!("{}", view::style(todo).into_crossterm().apply(line));
+                    let spans: String = line
+                        .iter()
+                        .map(|span| span.style.into_crossterm().apply(&span.content).to_string())
+                        .collect();
+                    println!("{spans}");
                 } else {
                     println!("{line}");
                 }

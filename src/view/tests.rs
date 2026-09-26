@@ -61,7 +61,7 @@ fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_f
     assert!(rows(&buffer)[4].starts_with("▸ +rent "));
     assert_eq!(buffer[(5, 4)].bg, Color::Reset);
 
-    app.panel = true;
+    app.focus = Focus::Panel;
     assert_eq!(render_in(&app, 50, 8)[(5, 4)].bg, Color::DarkGray);
 }
 
@@ -148,7 +148,7 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
 #[test]
 fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
     let mut app = app_of(&["Pay +rent"]);
-    app.help = true;
+    app.focus = Focus::Help;
 
     let rows = rows(&render_in(&app, 80, 30));
 
@@ -178,7 +178,7 @@ fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
 #[test]
 fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     let mut app = app_of(&["Pay +rent"]);
-    app.panel = true;
+    app.focus = Focus::Panel;
 
     let buffer = render(&app);
     assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all · tab back");
@@ -188,12 +188,12 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     app.message = Some("reloaded".to_string());
     assert!(!rows(&render(&app))[4].contains("j/k"));
 
-    app.panel = false;
+    app.focus = Focus::List;
     app.message = None;
     assert_eq!(rows(&render(&app))[4], " LIST");
     assert!(rows(&render_in(&app, 100, 5))[4].ends_with("/ search · ? help"));
 
-    app.searching = true;
+    app.focus = Focus::Search;
     app.search = "ca".to_string();
     let buffer = render(&app);
     assert_eq!(rows(&buffer)[4], " SEARCH  /ca▌  ⏎ keep · esc clear");
@@ -207,7 +207,7 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let mut editor = Editor::default();
     editor.text = "Call the bank about the loan and ask for a quote".to_string();
     editor.cursor = 5;
-    app.popup = Some(Popup { editor, target: Target::Add });
+    app.focus = Focus::Popup(Popup { editor, target: Target::Add });
 
     let buffer = render(&app);
     let rows = rows(&buffer);
@@ -222,7 +222,9 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     assert!(rows[4].starts_with(" INSERT"), "{}", rows[4]);
     assert_eq!(buffer[(1, 4)].bg, Color::Green);
 
-    app.popup.as_mut().unwrap().editor.mode = Mode::Normal;
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.editor.mode = Mode::Normal;
+    }
     let buffer = render(&app);
     assert!(self::rows(&buffer)[4].starts_with(" NORMAL"));
     assert_eq!(buffer[(1, 4)].bg, Color::Blue);

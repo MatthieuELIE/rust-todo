@@ -32,14 +32,8 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
 
-    let filters = app.filters();
-    let row = app.filter_row(&filters);
-    let entries = filters.iter().map(|(term, count)| format!(" {term:<14.14} {count:>3}"));
-    let highlight = if app.panel {
-        Style::new().bg(Color::DarkGray)
-    } else {
-        Style::new().bold()
-    };
+    let (entries, row) = panel(app);
+    let highlight = if app.panel { Style::new().bg(Color::DarkGray) } else { Style::new() };
     let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(Some(row)));
 
@@ -118,6 +112,34 @@ fn field(editor: &Editor) -> Line<'static> {
     Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
 }
 
+/// Rows of the filter panel and the one of the active filter: `all`, then the projects and the contexts, each section after a
+/// blank row and a header, and left out when empty.
+fn panel(app: &App) -> (Vec<Line<'static>>, usize) {
+    let filters = app.filters();
+    let active = app.filter_row(&filters);
+    let (mut lines, mut row) = (Vec::new(), 0);
+    for (i, (term, count)) in filters.iter().enumerate() {
+        let sigil = term.chars().next();
+        let (header, colour) = match sigil {
+            Some('+') => (" PROJECTS", Color::Magenta),
+            Some('@') => (" CONTEXTS", Color::Cyan),
+            _ => ("", Color::Reset),
+        };
+        if i > 0 && filters[i - 1].0.chars().next() != sigil {
+            lines.extend([Line::default(), Line::from(header.bold().fg(colour))]);
+        }
+        let marker = if i == active {
+            row = lines.len();
+            "▸ "
+        } else {
+            "  "
+        };
+        let name = Span::styled(format!("{term:<13.13}"), colour);
+        lines.push(Line::from_iter([marker.into(), name, " ".into(), format!("{count:>3}").dim()]));
+    }
+    (lines, row)
+}
+
 /// Draws an error that stops the list from opening, and how to leave.
 pub fn draw_error(frame: &mut Frame, message: &str) {
     let text = vec![Line::from(format!(" {message}")).red(), Line::from(" press any key to quit").dim()];
@@ -178,7 +200,11 @@ mod tests {
     }
 
     fn render(app: &App) -> Buffer {
-        let mut terminal = Terminal::new(TestBackend::new(50, 5)).unwrap();
+        render_in(app, 50, 5)
+    }
+
+    fn render_in(app: &App, width: u16, height: u16) -> Buffer {
+        let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
         terminal.draw(|frame| draw(frame, app, &mut ListState::default())).unwrap();
         terminal.backend().buffer().clone()
     }
@@ -204,10 +230,10 @@ mod tests {
         assert_eq!(
             rows(&buffer)[..4],
             [
-                " all              2│    1  Pay +rent",
-                " +bank            1│▸   2  Call +bank @phone",
-                " +rent            1│",
-                " @phone           1│",
+                "▸ all             2│    1  Pay +rent",
+                "                   │▸   2  Call +bank @phone",
+                " PROJECTS          │",
+                "  +bank           1│",
             ]
         );
         assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
@@ -215,16 +241,51 @@ mod tests {
     }
 
     #[test]
-    fn the_active_filter_is_bold_in_the_panel_and_highlighted_once_the_panel_has_focus() {
+    fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_focus() {
         let mut app = app_of(&["Pay +rent", "Call +bank"]);
         app.filter = Some("+rent".to_string());
 
-        let buffer = render(&app);
-        assert!(buffer[(1, 2)].modifier.contains(Modifier::BOLD));
-        assert!(!buffer[(1, 0)].modifier.contains(Modifier::BOLD));
+        let buffer = render_in(&app, 50, 8);
+        assert!(rows(&buffer)[0].starts_with("  all "));
+        assert!(rows(&buffer)[4].starts_with("▸ +rent "));
+        assert_eq!(buffer[(5, 4)].bg, Color::Reset);
 
         app.panel = true;
-        assert_eq!(render(&app)[(1, 2)].bg, Color::DarkGray);
+        assert_eq!(render_in(&app, 50, 8)[(5, 4)].bg, Color::DarkGray);
+    }
+
+    #[test]
+    fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empty_section() {
+        let buffer = render_in(&app_of(&["Pay +rent", "Call +bank @phone"]), 50, 9);
+        let panel: Vec<String> = rows(&buffer)
+            .iter()
+            .map(|row| row.chars().take(19).collect::<String>().trim_end().to_string())
+            .collect();
+
+        assert_eq!(
+            panel[..8],
+            [
+                "▸ all             2",
+                "",
+                " PROJECTS",
+                "  +bank           1",
+                "  +rent           1",
+                "",
+                " CONTEXTS",
+                "  @phone          1"
+            ]
+        );
+        assert_eq!((buffer[(1, 2)].fg, buffer[(1, 6)].fg), (Color::Magenta, Color::Cyan));
+        assert!(buffer[(1, 2)].modifier.contains(Modifier::BOLD));
+        assert_eq!(
+            (buffer[(2, 3)].fg, buffer[(2, 7)].fg, buffer[(2, 0)].fg),
+            (Color::Magenta, Color::Cyan, Color::Reset)
+        );
+        assert!(buffer[(18, 3)].modifier.contains(Modifier::DIM));
+
+        let contexts_only = rows(&render_in(&app_of(&["Call @phone"]), 50, 9));
+        assert_eq!(contexts_only[2].chars().take(9).collect::<String>(), " CONTEXTS");
+        assert!(!contexts_only.iter().any(|row| row.contains("PROJECTS")));
     }
 
     #[test]
@@ -305,7 +366,7 @@ mod tests {
     fn projects_and_contexts_are_coloured_on_screen() {
         let buffer = render(&app_of(&["Call +bank @phone"]));
 
-        assert_eq!(rows(&buffer)[0], " all              1│▸   1  Call +bank @phone");
+        assert_eq!(rows(&buffer)[0], "▸ all             1│▸   1  Call +bank @phone");
         assert_eq!(buffer[(32, 0)].fg, Color::Magenta);
         assert_eq!(buffer[(38, 0)].fg, Color::Cyan);
         assert_eq!(buffer[(27, 0)].fg, Color::Reset);

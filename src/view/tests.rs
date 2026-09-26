@@ -163,18 +163,33 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
 }
 
 #[test]
-fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
+fn the_help_shows_each_mode_s_keys_under_its_block_keys_bold_actions_and_slashes_dimmed() {
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help;
 
-    let rows = rows(&render_in(&app, 80, 30));
+    let buffer = render_in(&app, 90, 32);
+    let rows = rows(&buffer);
+    let y = rows.iter().position(|row| row.contains(" LIST ")).expect("list block");
 
-    let row = rows.iter().find(|row| row.contains("j k  ↓ ↑     move")).expect("list column");
-    assert!(row.contains("in the popup"), "{row}");
+    assert!(rows[y - 2].contains("╭ HELP ─"), "{}", rows[y - 2]);
+    assert!(rows.iter().any(|row| row.contains("─ any key closes ╯")));
+    assert!(rows[y].contains(" INSERT "), "{}", rows[y]);
+    assert!(rows[y + 1].contains("j/k/↓/↑      move"), "{}", rows[y + 1]);
+    assert!(rows.iter().any(|row| row.contains(" NORMAL ")));
+    assert!(rows.iter().any(|row| row.contains(" PANEL ")));
     assert!(rows.iter().any(|row| row.contains("za           fold, unfold group")));
-    assert!(rows.iter().any(|row| row.contains("Tab  Enter   back to the list")));
+    assert!(rows.iter().any(|row| row.contains("Tab/Enter    back to the list")));
     assert!(rows.iter().any(|row| row.contains("Esc          all tasks")));
     assert_eq!(rows.iter().filter(|row| row.contains("p Space      no priority")).count(), 2);
+
+    let y = y as u16;
+    assert_eq!((buffer[(8, y)].bg, buffer[(46, y)].bg), (Color::Blue, Color::Green));
+    let (key, slash, action) = (&buffer[(8, y + 1)], &buffer[(9, y + 1)], &buffer[(21, y + 1)]);
+    assert!(key.modifier.contains(Modifier::BOLD) && !key.modifier.contains(Modifier::DIM));
+    assert!(slash.modifier.contains(Modifier::DIM) && !slash.modifier.contains(Modifier::BOLD));
+    assert!(action.modifier.contains(Modifier::DIM) && !action.modifier.contains(Modifier::BOLD));
+    let search = rows.iter().position(|row| row.contains("/            search")).expect("search key") as u16;
+    assert!(!buffer[(8, search)].modifier.contains(Modifier::DIM));
 }
 
 #[test]
@@ -250,7 +265,7 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let buffer = render(&app);
     let rows = rows(&buffer);
 
-    assert!(rows[0].contains("┌ add (+rent) ───"), "{}", rows[0]);
+    assert!(rows[0].contains("┌ ADD (+rent) ───"), "{}", rows[0]);
     assert!(rows[1].contains("│Call the bank about the loan and ask  │"), "{}", rows[1]);
     assert!(rows[2].contains("│for a quote                           │"), "{}", rows[2]);
     assert!(rows[3].contains("└───"), "{}", rows[3]);

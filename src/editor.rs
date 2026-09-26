@@ -36,6 +36,15 @@ pub struct Editor {
 }
 
 impl Editor {
+    /// Opens on `text` in `mode`, the cursor at the start.
+    pub fn new(text: String, mode: Mode) -> Self {
+        Editor {
+            text,
+            mode,
+            ..Editor::default()
+        }
+    }
+
     /// Applies one key press to the text and tells whether editing goes on.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
         match (self.mode, key.code) {

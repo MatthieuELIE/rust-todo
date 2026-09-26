@@ -11,6 +11,15 @@ use crate::store::Store;
 use crate::todo::Todo;
 use crate::view;
 
+/// What the status bar input line is typing.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Prompt {
+    /// A task to add.
+    Add,
+    /// The search, applied at each letter.
+    Search,
+}
+
 /// State of the interactive list: the tasks and where the user stands in them.
 pub struct App {
     /// The tasks being browsed.
@@ -25,8 +34,12 @@ pub struct App {
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
     pub message: Option<String>,
-    /// Text of the task being typed, while the status bar is an input line.
-    pub input: Option<String>,
+    /// Set while the status bar is an input line.
+    pub prompt: Option<Prompt>,
+    /// Text of the task being typed.
+    pub input: String,
+    /// Search terms, separated by whitespace, as `todo list` takes them.
+    pub search: String,
 }
 
 impl App {
@@ -39,13 +52,16 @@ impl App {
             show_done: false,
             quit: false,
             message: None,
-            input: None,
+            prompt: None,
+            input: String::new(),
+            search: String::new(),
         }
     }
 
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
-        self.store.list(self.show_done, &[])
+        let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
+        self.store.list(self.show_done, &terms)
     }
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
@@ -55,18 +71,29 @@ impl App {
         let selected = tasks.get(self.cursor).map(|(number, _)| *number);
         let pending = self.pending.take();
         self.message = None;
-        if let Some(input) = &mut self.input {
+        if let Some(prompt) = self.prompt {
+            let text = match prompt {
+                Prompt::Add => &mut self.input,
+                Prompt::Search => &mut self.search,
+            };
             match key.code {
                 KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
-                KeyCode::Char(c) => input.push(c),
-                KeyCode::Backspace => _ = input.pop(),
-                KeyCode::Esc => self.input = None,
-                KeyCode::Enter => {
-                    let text = std::mem::take(input);
-                    self.input = None;
+                KeyCode::Char(c) => text.push(c),
+                KeyCode::Backspace => _ = text.pop(),
+                KeyCode::Esc => {
+                    text.clear();
+                    self.prompt = None;
+                }
+                KeyCode::Enter if prompt == Prompt::Add => {
+                    let text = std::mem::take(text);
+                    self.prompt = None;
                     return self.add(&text, today);
                 }
+                KeyCode::Enter => self.prompt = None,
                 _ => {}
+            }
+            if prompt == Prompt::Search {
+                self.cursor = 0;
             }
             return false;
         }
@@ -92,7 +119,16 @@ impl App {
             }
             KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
             KeyCode::Char('d') => self.pending = Some('d'),
-            KeyCode::Char('o') => self.input = Some(String::new()),
+            KeyCode::Char('o') => self.prompt = Some(Prompt::Add),
+            KeyCode::Char('/') => {
+                self.search.clear();
+                self.prompt = Some(Prompt::Search);
+                self.cursor = 0;
+            }
+            KeyCode::Esc => {
+                self.search.clear();
+                self.cursor = 0;
+            }
             KeyCode::Char('H') => {
                 self.show_done = !self.show_done;
                 self.cursor = 0;
@@ -109,8 +145,10 @@ impl App {
             Ok(todo) => {
                 self.store.add(todo);
                 let number = self.store.todos.len();
-                let row = self.tasks().iter().position(|(n, _)| *n == number);
-                self.cursor = row.unwrap_or(self.cursor);
+                match self.tasks().iter().position(|(n, _)| *n == number) {
+                    Some(row) => self.cursor = row,
+                    None => self.message = Some("added, hidden by the filter".to_string()),
+                }
                 true
             }
             Err(e) => {
@@ -210,7 +248,7 @@ mod tests {
         assert_eq!(shown(&app), ["(A) 2026-09-26 Ask for a quote", "one", "two", "three"]);
         assert_eq!(app.cursor, 0);
         assert!(!app.quit);
-        assert_eq!(app.input, None);
+        assert_eq!(app.prompt, None);
     }
 
     #[test]
@@ -220,10 +258,10 @@ mod tests {
         press(&mut app, "oab");
         app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
         press(&mut app, "c");
-        assert_eq!(app.input.as_deref(), Some("ac"));
+        assert_eq!(app.input, "ac");
 
         app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-        assert_eq!(app.input, None);
+        assert_eq!(app.prompt, None);
         assert_eq!(shown(&app), ["one", "two", "three"]);
     }
 
@@ -236,6 +274,50 @@ mod tests {
 
         assert_eq!(app.message.as_deref(), Some("a task needs a description"));
         assert_eq!(shown(&app), ["one", "two", "three"]);
+    }
+
+    #[test]
+    fn slash_filters_at_each_letter_from_the_top_and_enter_keeps_the_search() {
+        let mut app = app_of(&["Call the bank", "Pay rent", "Call mom"]);
+
+        press(&mut app, "jj/call");
+        assert_eq!(shown(&app), ["Call the bank", "Call mom"]);
+        assert_eq!(app.cursor, 0);
+
+        press(&mut app, " -mom");
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+        press(&mut app, "j");
+        assert_eq!(shown(&app), ["Call the bank"]);
+    }
+
+    #[test]
+    fn esc_drops_the_search_being_typed_or_the_one_kept_in_the_list() {
+        let mut app = app();
+        let esc = KeyEvent::from(KeyCode::Esc);
+
+        press(&mut app, "/one");
+        app.handle_key(esc, TODAY);
+        assert_eq!(shown(&app), ["one", "two", "three"]);
+
+        press(&mut app, "/one");
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+        app.handle_key(esc, TODAY);
+        assert_eq!(shown(&app), ["one", "two", "three"]);
+    }
+
+    #[test]
+    fn a_task_added_under_a_search_it_does_not_match_is_saved_but_said_hidden() {
+        let mut app = app();
+        let enter = KeyEvent::from(KeyCode::Enter);
+
+        press(&mut app, "/t");
+        app.handle_key(enter, TODAY);
+        press(&mut app, "jofour");
+        assert!(app.handle_key(enter, TODAY));
+
+        assert_eq!(shown(&app), ["two", "three"]);
+        assert_eq!(app.cursor, 1);
+        assert_eq!(app.message.as_deref(), Some("added, hidden by the filter"));
     }
 
     #[test]

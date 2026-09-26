@@ -79,6 +79,27 @@ impl Todo {
         self.completed = None;
     }
 
+    /// `+project` names in the description, without the `+`, once each in order of appearance.
+    pub fn projects(&self) -> Vec<&str> {
+        self.words_after('+')
+    }
+
+    /// `@context` names in the description, without the `@`, once each in order of appearance.
+    pub fn contexts(&self) -> Vec<&str> {
+        self.words_after('@')
+    }
+
+    /// Words of the description starting with `sigil`, without it, once each in order of appearance.
+    fn words_after(&self, sigil: char) -> Vec<&str> {
+        let mut names = Vec::new();
+        for name in self.description.split_whitespace().filter_map(|word| word.strip_prefix(sigil)) {
+            if !name.is_empty() && !names.contains(&name) {
+                names.push(name);
+            }
+        }
+        names
+    }
+
     /// Whether `c` is a priority letter, `A` to `E`.
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
@@ -179,6 +200,14 @@ mod tests {
         let task = Todo::from_line("2026-99-99 Lorem ipsum");
         assert_eq!(task.created, None);
         assert_eq!(task.description, "2026-99-99 Lorem ipsum");
+    }
+
+    #[test]
+    fn projects_and_contexts_are_named_without_their_sigil_once_each_in_order_of_appearance() {
+        let task = Todo::from_line("(A) Call +bank @phone about +Bank and +bank a+b + @phone @home");
+
+        assert_eq!(task.projects(), ["bank", "Bank"]);
+        assert_eq!(task.contexts(), ["phone", "home"]);
     }
 
     #[test]

@@ -447,6 +447,78 @@ fn a_key_after_p_other_than_a_to_e_or_space_says_so_and_is_swallowed() {
     assert_eq!((popup(&app).editor.text.as_str(), app.message.as_deref()), ("(A) two", None));
 }
 
+fn key(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
+    app.handle_key(KeyEvent::new(code, modifiers), TODAY);
+}
+
+fn names(app: &App) -> Vec<String> {
+    app.completions().0.iter().map(|(name, count)| format!("{name} {count}")).collect()
+}
+
+#[test]
+fn a_tag_typed_in_the_popup_lists_the_names_of_the_file_starting_like_it_most_used_first() {
+    let mut app = app_of(&[
+        "Pay +bank",
+        "Call +Bank @phone",
+        "x 2026-09-20 Old +bank",
+        "Read +books +bank",
+        "Sell +rent",
+    ]);
+
+    press(&mut app, "oBuy +b");
+    assert_eq!(names(&app), ["+bank 3", "+Bank 1", "+books 1"]);
+    press(&mut app, "O");
+    assert_eq!(names(&app), ["+books 1"]);
+    press(&mut app, " @");
+    assert_eq!(names(&app), ["@phone 1"]);
+    press(&mut app, " ");
+    assert!(names(&app).is_empty());
+
+    press(&mut app, "+r");
+    key(&mut app, KeyCode::Left, KeyModifiers::NONE);
+    assert_eq!(names(&app), ["+bank 3", "+Bank 1", "+books 1", "+rent 1"]);
+    key(&mut app, KeyCode::Left, KeyModifiers::NONE);
+    assert!(names(&app).is_empty());
+    key(&mut app, KeyCode::Right, KeyModifiers::NONE);
+    assert_eq!(names(&app).len(), 4);
+    key(&mut app, KeyCode::Esc, KeyModifiers::NONE);
+    assert!(names(&app).is_empty());
+}
+
+#[test]
+fn arrows_and_ctrl_n_p_pick_a_name_that_tab_writes_in_place_of_the_tag() {
+    let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
+    let pick = |app: &mut App, code: KeyCode, modifiers: KeyModifiers| {
+        key(app, code, modifiers);
+        app.completions().1
+    };
+
+    press(&mut app, "oCall +B");
+    assert_eq!(app.completions().1, 0);
+    assert_eq!(pick(&mut app, KeyCode::Down, KeyModifiers::NONE), 1);
+    assert_eq!(pick(&mut app, KeyCode::Down, KeyModifiers::NONE), 1);
+    assert_eq!(pick(&mut app, KeyCode::Char('p'), KeyModifiers::CONTROL), 0);
+    assert_eq!(pick(&mut app, KeyCode::Char('n'), KeyModifiers::CONTROL), 1);
+    assert_eq!(pick(&mut app, KeyCode::Up, KeyModifiers::NONE), 0);
+    assert_eq!(pick(&mut app, KeyCode::Char('n'), KeyModifiers::CONTROL), 1);
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    assert_eq!((popup(&app).editor.text.as_str(), popup(&app).editor.cursor), ("Call +books ", 12));
+    assert!(names(&app).is_empty());
+
+    press(&mut app, "+b now");
+    (0..5).for_each(|_| key(&mut app, KeyCode::Left, KeyModifiers::NONE));
+    assert_eq!(names(&app), ["+bank 2", "+books 1"]);
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    assert_eq!(
+        (popup(&app).editor.text.as_str(), popup(&app).editor.cursor),
+        ("Call +books +bank now", 18)
+    );
+
+    press(&mut app, "+");
+    key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    assert_eq!(shown(&app).last().unwrap(), "2026-09-26 Call +books +bank +now");
+}
+
 fn redo(app: &mut App) -> bool {
     app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY)
 }

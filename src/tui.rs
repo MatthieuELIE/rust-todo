@@ -1,3 +1,5 @@
+use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 use std::time::Duration;
@@ -30,6 +32,8 @@ pub struct Popup {
     pub editor: Editor,
     /// What the text is for.
     pub target: Target,
+    /// Row picked among the completions of the tag being typed.
+    pub selected: usize,
 }
 
 /// Where the keys go.
@@ -211,6 +215,32 @@ impl App {
         filters
     }
 
+    /// Completions of the tag typed in the popup and the row picked among them: the `+projects` or `@contexts` of every task, done
+    /// ones included, starting like the tag whatever the case, with how many tasks have each, the most used first, then
+    /// alphabetical.
+    pub fn completions(&self) -> (Vec<(String, usize)>, usize) {
+        let Focus::Popup(popup) = &self.focus else {
+            return Default::default();
+        };
+        let Some(tag) = popup.editor.tag() else {
+            return Default::default();
+        };
+        let (sigil, names): (char, fn(&Todo) -> Vec<&str>) = if tag.starts_with('+') {
+            ('+', Todo::projects)
+        } else {
+            ('@', Todo::contexts)
+        };
+        let mut counts = HashMap::new();
+        for name in self.store.todos.iter().flat_map(names) {
+            *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
+        }
+        let tag = tag.to_lowercase();
+        let mut names: Vec<(String, usize)> = counts.into_iter().filter(|(name, _)| name.to_lowercase().starts_with(&tag)).collect();
+        names.sort_by_key(|(name, count)| (Reverse(*count), name.to_lowercase(), name.clone()));
+        let selected = popup.selected.min(names.len().saturating_sub(1));
+        (names, selected)
+    }
+
     /// Row of the active filter among the panel `filters`, `None` when it is not among them.
     pub fn filter_row(&self, filters: &[(String, usize)]) -> Option<usize> {
         match &self.filter {
@@ -263,14 +293,7 @@ impl App {
                 self.focus = Focus::List;
                 false
             }
-            Focus::Popup(ref mut popup) => match popup.editor.handle_key(key) {
-                Outcome::Continue => false,
-                Outcome::NotPriority => {
-                    self.message = Some(NOT_PRIORITY.to_string());
-                    false
-                }
-                outcome => self.close_popup(outcome, today),
-            },
+            Focus::Popup(_) => self.popup_key(key, today),
             Focus::Search => {
                 self.search_key(key);
                 false
@@ -283,6 +306,42 @@ impl App {
         };
         self.clamp_cursor();
         write
+    }
+
+    /// Applies a key typed in the popup, the arrows, `Ctrl-N`, `Ctrl-P` and `Tab` going to the completions while there are some,
+    /// and tells whether the file must be rewritten.
+    fn popup_key(&mut self, key: KeyEvent, today: Date) -> bool {
+        let (names, selected) = self.completions();
+        let Focus::Popup(popup) = &mut self.focus else {
+            unreachable!("the popup is open");
+        };
+        let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+        match (key.code, ctrl) {
+            _ if names.is_empty() => {}
+            (KeyCode::Down, _) | (KeyCode::Char('n'), true) => {
+                popup.selected = (selected + 1).min(names.len() - 1);
+                return false;
+            }
+            (KeyCode::Up, _) | (KeyCode::Char('p'), true) => {
+                popup.selected = selected.saturating_sub(1);
+                return false;
+            }
+            (KeyCode::Tab, _) => {
+                popup.editor.complete(&names[selected].0);
+                popup.selected = 0;
+                return false;
+            }
+            _ => {}
+        }
+        popup.selected = 0;
+        match popup.editor.handle_key(key) {
+            Outcome::Continue => false,
+            Outcome::NotPriority => {
+                self.message = Some(NOT_PRIORITY.to_string());
+                false
+            }
+            outcome => self.close_popup(outcome, today),
+        }
     }
 
     /// Closes the popup, adding or editing the task when its text was submitted, and tells whether the file must be rewritten.
@@ -386,6 +445,7 @@ impl App {
                 self.focus = Focus::Popup(Popup {
                     editor: Editor::default(),
                     target: Target::Add,
+                    selected: 0,
                 })
             }
             KeyCode::Char('/') => {
@@ -403,6 +463,7 @@ impl App {
                     self.focus = Focus::Popup(Popup {
                         editor: Editor::new(self.store.todos[number - 1].to_line(), Mode::Normal),
                         target: Target::Edit(number),
+                        selected: 0,
                     })
                 }
             }

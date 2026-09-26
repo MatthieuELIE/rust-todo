@@ -306,3 +306,25 @@ fn p_leaves_a_done_line_alone_and_is_a_letter_in_insert_mode() {
     keys(&mut ed, "pa");
     assert_eq!(state(&ed), ("pa", 2));
 }
+
+#[test]
+fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_or_an_at_in_insert_mode() {
+    assert_eq!(editor("Call +ba", 8).tag(), Some("+ba"));
+    assert_eq!(editor("Call +bank now", 7).tag(), Some("+b"));
+    assert_eq!(editor("Call @", 6).tag(), Some("@"));
+    assert_eq!(editor("Call +bank ", 11).tag(), None);
+    assert_eq!(editor("Call +bank", 5).tag(), None);
+    assert_eq!(editor("a+b", 3).tag(), None);
+    assert_eq!(normal("Call +bank", 7).tag(), None);
+}
+
+#[test]
+fn completing_writes_the_name_over_the_whole_word_then_one_space_the_cursor_after_it() {
+    let mut ed = editor("Call +b", 7);
+    ed.complete("+bank");
+    assert_eq!(state(&ed), ("Call +bank ", 11));
+
+    let mut ed = editor("Call +bnk now", 7);
+    ed.complete("+Bank");
+    assert_eq!(state(&ed), ("Call +Bank now", 11));
+}

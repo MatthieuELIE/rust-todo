@@ -70,6 +70,9 @@ Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
 A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.
 
+While a word starting with `+` or `@` is typed, a drop-down lists the projects or contexts of the whole file, done tasks included, that start like it whatever the case, the most used first.
+`↓` `↑` or `Ctrl-N` `Ctrl-P` pick one, and `Tab` writes it in place of the word, followed by a space; `Esc` and `Enter` keep their meaning.
+
 An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task.

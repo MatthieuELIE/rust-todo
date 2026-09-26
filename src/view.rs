@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
+use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListState, Padding, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
@@ -12,18 +12,19 @@ use crate::tui::{App, Focus, Group, Popup, Target};
 /// popup's frame read as one surface.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
 
-/// Keys of the list shown by `?`, one per line.
+/// Keys of the list shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
 const HELP_LIST: &str = "\
-j k  ↓ ↑     move
-gg  G        top, bottom
+LIST
+j/k/↓/↑      move
+gg/G         top, bottom
 Enter        edit
 o            add
 x            done, not done
 dd           delete
 p a…e        priority
 p Space      no priority
-u  Ctrl-r    undo, redo
-zM  zR       fold, unfold all
+u/Ctrl-r     undo, redo
+zM/zR        fold, unfold all
 za           fold, unfold group
 /            search
 H            show, hide done
@@ -32,31 +33,31 @@ Esc          drop filter and search
 ?            these keys
 q            quit";
 
-/// Keys of the popup and the panel shown by `?`, one per line.
+/// Keys of the popup's two modes and of the panel shown by `?`, each under its mode's name, one per line.
 const HELP_EDIT: &str = "\
-in the popup
+INSERT
 Enter        save
 Esc          normal mode
 Ctrl-w       erase a word
 Ctrl-u       erase to the start
 Tab          complete + or @ word
-↓ ↑ Ctrl-n p pick a completion
+↓/↑/Ctrl-n/p pick a completion
 
-in normal mode
-h l  0 $     move
-w b e        word
-W B E        blank-separated word
-x  D  C      delete, to end, change
-dw cw dW cW  delete, change a word
-i a  I A     insert
+NORMAL
+h/l/0/$      move
+w/b/e        word
+W/B/E        blank-separated word
+x/D/C        delete, to end, change
+dw/cw/dW/cW  delete, change a word
+i/a/I/A      insert
 p a…e        priority
 p Space      no priority
 Esc          cancel
 
-in the panel
-j k          pick a filter
+PANEL
+j/k          pick a filter
 Esc          all tasks
-Tab  Enter   back to the list";
+Tab/Enter    back to the list";
 
 /// Draws the filter panel and the task list above a one-line status bar, on the background; `scroll` keeps the list's offset from
 /// one frame to the next.
@@ -132,15 +133,15 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
 /// Draws the status bar: the mode block, the active filters, then the mode's keys, bold before their dimmed action, when they fit
 /// and no message is shown, which goes on the right.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
-    let (mode, colour, keys) = match &app.focus {
-        Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
+    let (mode, keys) = match &app.focus {
+        Focus::Search => ("SEARCH", "⏎ keep · esc clear"),
         Focus::Popup(popup) => match popup.editor.mode {
-            Mode::Insert if app.completions().0.is_empty() => ("INSERT", Color::Green, "esc normal · ⏎ save"),
-            Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save · tab complete"),
-            Mode::Normal => ("NORMAL", Color::Blue, "i insert · p priority · ⏎ save · esc cancel"),
+            Mode::Insert if app.completions().0.is_empty() => ("INSERT", "esc normal · ⏎ save"),
+            Mode::Insert => ("INSERT", "esc normal · ⏎ save · tab complete"),
+            Mode::Normal => ("NORMAL", "i insert · p priority · ⏎ save · esc cancel"),
         },
-        Focus::Panel => ("PANEL", Color::Magenta, "j/k filter · esc all tasks · tab back"),
-        Focus::List | Focus::Help => ("LIST", Color::Blue, "⏎ edit · o add · x done · p priority · ? help"),
+        Focus::Panel => ("PANEL", "j/k filter · esc all tasks · tab back"),
+        Focus::List | Focus::Help => ("LIST", "⏎ edit · o add · x done · p priority · ? help"),
     };
     let filters = if matches!(app.focus, Focus::Search) {
         format!("/{}▌", app.search)
@@ -149,7 +150,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         let done = app.show_done.then(|| "+done".to_string());
         [app.filter.clone(), search, done].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
-    let mut status = Line::from_iter([format!(" {mode} ").bold().black().bg(colour), format!(" {filters}").into()]);
+    let mut status = Line::from_iter([mode_block(mode), format!(" {filters}").into()]);
     let mut hints = Line::from(if filters.is_empty() { "" } else { "  " });
     for (i, hint) in keys.split(" · ").enumerate() {
         let (key, action) = hint.split_once(' ').unwrap_or_default();
@@ -164,25 +165,63 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-/// Draws the key help in two columns, centred in `area`.
+/// Draws the key help in two columns in a rounded box, centred in `area`.
 fn draw_help(frame: &mut Frame, area: Rect) {
-    let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 2;
-    let area = area.centered(Constraint::Length(76), Constraint::Length(height));
-    let block = Block::bordered().title(" keys ");
+    let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 4;
+    let area = area.centered(Constraint::Length(82), Constraint::Length(height));
+    let block = Block::bordered()
+        .border_type(BorderType::Rounded)
+        .title(" HELP ".bold())
+        .title_bottom(Line::from(" any key closes ".dim()).right_aligned())
+        .padding(Padding::new(3, 3, 1, 1));
     let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
     frame.render_widget(Clear, area);
     frame.render_widget(block, area);
-    frame.render_widget(Paragraph::new(HELP_LIST), list);
-    frame.render_widget(Paragraph::new(HELP_EDIT), edit);
+    frame.render_widget(Paragraph::new(help_lines(HELP_LIST)), list);
+    frame.render_widget(Paragraph::new(help_lines(HELP_EDIT)), edit);
+}
+
+/// Lines of a help column: a mode name as its status bar block, then each key bold, the `/` between alternatives and the action
+/// dimmed.
+fn help_lines(text: &'static str) -> Vec<Line<'static>> {
+    text.lines()
+        .map(|line| {
+            if matches!(line, "LIST" | "INSERT" | "NORMAL" | "PANEL") {
+                return Line::from(mode_block(line));
+            }
+            let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));
+            let alternatives: Vec<&str> = if key.trim_end() == "/" { vec![key] } else { key.split('/').collect() };
+            let mut spans = Vec::new();
+            for (i, alternative) in alternatives.into_iter().enumerate() {
+                if i > 0 {
+                    spans.push("/".dim());
+                }
+                spans.push(alternative.bold());
+            }
+            spans.push(action.dim());
+            Line::from(spans)
+        })
+        .collect()
+}
+
+/// A mode's name in bold black on the mode's colour, as the status bar and the help show it.
+fn mode_block(mode: &str) -> Span<'static> {
+    let colour = match mode {
+        "INSERT" => Color::Green,
+        "PANEL" => Color::Magenta,
+        "SEARCH" => Color::Yellow,
+        _ => Color::Blue,
+    };
+    format!(" {mode} ").bold().black().bg(colour)
 }
 
 /// Draws the popup centred in `bounds`, its title naming the task edited or the panel filter an added task gets, and the
 /// completions of the tag typed.
 fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
     let title = match (&popup.target, app.filter.as_deref()) {
-        (Target::Edit(number), _) => format!(" edit {number} "),
-        (Target::Add, Some(term)) => format!(" add ({term}) "),
-        (Target::Add, None) => " add ".to_string(),
+        (Target::Edit(number), _) => format!(" EDIT {number} "),
+        (Target::Add, Some(term)) => format!(" ADD ({term}) "),
+        (Target::Add, None) => " ADD ".to_string(),
     };
     let field = Paragraph::new(field(&popup.editor))
         .wrap(Wrap { trim: false })

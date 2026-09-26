@@ -116,6 +116,84 @@ pub fn style(todo: &Todo) -> Style {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::store::Store;
+    use ratatui::Terminal;
+    use ratatui::backend::TestBackend;
+    use ratatui::buffer::Buffer;
+    use ratatui::style::Modifier;
+
+    fn app_of(lines: &[&str]) -> App {
+        App::new(Store::new(lines.iter().map(|l| Todo::from_line(l)).collect()))
+    }
+
+    fn render(app: &App) -> Buffer {
+        let mut terminal = Terminal::new(TestBackend::new(50, 5)).unwrap();
+        terminal.draw(|frame| draw(frame, app, &mut ListState::default())).unwrap();
+        terminal.backend().buffer().clone()
+    }
+
+    fn rows(buffer: &Buffer) -> Vec<String> {
+        let row = |y| {
+            (0..buffer.area.width)
+                .map(|x| buffer[(x, y)].symbol())
+                .collect::<String>()
+                .trim_end()
+                .to_string()
+        };
+        (0..buffer.area.height).map(row).collect()
+    }
+
+    #[test]
+    fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted() {
+        let mut app = app_of(&["Pay +rent", "Call +bank @phone", "x 2026-09-20 Old +rent"]);
+        app.cursor = 1;
+
+        let buffer = render(&app);
+
+        assert_eq!(
+            rows(&buffer)[..4],
+            [
+                " all              2│    1  Pay +rent",
+                " +bank            1│▸   2  Call +bank @phone",
+                " +rent            1│",
+                " @phone           1│",
+            ]
+        );
+        assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
+        assert_eq!(buffer[(30, 0)].bg, Color::Reset);
+    }
+
+    #[test]
+    fn the_active_filter_is_bold_in_the_panel_and_highlighted_once_the_panel_has_focus() {
+        let mut app = app_of(&["Pay +rent", "Call +bank"]);
+        app.filter = Some("+rent".to_string());
+
+        let buffer = render(&app);
+        assert!(buffer[(1, 2)].modifier.contains(Modifier::BOLD));
+        assert!(!buffer[(1, 0)].modifier.contains(Modifier::BOLD));
+
+        app.panel = true;
+        assert_eq!(render(&app)[(1, 2)].bg, Color::DarkGray);
+    }
+
+    #[test]
+    fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_or_help_right() {
+        let mut app = app_of(&["Pay +rent"]);
+        app.filter = Some("+rent".to_string());
+        app.search = "pay".to_string();
+        app.show_done = true;
+        app.message = Some("reloaded".to_string());
+
+        let status = rows(&render(&app))[4].clone();
+        assert!(status.starts_with(" LIST  +rent  /pay  +done "), "{status}");
+        assert!(status.ends_with(" reloaded"), "{status}");
+
+        app.panel = true;
+        app.message = None;
+        let status = rows(&render(&app))[4].clone();
+        assert!(status.starts_with(" PANEL  +rent"), "{status}");
+        assert!(status.ends_with(" ? help"), "{status}");
+    }
 
     #[test]
     fn done_tasks_are_dimmed_and_prioritised_ones_bold_with_a_to_c_tinted() {

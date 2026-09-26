@@ -2,10 +2,28 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{Block, Borders, List, ListState, Paragraph};
+use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph};
 
 use crate::todo::Todo;
 use crate::tui::{App, Prompt};
+
+/// Keys shown by `?`, one per line.
+const HELP: &str = "\
+j k  ↓ ↑     move
+gg  G        top, bottom
+x            done, not done
+o            add
+dd           delete
+/            search
+H            show, hide done
+Tab          panel
+Esc          drop filter and search
+q            quit
+
+in the panel
+j k          pick a filter
+Esc          all
+Tab  Enter   back to the list";
 
 /// Draws the filter panel and the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the
 /// next.
@@ -61,8 +79,13 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         }
     };
     frame.render_widget(Paragraph::new(status), status_area);
-    if let Some(message) = &app.message {
-        frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), status_area);
+    let right = app.message.as_deref().map_or("? help ".dim(), |message| format!("{message} ").into());
+    frame.render_widget(Paragraph::new(right).right_aligned(), status_area);
+
+    if app.help {
+        let area = main_area.centered(Constraint::Length(38), Constraint::Length(HELP.lines().count() as u16 + 2));
+        frame.render_widget(Clear, area);
+        frame.render_widget(Paragraph::new(HELP).block(Block::bordered().title(" keys ")), area);
     }
 }
 

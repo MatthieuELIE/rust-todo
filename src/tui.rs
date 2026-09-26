@@ -44,6 +44,8 @@ pub struct App {
     pub filter: Option<String>,
     /// Set while keys go to the panel rather than the list.
     pub panel: bool,
+    /// Set while the key help is shown over the list.
+    pub help: bool,
 }
 
 impl App {
@@ -61,6 +63,7 @@ impl App {
             search: String::new(),
             filter: None,
             panel: false,
+            help: false,
         }
     }
 
@@ -105,6 +108,10 @@ impl App {
         let selected = tasks.get(self.cursor).map(|(number, _)| *number);
         let pending = self.pending.take();
         self.message = None;
+        if self.help {
+            self.help = false;
+            return false;
+        }
         if let Some(prompt) = self.prompt {
             let text = match prompt {
                 Prompt::Add => &mut self.input,
@@ -184,6 +191,7 @@ impl App {
                 self.cursor = 0;
             }
             KeyCode::Tab => self.panel = true,
+            KeyCode::Char('?') => self.help = true,
             KeyCode::Char('H') => {
                 self.show_done = !self.show_done;
                 self.cursor = 0;
@@ -447,6 +455,21 @@ mod tests {
         let lines: Vec<String> = app.store.todos.iter().map(Todo::to_line).collect();
         assert_eq!(lines, ["Pay +rent", "(A) 2026-09-26 Call landlord +rent", "2026-09-26 Fix +Rent form"]);
         assert_eq!(app.cursor, 2);
+    }
+
+    #[test]
+    fn question_mark_opens_the_help_and_the_next_key_only_closes_it() {
+        let mut app = app();
+
+        press(&mut app, "?");
+        assert!(app.help);
+
+        assert!(!press(&mut app, "x"));
+        assert!(!app.help);
+        assert_eq!(shown(&app), ["one", "two", "three"]);
+
+        press(&mut app, "?q");
+        assert!(!app.quit);
     }
 
     #[test]

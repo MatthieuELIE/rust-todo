@@ -53,6 +53,7 @@ Every change is written at once, and `q` quits without asking.
 | `q`, `Ctrl-C` | quit |
 
 The rows are those of `todo list`: same numbers, order and colours.
+The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups, rather than left to the terminal's.
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.

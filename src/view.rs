@@ -8,6 +8,10 @@ use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
 use crate::tui::{App, Focus, Group, Popup, Target};
 
+/// Background of every cell no widget paints: Catppuccin Mocha's mantle, the colour herdr gives its popups, so the list and the
+/// popup's frame read as one surface.
+const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
+
 /// Keys of the list shown by `?`, one per line.
 const HELP_LIST: &str = "\
 j k  ↓ ↑     move
@@ -54,8 +58,8 @@ j k          pick a filter
 Esc          all tasks
 Tab  Enter   back to the list";
 
-/// Draws the filter panel and the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the
-/// next.
+/// Draws the filter panel and the task list above a one-line status bar, on the background; `scroll` keeps the list's offset from
+/// one frame to the next.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
@@ -75,6 +79,9 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         Focus::Help => draw_help(frame, main_area),
         Focus::Popup(popup) => draw_popup(frame, app, popup, main_area),
         _ => {}
+    }
+    for cell in frame.buffer_mut().content.iter_mut().filter(|cell| cell.bg == Color::Reset) {
+        cell.bg = BACKGROUND;
     }
 }
 

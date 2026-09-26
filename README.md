@@ -64,7 +64,8 @@ A task is listed when its line contains every term, compared as a case-insensiti
 Flags go before terms: in `todo list +work --all`, `--all` is one more term, excluding `-all`, and done tasks stay hidden.
 
 Pending tasks come first, prioritised ones by priority, then the rest; ties keep the file order.
-stdout carries task lines only, bold for a priority and dimmed once done when it is a terminal, plain text when piped.
+stdout carries task lines only, styled when it is a terminal and plain text when piped.
+A priority is bold, tinted yellow, green and blue for A to C as `todo.sh` does, and a done task is dimmed.
 An empty listing says so on stderr and still exits 0.
 
 ### Differences from `todo.sh`

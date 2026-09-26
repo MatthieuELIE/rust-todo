@@ -65,7 +65,7 @@ pub struct App {
     store: Store,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`) waiting for its second key.
+    /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
     pending: Option<char>,
     /// Whether done tasks are listed too.
     pub show_done: bool,
@@ -151,6 +151,14 @@ impl App {
             }
         }
         rows
+    }
+
+    /// Row of the first task on screen in `group`.
+    fn first_task(&self, group: Group) -> Option<Row> {
+        self.tasks()
+            .iter()
+            .find(|(_, todo)| Group::of(todo) == group)
+            .map(|(number, _)| Row::Task(*number))
     }
 
     /// Puts the cursor on `row`, or on its group when that is folded, and tells whether either is on screen.
@@ -311,13 +319,26 @@ impl App {
             KeyCode::Char('R') if pending == Some('z') => {
                 self.folded.clear();
                 let target = match row {
-                    Some(Row::Group(group)) => self.tasks().iter().find(|(_, todo)| Group::of(todo) == group).map(|(n, _)| Row::Task(*n)),
+                    Some(Row::Group(group)) => self.first_task(group),
                     row => row,
                 };
                 if let Some(target) = target {
                     self.select(target);
                 }
             }
+            KeyCode::Char('a') if pending == Some('z') => match row {
+                Some(Row::Task(number)) if !self.groups().is_empty() => {
+                    self.folded.push(Group::of(&self.store.todos[number - 1]));
+                    self.select(Row::Task(number));
+                }
+                Some(Row::Group(group)) => {
+                    self.folded.retain(|folded| *folded != group);
+                    if let Some(first) = self.first_task(group) {
+                        self.select(first);
+                    }
+                }
+                _ => {}
+            },
             KeyCode::Char('z') => self.pending = Some('z'),
             KeyCode::Char('u') => write = self.step(true),
             KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
@@ -1053,6 +1074,37 @@ mod tests {
         app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
 
         assert_eq!(app.rows(), [Row::Group(Group::Priority('A')), Row::Task(3), Row::Task(4)]);
+    }
+
+    #[test]
+    fn za_folds_the_group_of_the_task_onto_its_header_and_unfolds_it_onto_its_first_task() {
+        let mut app = grouped();
+
+        press(&mut app, "jza");
+        assert_eq!(app.rows(), [Row::Group(Group::Priority('A')), Row::Task(3), Row::Task(4)]);
+        assert_eq!(app.cursor, 0);
+
+        press(&mut app, "jzMkza");
+        assert_eq!(
+            app.rows(),
+            [
+                Row::Task(1),
+                Row::Task(2),
+                Row::Group(Group::Priority('B')),
+                Row::Group(Group::Unprioritised)
+            ]
+        );
+        assert_eq!(app.cursor, 0);
+    }
+
+    #[test]
+    fn za_without_groups_does_nothing() {
+        let mut app = app_of(&["one", "two"]);
+
+        press(&mut app, "jza");
+
+        assert_eq!(app.rows(), [Row::Task(1), Row::Task(2)]);
+        assert_eq!(app.cursor, 1);
     }
 
     #[test]

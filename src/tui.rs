@@ -28,6 +28,17 @@ pub struct Popup {
     pub target: Target,
 }
 
+/// A group of the list, in display order.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Group {
+    /// Pending tasks with this priority.
+    Priority(char),
+    /// Pending tasks without a priority.
+    Unprioritised,
+    /// Done tasks.
+    Done,
+}
+
 /// State of the interactive list: the tasks and where the user stands in them.
 pub struct App {
     /// The tasks being browsed.
@@ -86,6 +97,27 @@ impl App {
         let mut terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
         terms.extend(self.filter.clone());
         self.store.list(self.show_done, &terms)
+    }
+
+    /// Groups of the tasks on screen with how many tasks each holds, in display order and without empty ones; none at all when
+    /// no task on screen has a priority.
+    pub fn groups(&self) -> Vec<(Group, usize)> {
+        let mut groups: Vec<(Group, usize)> = Vec::new();
+        for (_, todo) in self.tasks() {
+            let group = match (todo.done, todo.priority) {
+                (true, _) => Group::Done,
+                (false, Some(letter)) => Group::Priority(letter),
+                (false, None) => Group::Unprioritised,
+            };
+            match groups.last_mut() {
+                Some((last, count)) if *last == group => *count += 1,
+                _ => groups.push((group, 1)),
+            }
+        }
+        if !groups.iter().any(|(group, _)| matches!(group, Group::Priority(_))) {
+            groups.clear();
+        }
+        groups
     }
 
     /// Panel entries with how many tasks each shows, the search left out: `all`, then the `+projects` and `@contexts` of the
@@ -844,6 +876,30 @@ mod tests {
 
         assert!(!press(&mut app, "u"));
         assert!(!redo(&mut app));
+    }
+
+    #[test]
+    fn the_groups_follow_the_priorities_on_screen_with_their_counts() {
+        let mut app = app_of(&["(C) one", "two", "(A) three", "x 2026-09-20 four", "(A) five +work"]);
+        use Group::*;
+
+        assert_eq!(app.groups(), [(Priority('A'), 2), (Priority('C'), 1), (Unprioritised, 1)]);
+
+        press(&mut app, "H");
+        assert_eq!(app.groups(), [(Priority('A'), 2), (Priority('C'), 1), (Unprioritised, 1), (Done, 1)]);
+
+        app.filter = Some("+work".to_string());
+        assert_eq!(app.groups(), [(Priority('A'), 1)]);
+    }
+
+    #[test]
+    fn there_are_no_groups_when_no_task_on_screen_has_a_priority() {
+        let mut app = app_of(&["one", "x 2026-09-20 two", "(A) three +work"]);
+
+        press(&mut app, "H/-work");
+        app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+
+        assert_eq!(app.groups(), []);
     }
 
     #[test]

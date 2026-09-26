@@ -4,7 +4,7 @@ use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
-use crate::editor::Editor;
+use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
 use crate::tui::App;
 
@@ -64,8 +64,11 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let status = if app.searching {
         Line::from(format!(" /{}▌", app.search))
     } else {
-        let mode = if app.popup.is_some() {
-            " INSERT"
+        let mode = if let Some(popup) = &app.popup {
+            match popup.editor.mode {
+                Mode::Insert => " INSERT",
+                Mode::Normal => " NORMAL",
+            }
         } else if app.panel {
             " PANEL"
         } else {
@@ -225,10 +228,9 @@ mod tests {
     fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_the_status_bar_says_insert() {
         let mut app = app_of(&["Pay +rent"]);
         app.filter = Some("+rent".to_string());
-        let editor = Editor {
-            text: "Call the bank about the loan and ask for a quote".to_string(),
-            cursor: 5,
-        };
+        let mut editor = Editor::default();
+        editor.text = "Call the bank about the loan and ask for a quote".to_string();
+        editor.cursor = 5;
         app.popup = Some(Popup { editor, target: Target::Add });
 
         let buffer = render(&app);
@@ -242,6 +244,9 @@ mod tests {
         assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
         assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
         assert!(rows[4].starts_with(" INSERT"), "{}", rows[4]);
+
+        app.popup.as_mut().unwrap().editor.mode = Mode::Normal;
+        assert!(self::rows(&render(&app))[4].starts_with(" NORMAL"));
     }
 
     #[test]

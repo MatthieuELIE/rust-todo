@@ -644,3 +644,13 @@ fn a_paste_types_its_lines_as_one_into_the_popup_or_the_search_and_does_nothing_
     app.paste("tw\no");
     assert_eq!(app.search, "tw o");
 }
+
+#[test]
+fn a_control_key_in_the_search_types_nothing() {
+    let mut app = app();
+
+    press(&mut app, "/t");
+    app.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL), TODAY);
+
+    assert_eq!(app.search, "t");
+}

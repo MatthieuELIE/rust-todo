@@ -31,7 +31,7 @@ fn main() -> ExitCode {
     };
 
     let Some(command) = cli.command else {
-        return match tui::run(store) {
+        return match tui::run(store, &path) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");

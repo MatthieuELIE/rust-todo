@@ -73,6 +73,12 @@ impl Todo {
         self.priority = None;
     }
 
+    /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
+    pub fn reopen(&mut self) {
+        self.done = false;
+        self.completed = None;
+    }
+
     /// Whether `c` is a priority letter, `A` to `E`.
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
@@ -173,6 +179,16 @@ mod tests {
         let task = Todo::from_line("2026-99-99 Lorem ipsum");
         assert_eq!(task.created, None);
         assert_eq!(task.description, "2026-99-99 Lorem ipsum");
+    }
+
+    #[test]
+    fn reopening_a_task_clears_its_completion_but_not_the_dropped_priority() {
+        let mut task = Todo::from_line("(A) 2026-08-01 Lorem ipsum");
+        task.complete(date!(2026 - 09 - 01));
+
+        task.reopen();
+
+        assert_eq!(task.to_line(), "2026-08-01 Lorem ipsum");
     }
 
     #[test]

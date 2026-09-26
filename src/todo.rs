@@ -20,7 +20,6 @@ pub struct Todo {
     pub completed: Option<Date>,
 }
 
-/// A todo list, which is a collection of todo items.
 impl Todo {
     /// Convert a todo item to a line of text in the todo.txt format.
     pub fn to_line(&self) -> String {

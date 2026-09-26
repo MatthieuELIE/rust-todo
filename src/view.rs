@@ -1,12 +1,12 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Layout};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
-use crate::tui::{App, Focus, Group, Target};
+use crate::tui::{App, Focus, Group, Popup, Target};
 
 /// Keys of the list shown by `?`, one per line.
 const HELP_LIST: &str = "\
@@ -65,6 +65,18 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(Some(row)));
 
+    draw_list(frame, app, list_area, scroll);
+    draw_status(frame, app, status_area);
+    match &app.focus {
+        Focus::Help => draw_help(frame, main_area),
+        Focus::Popup(popup) => draw_popup(frame, popup, app.filter.as_deref(), main_area),
+        _ => {}
+    }
+}
+
+/// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset from one frame to the
+/// next.
+fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     let tasks = app.tasks();
     if tasks.is_empty() {
         frame.render_widget(
@@ -74,7 +86,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
                 "no matching task"
             })
             .dim(),
-            list_area,
+            area,
         );
     } else {
         let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo));
@@ -84,7 +96,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
             if folded {
                 rows.push(lines.len());
             }
-            lines.push(header(group, count, folded, list_area.width.saturating_sub(2) as usize));
+            lines.push(header(group, count, folded, area.width.saturating_sub(2) as usize));
             for task in tasks.by_ref().take(count).filter(|_| !folded) {
                 rows.push(lines.len());
                 lines.push(task);
@@ -99,9 +111,13 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
             .highlight_style(Style::new().bg(Color::DarkGray))
             .scroll_padding(1);
         scroll.select(rows.get(app.cursor).copied());
-        frame.render_stateful_widget(list, list_area, scroll);
+        frame.render_stateful_widget(list, area, scroll);
     }
+}
 
+/// Draws the status bar: the mode block, the active filters, then the mode's keys when they fit and no message is shown, which
+/// goes on the right.
+fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, colour, keys) = match &app.focus {
         Focus::Search => ("SEARCH", Color::Yellow, "⏎ keep · esc clear"),
         Focus::Popup(popup) => match popup.editor.mode {
@@ -124,40 +140,42 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     };
     let keys = format!("{}{keys}", if filters.is_empty() { "" } else { "  " }).dim();
     let mut status = Line::from_iter([format!(" {mode} ").bold().black().bg(colour), format!(" {filters}").into()]);
-    if app.message.is_none() && status.width() + keys.width() <= status_area.width as usize {
+    if app.message.is_none() && status.width() + keys.width() <= area.width as usize {
         status.push_span(keys);
     }
-    frame.render_widget(Paragraph::new(status), status_area);
+    frame.render_widget(Paragraph::new(status), area);
     if let Some(message) = &app.message {
-        frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), status_area);
+        frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), area);
     }
+}
 
-    if matches!(app.focus, Focus::Help) {
-        let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 2;
-        let area = main_area.centered(Constraint::Length(76), Constraint::Length(height));
-        let block = Block::bordered().title(" keys ");
-        let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
-        frame.render_widget(Clear, area);
-        frame.render_widget(block, area);
-        frame.render_widget(Paragraph::new(HELP_LIST), list);
-        frame.render_widget(Paragraph::new(HELP_EDIT), edit);
-    }
+/// Draws the key help in two columns, centred in `area`.
+fn draw_help(frame: &mut Frame, area: Rect) {
+    let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 2;
+    let area = area.centered(Constraint::Length(76), Constraint::Length(height));
+    let block = Block::bordered().title(" keys ");
+    let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
+    frame.render_widget(Clear, area);
+    frame.render_widget(block, area);
+    frame.render_widget(Paragraph::new(HELP_LIST), list);
+    frame.render_widget(Paragraph::new(HELP_EDIT), edit);
+}
 
-    if let Focus::Popup(popup) = &app.focus {
-        let title = match (&popup.target, &app.filter) {
-            (Target::Edit(number), _) => format!(" edit {number} "),
-            (Target::Add, Some(term)) => format!(" add ({term}) "),
-            (Target::Add, None) => " add ".to_string(),
-        };
-        let field = Paragraph::new(field(&popup.editor))
-            .wrap(Wrap { trim: false })
-            .block(Block::bordered().title(title));
-        let width = main_area.width * 4 / 5;
-        let height = field.line_count(width.saturating_sub(2)) as u16;
-        let area = main_area.centered(Constraint::Length(width), Constraint::Length(height));
-        frame.render_widget(Clear, area);
-        frame.render_widget(field, area);
-    }
+/// Draws the popup centred in `area`, its title naming the task edited or the panel `filter` an added task gets.
+fn draw_popup(frame: &mut Frame, popup: &Popup, filter: Option<&str>, area: Rect) {
+    let title = match (&popup.target, filter) {
+        (Target::Edit(number), _) => format!(" edit {number} "),
+        (Target::Add, Some(term)) => format!(" add ({term}) "),
+        (Target::Add, None) => " add ".to_string(),
+    };
+    let field = Paragraph::new(field(&popup.editor))
+        .wrap(Wrap { trim: false })
+        .block(Block::bordered().title(title));
+    let width = area.width * 4 / 5;
+    let height = field.line_count(width.saturating_sub(2)) as u16;
+    let area = area.centered(Constraint::Length(width), Constraint::Length(height));
+    frame.render_widget(Clear, area);
+    frame.render_widget(field, area);
 }
 
 /// The popup's text with the character under the cursor, or a space past the end, in reverse video.

@@ -54,6 +54,10 @@ pub struct App {
     pub panel: bool,
     /// Set while the key help is shown over the list.
     pub help: bool,
+    /// Tasks as they were before each change, the latest last.
+    undo: Vec<Vec<Todo>>,
+    /// Tasks as they were before each `u`, the latest last.
+    redo: Vec<Vec<Todo>>,
 }
 
 impl App {
@@ -72,6 +76,8 @@ impl App {
             filter: None,
             panel: false,
             help: false,
+            undo: Vec::new(),
+            redo: Vec::new(),
         }
     }
 
@@ -110,7 +116,20 @@ impl App {
     }
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
+    /// A change, other than a step through the history, keeps the tasks as they were for `u`.
     pub fn handle_key(&mut self, key: KeyEvent, today: Date) -> bool {
+        let before = self.store.todos.clone();
+        let history = (self.undo.len(), self.redo.len());
+        let write = self.apply(key, today);
+        if write && history == (self.undo.len(), self.redo.len()) {
+            self.undo.push(before);
+            self.redo.clear();
+        }
+        write
+    }
+
+    /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
+    fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
         let tasks = self.tasks();
         let last = tasks.len().saturating_sub(1);
         let selected = tasks.get(self.cursor).map(|(number, _)| *number);
@@ -191,6 +210,8 @@ impl App {
                 }
             }
             KeyCode::Char('p') => self.pending = Some('p'),
+            KeyCode::Char('u') => write = self.step(true),
+            KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
             KeyCode::Char('g') => self.pending = Some('g'),
             KeyCode::Char('G') => self.cursor = last,
@@ -288,10 +309,33 @@ impl App {
         }
     }
 
-    /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row.
+    /// Brings back the tasks as they were before the last change (`back`) or before the last `u`, keeping the current ones for
+    /// the way back; with no such state it only says so.
+    fn step(&mut self, back: bool) -> bool {
+        let (from, to, done, none) = if back {
+            (&mut self.undo, &mut self.redo, "undone", "nothing to undo")
+        } else {
+            (&mut self.redo, &mut self.undo, "redone", "nothing to redo")
+        };
+        match from.pop() {
+            Some(todos) => {
+                to.push(std::mem::replace(&mut self.store.todos, todos));
+                self.message = Some(done.to_string());
+                true
+            }
+            None => {
+                self.message = Some(none.to_string());
+                false
+            }
+        }
+    }
+
+    /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row and forgetting the history.
     /// An edit is cancelled, since its task number may now name another task.
     pub fn reload(&mut self, store: Store) {
         self.store = store;
+        self.undo.clear();
+        self.redo.clear();
         self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
         self.message = Some("reloaded".to_string());
         if let Some(Popup { target: Target::Edit(_), .. }) = self.popup {
@@ -736,6 +780,70 @@ mod tests {
         assert!(!press(&mut app, "Hjpb"));
 
         assert_eq!(shown(&app), ["(A) one", "x 2026-09-20 two"]);
+    }
+
+    fn redo(app: &mut App) -> bool {
+        app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY)
+    }
+
+    fn lines(app: &App) -> Vec<String> {
+        app.store.todos.iter().map(Todo::to_line).collect()
+    }
+
+    #[test]
+    fn u_brings_back_a_completed_task_with_its_priority() {
+        let mut app = app_of(&["(A) one", "two"]);
+
+        press(&mut app, "x");
+        assert!(press(&mut app, "u"));
+
+        assert_eq!(lines(&app), ["(A) one", "two"]);
+        assert_eq!(app.message.as_deref(), Some("undone"));
+    }
+
+    #[test]
+    fn u_steps_back_through_every_change_and_ctrl_r_forward_again() {
+        let mut app = app();
+
+        press(&mut app, "ddx");
+        assert_eq!(lines(&app), ["x 2026-09-26 two", "three"]);
+        press(&mut app, "uu");
+        assert_eq!(lines(&app), ["one", "two", "three"]);
+
+        assert!(redo(&mut app));
+        assert_eq!(lines(&app), ["two", "three"]);
+        assert_eq!(app.message.as_deref(), Some("redone"));
+    }
+
+    #[test]
+    fn a_change_after_u_leaves_nothing_to_redo() {
+        let mut app = app();
+
+        press(&mut app, "xux");
+
+        assert!(!redo(&mut app));
+        assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    }
+
+    #[test]
+    fn u_and_ctrl_r_with_no_history_write_nothing_and_say_so() {
+        let mut app = app();
+
+        assert!(!press(&mut app, "u"));
+        assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+        assert!(!redo(&mut app));
+        assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    }
+
+    #[test]
+    fn a_reload_forgets_the_history() {
+        let mut app = app();
+
+        press(&mut app, "xxu");
+        app.reload(Store::new(vec![Todo::from_line("one")]));
+
+        assert!(!press(&mut app, "u"));
+        assert!(!redo(&mut app));
     }
 
     #[test]

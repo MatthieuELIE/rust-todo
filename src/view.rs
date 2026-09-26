@@ -21,7 +21,11 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
-    frame.render_widget(Paragraph::new(" LIST").bold(), status_area);
+    let filters = if app.show_done { "  +done" } else { "" };
+    frame.render_widget(Paragraph::new(Line::from_iter([" LIST".bold(), filters.into()])), status_area);
+    if let Some(message) = &app.message {
+        frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), status_area);
+    }
 }
 
 /// A listed task: its number, then its todo.txt line.

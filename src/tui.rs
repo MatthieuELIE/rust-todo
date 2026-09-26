@@ -1,8 +1,11 @@
 use std::io;
+use std::path::Path;
 
 use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::widgets::ListState;
+use time::Date;
 
+use crate::repository;
 use crate::store::Store;
 use crate::todo::Todo;
 use crate::view;
@@ -13,10 +16,14 @@ pub struct App {
     store: Store,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`) waiting for its second key.
+    /// First key of a two-key command (`gg`, `dd`) waiting for its second key.
     pending: Option<char>,
+    /// Whether done tasks are listed too.
+    pub show_done: bool,
     /// Set once the user asked to leave.
     pub quit: bool,
+    /// Last message for the status bar, cleared by the next key.
+    pub message: Option<String>,
 }
 
 impl App {
@@ -26,19 +33,25 @@ impl App {
             store,
             cursor: 0,
             pending: None,
+            show_done: false,
             quit: false,
+            message: None,
         }
     }
 
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
-        self.store.list(false, &[])
+        self.store.list(self.show_done, &[])
     }
 
-    /// Applies one key press to the state.
-    pub fn handle_key(&mut self, key: KeyEvent) {
-        let last = self.tasks().len().saturating_sub(1);
+    /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
+    pub fn handle_key(&mut self, key: KeyEvent, today: Date) -> bool {
+        let tasks = self.tasks();
+        let last = tasks.len().saturating_sub(1);
+        let selected = tasks.get(self.cursor).map(|(number, _)| *number);
         let pending = self.pending.take();
+        self.message = None;
+        let mut write = false;
         match key.code {
             KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
             KeyCode::Char('q') => self.quit = true,
@@ -47,13 +60,32 @@ impl App {
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
             KeyCode::Char('g') => self.pending = Some('g'),
             KeyCode::Char('G') => self.cursor = last,
+            KeyCode::Char('x') => {
+                if let Some(number) = selected {
+                    let todo = &mut self.store.todos[number - 1];
+                    if todo.done {
+                        todo.reopen()
+                    } else {
+                        todo.complete(today)
+                    }
+                    write = true;
+                }
+            }
+            KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
+            KeyCode::Char('d') => self.pending = Some('d'),
+            KeyCode::Char('H') => {
+                self.show_done = !self.show_done;
+                self.cursor = 0;
+            }
             _ => {}
         }
+        self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
+        write
     }
 }
 
-/// Runs the interactive list until the user quits.
-pub fn run(store: Store) -> io::Result<()> {
+/// Runs the interactive list until the user quits, saving to `path` after every change.
+pub fn run(store: Store, path: &Path) -> io::Result<()> {
     let mut app = App::new(store);
     let mut scroll = ListState::default();
     ratatui::run(|terminal| {
@@ -61,8 +93,10 @@ pub fn run(store: Store) -> io::Result<()> {
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll))?;
             if let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
+                && app.handle_key(key, crate::today())
+                && let Err(e) = repository::save(path, &app.store.todos)
             {
-                app.handle_key(key);
+                app.message = Some(format!("could not save: {e} (file left unchanged)"));
             }
         }
         Ok(())
@@ -72,15 +106,69 @@ pub fn run(store: Store) -> io::Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use time::macros::date;
 
-    fn app() -> App {
-        App::new(Store::new(["one", "two", "three"].into_iter().map(Todo::from_line).collect()))
+    const TODAY: Date = date!(2026 - 09 - 26);
+
+    fn app_of(lines: &[&str]) -> App {
+        App::new(Store::new(lines.iter().map(|l| Todo::from_line(l)).collect()))
     }
 
-    fn press(app: &mut App, keys: &str) {
-        for c in keys.chars() {
-            app.handle_key(KeyEvent::from(KeyCode::Char(c)));
-        }
+    fn app() -> App {
+        app_of(&["one", "two", "three"])
+    }
+
+    fn press(app: &mut App, keys: &str) -> bool {
+        keys.chars()
+            .fold(false, |write, c| app.handle_key(KeyEvent::from(KeyCode::Char(c)), TODAY) | write)
+    }
+
+    fn shown(app: &App) -> Vec<String> {
+        app.tasks().into_iter().map(|(_, todo)| todo.to_line()).collect()
+    }
+
+    #[test]
+    fn x_completes_the_selected_task_and_the_next_one_takes_its_row() {
+        let mut app = app();
+
+        assert!(press(&mut app, "jx"));
+
+        assert_eq!(shown(&app), ["one", "three"]);
+        assert_eq!(app.cursor, 1);
+        assert_eq!(app.store.todos[1].to_line(), "x 2026-09-26 two");
+    }
+
+    #[test]
+    fn h_shows_done_tasks_from_the_top_where_x_reopens_them() {
+        let mut app = app_of(&["x 2026-09-20 one", "two"]);
+
+        assert!(!press(&mut app, "H"));
+        assert_eq!(shown(&app), ["two", "x 2026-09-20 one"]);
+        assert!(press(&mut app, "jx"));
+        assert_eq!(shown(&app), ["one", "two"]);
+
+        assert_eq!(app.cursor, 1);
+        press(&mut app, "H");
+        assert_eq!(app.cursor, 0);
+    }
+
+    #[test]
+    fn dd_removes_the_selected_task_and_a_d_followed_by_another_key_does_nothing() {
+        let mut app = app();
+
+        assert!(!press(&mut app, "djd"));
+        assert_eq!(app.cursor, 1);
+        assert!(press(&mut app, "jdd"));
+
+        assert_eq!(shown(&app), ["one", "two"]);
+        assert_eq!(app.cursor, 1);
+    }
+
+    #[test]
+    fn x_and_dd_do_nothing_on_an_empty_list() {
+        let mut app = app_of(&[]);
+
+        assert!(!press(&mut app, "xdd"));
     }
 
     #[test]
@@ -91,7 +179,7 @@ mod tests {
         assert_eq!(app.cursor, 0);
         press(&mut app, "jjj");
         assert_eq!(app.cursor, 2);
-        app.handle_key(KeyEvent::from(KeyCode::Up));
+        app.handle_key(KeyEvent::from(KeyCode::Up), TODAY);
         assert_eq!(app.cursor, 1);
     }
 
@@ -114,7 +202,7 @@ mod tests {
         assert!(by_q.quit);
 
         let mut by_ctrl_c = app();
-        by_ctrl_c.handle_key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL));
+        by_ctrl_c.handle_key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL), TODAY);
         assert!(by_ctrl_c.quit);
     }
 }

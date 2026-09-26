@@ -25,6 +25,8 @@ pub struct App {
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
     pub message: Option<String>,
+    /// Text of the task being typed, while the status bar is an input line.
+    pub input: Option<String>,
 }
 
 impl App {
@@ -37,6 +39,7 @@ impl App {
             show_done: false,
             quit: false,
             message: None,
+            input: None,
         }
     }
 
@@ -52,6 +55,21 @@ impl App {
         let selected = tasks.get(self.cursor).map(|(number, _)| *number);
         let pending = self.pending.take();
         self.message = None;
+        if let Some(input) = &mut self.input {
+            match key.code {
+                KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
+                KeyCode::Char(c) => input.push(c),
+                KeyCode::Backspace => _ = input.pop(),
+                KeyCode::Esc => self.input = None,
+                KeyCode::Enter => {
+                    let text = std::mem::take(input);
+                    self.input = None;
+                    return self.add(&text, today);
+                }
+                _ => {}
+            }
+            return false;
+        }
         let mut write = false;
         match key.code {
             KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
@@ -74,6 +92,7 @@ impl App {
             }
             KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
             KeyCode::Char('d') => self.pending = Some('d'),
+            KeyCode::Char('o') => self.input = Some(String::new()),
             KeyCode::Char('H') => {
                 self.show_done = !self.show_done;
                 self.cursor = 0;
@@ -82,6 +101,23 @@ impl App {
         }
         self.cursor = self.cursor.min(self.tasks().len().saturating_sub(1));
         write
+    }
+
+    /// Adds the task typed as `text`, dated `today`, with the cursor on it; a rejected text only leaves a message.
+    fn add(&mut self, text: &str, today: Date) -> bool {
+        match Todo::new_from_input(text, today) {
+            Ok(todo) => {
+                self.store.add(todo);
+                let number = self.store.todos.len();
+                let row = self.tasks().iter().position(|(n, _)| *n == number);
+                self.cursor = row.unwrap_or(self.cursor);
+                true
+            }
+            Err(e) => {
+                self.message = Some(e);
+                false
+            }
+        }
     }
 
     /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row.
@@ -162,6 +198,44 @@ mod tests {
         assert_eq!(shown(&app), ["one", "three"]);
         assert_eq!(app.cursor, 1);
         assert_eq!(app.store.todos[1].to_line(), "x 2026-09-26 two");
+    }
+
+    #[test]
+    fn o_types_a_task_that_enter_adds_with_the_cursor_on_it() {
+        let mut app = app();
+
+        assert!(!press(&mut app, "jjo(A) Ask for a quote"));
+        assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+        assert_eq!(shown(&app), ["(A) 2026-09-26 Ask for a quote", "one", "two", "three"]);
+        assert_eq!(app.cursor, 0);
+        assert!(!app.quit);
+        assert_eq!(app.input, None);
+    }
+
+    #[test]
+    fn backspace_edits_the_input_and_esc_drops_it() {
+        let mut app = app();
+
+        press(&mut app, "oab");
+        app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
+        press(&mut app, "c");
+        assert_eq!(app.input.as_deref(), Some("ac"));
+
+        app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+        assert_eq!(app.input, None);
+        assert_eq!(shown(&app), ["one", "two", "three"]);
+    }
+
+    #[test]
+    fn a_rejected_input_adds_nothing_and_says_why() {
+        let mut app = app();
+
+        press(&mut app, "o");
+        assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+        assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+        assert_eq!(shown(&app), ["one", "two", "three"]);
     }
 
     #[test]

@@ -6,18 +6,24 @@ use ratatui::crossterm::event::{self, Event, KeyCode, KeyEvent, KeyEventKind, Ke
 use ratatui::widgets::ListState;
 use time::Date;
 
+use crate::editor::{Editor, Outcome};
 use crate::repository;
 use crate::store::Store;
 use crate::todo::Todo;
 use crate::view;
 
-/// What the status bar input line is typing.
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Prompt {
-    /// A task to add.
+/// What the popup's text becomes once submitted.
+pub enum Target {
+    /// A new task.
     Add,
-    /// The search, applied at each letter.
-    Search,
+}
+
+/// The centred field where a task is typed.
+pub struct Popup {
+    /// The text being typed.
+    pub editor: Editor,
+    /// What the text is for.
+    pub target: Target,
 }
 
 /// State of the interactive list: the tasks and where the user stands in them.
@@ -34,10 +40,10 @@ pub struct App {
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
     pub message: Option<String>,
-    /// Set while the status bar is an input line.
-    pub prompt: Option<Prompt>,
-    /// Text of the task being typed.
-    pub input: String,
+    /// Set while the status bar is the search input line.
+    pub searching: bool,
+    /// Set while a task is typed in the popup.
+    pub popup: Option<Popup>,
     /// Search terms, separated by whitespace, as `todo list` takes them.
     pub search: String,
     /// Term picked in the panel, `None` for `all`.
@@ -58,8 +64,8 @@ impl App {
             show_done: false,
             quit: false,
             message: None,
-            prompt: None,
-            input: String::new(),
+            searching: false,
+            popup: None,
             search: String::new(),
             filter: None,
             panel: false,
@@ -112,30 +118,34 @@ impl App {
             self.help = false;
             return false;
         }
-        if let Some(prompt) = self.prompt {
-            let text = match prompt {
-                Prompt::Add => &mut self.input,
-                Prompt::Search => &mut self.search,
+        if let Some(popup) = &mut self.popup {
+            if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
+                self.quit = true;
+                return false;
+            }
+            let outcome = popup.editor.handle_key(key);
+            if outcome == Outcome::Continue {
+                return false;
+            }
+            let popup = self.popup.take().expect("the popup is open");
+            return match (outcome, popup.target) {
+                (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
+                _ => false,
             };
+        }
+        if self.searching {
             match key.code {
                 KeyCode::Char('c') if key.modifiers == KeyModifiers::CONTROL => self.quit = true,
-                KeyCode::Char(c) => text.push(c),
-                KeyCode::Backspace => _ = text.pop(),
+                KeyCode::Char(c) => self.search.push(c),
+                KeyCode::Backspace => _ = self.search.pop(),
                 KeyCode::Esc => {
-                    text.clear();
-                    self.prompt = None;
+                    self.search.clear();
+                    self.searching = false;
                 }
-                KeyCode::Enter if prompt == Prompt::Add => {
-                    let text = std::mem::take(text);
-                    self.prompt = None;
-                    return self.add(&text, today);
-                }
-                KeyCode::Enter => self.prompt = None,
+                KeyCode::Enter => self.searching = false,
                 _ => {}
             }
-            if prompt == Prompt::Search {
-                self.cursor = 0;
-            }
+            self.cursor = 0;
             return false;
         }
         if self.panel {
@@ -179,10 +189,15 @@ impl App {
             }
             KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
             KeyCode::Char('d') => self.pending = Some('d'),
-            KeyCode::Char('o') => self.prompt = Some(Prompt::Add),
+            KeyCode::Char('o') => {
+                self.popup = Some(Popup {
+                    editor: Editor::default(),
+                    target: Target::Add,
+                })
+            }
             KeyCode::Char('/') => {
                 self.search.clear();
-                self.prompt = Some(Prompt::Search);
+                self.searching = true;
                 self.cursor = 0;
             }
             KeyCode::Esc => {
@@ -331,7 +346,7 @@ mod tests {
         assert_eq!(shown(&app), ["(A) 2026-09-26 Ask for a quote", "one", "two", "three"]);
         assert_eq!(app.cursor, 0);
         assert!(!app.quit);
-        assert_eq!(app.prompt, None);
+        assert!(app.popup.is_none());
     }
 
     #[test]
@@ -341,11 +356,23 @@ mod tests {
         press(&mut app, "oab");
         app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
         press(&mut app, "c");
-        assert_eq!(app.input, "ac");
+        assert_eq!(app.popup.as_ref().unwrap().editor.text, "ac");
 
         app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-        assert_eq!(app.prompt, None);
+        assert!(app.popup.is_none());
         assert_eq!(shown(&app), ["one", "two", "three"]);
+    }
+
+    #[test]
+    fn list_keys_typed_in_the_popup_are_text() {
+        let mut app = app();
+
+        assert!(!press(&mut app, "oqxdd"));
+        assert!(!app.quit);
+        assert_eq!(shown(&app), ["one", "two", "three"]);
+        assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+        assert_eq!(app.store.todos[3].to_line(), "2026-09-26 qxdd");
     }
 
     #[test]

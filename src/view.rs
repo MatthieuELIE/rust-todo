@@ -4,8 +4,9 @@ use ratatui::style::{Color, Style, Stylize};
 use ratatui::text::Line;
 use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
+use crate::editor::Editor;
 use crate::todo::Todo;
-use crate::tui::{App, Prompt};
+use crate::tui::App;
 
 /// Keys shown by `?`, one per line.
 const HELP: &str = "\
@@ -60,23 +61,24 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
-    let status = match app.prompt {
-        Some(Prompt::Add) => match &app.filter {
-            Some(term) => Line::from(format!(" add ({term}): {}▌", app.input)),
-            None => Line::from(format!(" add: {}▌", app.input)),
-        },
-        Some(Prompt::Search) => Line::from(format!(" /{}▌", app.search)),
-        None => {
-            let mode = if app.panel { " PANEL" } else { " LIST" };
-            let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
-            let done = app.show_done.then(|| "+done".to_string());
-            let filters: String = [app.filter.clone(), search, done]
-                .into_iter()
-                .flatten()
-                .map(|f| format!("  {f}"))
-                .collect();
-            Line::from_iter([mode.bold(), filters.into()])
-        }
+    let status = if app.searching {
+        Line::from(format!(" /{}▌", app.search))
+    } else {
+        let mode = if app.popup.is_some() {
+            " INSERT"
+        } else if app.panel {
+            " PANEL"
+        } else {
+            " LIST"
+        };
+        let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
+        let done = app.show_done.then(|| "+done".to_string());
+        let filters: String = [app.filter.clone(), search, done]
+            .into_iter()
+            .flatten()
+            .map(|f| format!("  {f}"))
+            .collect();
+        Line::from_iter([mode.bold(), filters.into()])
     };
     frame.render_widget(Paragraph::new(status), status_area);
     let right = app.message.as_deref().map_or("? help ".dim(), |message| format!("{message} ").into());
@@ -87,6 +89,29 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_widget(Clear, area);
         frame.render_widget(Paragraph::new(HELP).block(Block::bordered().title(" keys ")), area);
     }
+
+    if let Some(popup) = &app.popup {
+        let title = match &app.filter {
+            Some(term) => format!(" add ({term}) "),
+            None => " add ".to_string(),
+        };
+        let field = Paragraph::new(field(&popup.editor))
+            .wrap(Wrap { trim: false })
+            .block(Block::bordered().title(title));
+        let width = main_area.width * 4 / 5;
+        let height = field.line_count(width.saturating_sub(2)) as u16;
+        let area = main_area.centered(Constraint::Length(width), Constraint::Length(height));
+        frame.render_widget(Clear, area);
+        frame.render_widget(field, area);
+    }
+}
+
+/// The popup's text with the character under the cursor, or a space past the end, in reverse video.
+fn field(editor: &Editor) -> Line<'static> {
+    let mut chars = editor.text.chars();
+    let before: String = chars.by_ref().take(editor.cursor).collect();
+    let under = chars.next().map_or(" ".to_string(), String::from);
+    Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
 }
 
 /// Draws an error that stops the list from opening, and how to leave.
@@ -117,6 +142,7 @@ pub fn style(todo: &Todo) -> Style {
 mod tests {
     use super::*;
     use crate::store::Store;
+    use crate::tui::{Popup, Target};
     use ratatui::Terminal;
     use ratatui::backend::TestBackend;
     use ratatui::buffer::Buffer;
@@ -193,6 +219,29 @@ mod tests {
         let status = rows(&render(&app))[4].clone();
         assert!(status.starts_with(" PANEL  +rent"), "{status}");
         assert!(status.ends_with(" ? help"), "{status}");
+    }
+
+    #[test]
+    fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_the_status_bar_says_insert() {
+        let mut app = app_of(&["Pay +rent"]);
+        app.filter = Some("+rent".to_string());
+        let editor = Editor {
+            text: "Call the bank about the loan and ask for a quote".to_string(),
+            cursor: 5,
+        };
+        app.popup = Some(Popup { editor, target: Target::Add });
+
+        let buffer = render(&app);
+        let rows = rows(&buffer);
+
+        assert!(rows[0].contains("┌ add (+rent) ───"), "{}", rows[0]);
+        assert!(rows[1].contains("│Call the bank about the loan and ask  │"), "{}", rows[1]);
+        assert!(rows[2].contains("│for a quote                           │"), "{}", rows[2]);
+        assert!(rows[3].contains("└───"), "{}", rows[3]);
+        assert_eq!(buffer[(11, 1)].symbol(), "t");
+        assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
+        assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
+        assert!(rows[4].starts_with(" INSERT"), "{}", rows[4]);
     }
 
     #[test]

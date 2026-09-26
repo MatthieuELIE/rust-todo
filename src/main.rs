@@ -1,4 +1,5 @@
 mod cli;
+mod editor;
 mod repository;
 mod store;
 mod todo;

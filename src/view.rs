@@ -8,18 +8,42 @@ use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
 use crate::tui::{App, Group, Target};
 
-/// Keys shown by `?`, one per line.
-const HELP: &str = "\
+/// Keys of the list shown by `?`, one per line.
+const HELP_LIST: &str = "\
 j k  ↓ ↑     move
 gg  G        top, bottom
-x            done, not done
+Enter        edit
 o            add
+x            done, not done
 dd           delete
+p a…e        priority
+p Space      no priority
+u  Ctrl-r    undo, redo
+zM  zR       fold, unfold all
+za           fold, unfold group
 /            search
 H            show, hide done
 Tab          panel
 Esc          drop filter and search
-q            quit
+?            these keys
+q            quit";
+
+/// Keys of the popup and the panel shown by `?`, one per line.
+const HELP_EDIT: &str = "\
+in the popup
+Enter        save
+Esc          normal mode
+Ctrl-w       erase a word
+Ctrl-u       erase to the start
+
+in normal mode
+h l  0 $     move
+w b e        word
+W B E        blank-separated word
+x  D  C      delete, to end, change
+dw cw dW cW  delete, change a word
+i a  I A     insert
+Esc          cancel
 
 in the panel
 j k          pick a filter
@@ -108,9 +132,14 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     }
 
     if app.help {
-        let area = main_area.centered(Constraint::Length(38), Constraint::Length(HELP.lines().count() as u16 + 2));
+        let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 2;
+        let area = main_area.centered(Constraint::Length(76), Constraint::Length(height));
+        let block = Block::bordered().title(" keys ");
+        let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
         frame.render_widget(Clear, area);
-        frame.render_widget(Paragraph::new(HELP).block(Block::bordered().title(" keys ")), area);
+        frame.render_widget(block, area);
+        frame.render_widget(Paragraph::new(HELP_LIST), list);
+        frame.render_widget(Paragraph::new(HELP_EDIT), edit);
     }
 
     if let Some(popup) = &app.popup {
@@ -371,6 +400,19 @@ mod tests {
             ]
         );
         assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
+    }
+
+    #[test]
+    fn the_help_shows_the_list_keys_beside_the_popup_and_panel_keys() {
+        let mut app = app_of(&["Pay +rent"]);
+        app.help = true;
+
+        let rows = rows(&render_in(&app, 80, 30));
+
+        let row = rows.iter().find(|row| row.contains("j k  ↓ ↑     move")).expect("list column");
+        assert!(row.contains("in the popup"), "{row}");
+        assert!(rows.iter().any(|row| row.contains("za           fold, unfold group")));
+        assert!(rows.iter().any(|row| row.contains("Tab  Enter   back to the list")));
     }
 
     #[test]

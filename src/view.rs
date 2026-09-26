@@ -63,7 +63,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         Style::new()
     };
     let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
-    frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(Some(row)));
+    frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
     draw_list(frame, app, list_area, scroll);
     draw_status(frame, app, status_area);
@@ -186,12 +186,12 @@ fn field(editor: &Editor) -> Line<'static> {
     Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
 }
 
-/// Rows of the filter panel and the one of the active filter: `all`, then the projects and the contexts, each section after a
-/// blank row and a header, and left out when empty.
-fn panel(app: &App) -> (Vec<Line<'static>>, usize) {
+/// Rows of the filter panel and the one of the active filter when it is among them: `all`, then the projects and the contexts,
+/// each section after a blank row and a header, and left out when empty.
+fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let filters = app.filters();
     let active = app.filter_row(&filters);
-    let (mut lines, mut row) = (Vec::new(), 0);
+    let (mut lines, mut row) = (Vec::new(), None);
     for (i, (term, count)) in filters.iter().enumerate() {
         let sigil = term.chars().next();
         let (header, colour) = match sigil {
@@ -202,8 +202,8 @@ fn panel(app: &App) -> (Vec<Line<'static>>, usize) {
         if i > 0 && filters[i - 1].0.chars().next() != sigil {
             lines.extend([Line::default(), Line::from(header.bold().fg(colour))]);
         }
-        let marker = if i == active {
-            row = lines.len();
+        let marker = if Some(i) == active {
+            row = Some(lines.len());
             "▸ "
         } else {
             "  "

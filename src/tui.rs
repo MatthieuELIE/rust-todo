@@ -205,9 +205,12 @@ impl App {
         filters
     }
 
-    /// Row of the active filter among the panel `filters`, `all` when it is not among them.
-    pub fn filter_row(&self, filters: &[(String, usize)]) -> usize {
-        filters.iter().position(|(term, _)| Some(term) == self.filter.as_ref()).unwrap_or(0)
+    /// Row of the active filter among the panel `filters`, `None` when it is not among them.
+    pub fn filter_row(&self, filters: &[(String, usize)]) -> Option<usize> {
+        match &self.filter {
+            None => Some(0),
+            Some(filter) => filters.iter().position(|(term, _)| term == filter),
+        }
     }
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
@@ -287,7 +290,7 @@ impl App {
     /// Applies a key typed in the search line, the list back on its first row.
     fn search_key(&mut self, key: KeyEvent) {
         match key.code {
-            KeyCode::Char(c) => self.search.push(c),
+            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => self.search.push(c),
             KeyCode::Backspace => _ = self.search.pop(),
             KeyCode::Esc => {
                 self.search.clear();
@@ -302,7 +305,7 @@ impl App {
     /// Applies a key typed in the panel, the list back on its first row when the filter changes.
     fn panel_key(&mut self, key: KeyEvent) {
         let filters = self.filters();
-        let row = self.filter_row(&filters);
+        let row = self.filter_row(&filters).unwrap_or(0);
         let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
         let before = self.filter.clone();
         match key.code {

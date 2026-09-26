@@ -66,6 +66,17 @@ fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_f
 }
 
 #[test]
+fn a_filter_gone_from_the_panel_marks_no_entry() {
+    let mut app = app_of(&["Pay +rent", "x 2026-09-20 Call +bank"]);
+    app.filter = Some("+bank".to_string());
+    app.focus = Focus::Panel;
+
+    let buffer = render_in(&app, 50, 8);
+    assert!(rows(&buffer).iter().all(|row| !row.starts_with('▸')));
+    assert_eq!(buffer[(5, 0)].bg, Color::Reset);
+}
+
+#[test]
 fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empty_section() {
     let buffer = render_in(&app_of(&["Pay +rent", "Call +bank @phone"]), 50, 9);
     let panel: Vec<String> = rows(&buffer)

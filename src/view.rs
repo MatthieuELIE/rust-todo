@@ -6,7 +6,7 @@ use ratatui::widgets::{Block, Borders, Clear, List, ListState, Paragraph, Wrap};
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
-use crate::tui::{App, Target};
+use crate::tui::{App, Group, Target};
 
 /// Keys shown by `?`, one per line.
 const HELP: &str = "\
@@ -49,9 +49,22 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
             list_area,
         );
     } else {
-        let lines = tasks.into_iter().map(|(number, todo)| line(number, todo));
-        let list = List::new(lines).highlight_symbol("▸ ").highlight_style(Style::new().bg(Color::DarkGray));
-        scroll.select(Some(app.cursor));
+        let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo));
+        let (mut lines, mut row, mut start) = (Vec::new(), app.cursor, 0);
+        for (group, count) in app.groups() {
+            lines.push(header(group, count, list_area.width.saturating_sub(2) as usize));
+            if app.cursor >= start {
+                row += 1;
+            }
+            lines.extend(tasks.by_ref().take(count));
+            start += count;
+        }
+        lines.extend(tasks);
+        let list = List::new(lines)
+            .highlight_symbol("▸ ")
+            .highlight_style(Style::new().bg(Color::DarkGray))
+            .scroll_padding(1);
+        scroll.select(Some(row));
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
@@ -174,6 +187,18 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     Line::from(spans)
 }
 
+/// Header of a group of the list: its count, its title, then a rule filling `width`.
+fn header(group: Group, count: usize, width: usize) -> Line<'static> {
+    let (title, style) = match group {
+        Group::Priority(letter) => (format!("PRIORITY {letter}"), priority(letter)),
+        Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().dim()),
+        Group::Done => ("DONE".to_string(), Style::new().bold().dim()),
+    };
+    let count = format!(" ({count})");
+    let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4));
+    Line::from_iter([count.dim(), "  ".into(), Span::styled(title, style), "  ".into(), rule.dim()])
+}
+
 /// A priority bold, tinted yellow, green and blue for A to C as `todo.sh` does.
 fn priority(letter: char) -> Style {
     let bold = Style::new().bold();
@@ -286,6 +311,31 @@ mod tests {
         let contexts_only = rows(&render_in(&app_of(&["Call @phone"]), 50, 9));
         assert_eq!(contexts_only[2].chars().take(9).collect::<String>(), " CONTEXTS");
         assert!(!contexts_only.iter().any(|row| row.contains("PROJECTS")));
+    }
+
+    #[test]
+    fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
+        let mut app = app_of(&["c", "(B) b", "(A) a"]);
+        app.cursor = 1;
+
+        let buffer = render_in(&app, 50, 8);
+        let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
+
+        assert_eq!(
+            list[..6],
+            [
+                format!("   (1)  PRIORITY A  {}", "─".repeat(10)),
+                "    3  (A) a".to_string(),
+                format!("   (1)  PRIORITY B  {}", "─".repeat(10)),
+                "▸   2  (B) b".to_string(),
+                format!("   (1)  NO PRIORITY  {}", "─".repeat(9)),
+                "    1  c".to_string(),
+            ]
+        );
+        assert_eq!(buffer[(30, 3)].bg, Color::DarkGray);
+        assert_eq!((buffer[(28, 0)].fg, buffer[(28, 2)].fg), (Color::Yellow, Color::Green));
+        assert!(buffer[(28, 4)].modifier.contains(Modifier::DIM));
+        assert!(buffer[(49, 0)].modifier.contains(Modifier::DIM));
     }
 
     #[test]

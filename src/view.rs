@@ -5,7 +5,7 @@ use ratatui::text::Line;
 use ratatui::widgets::{List, ListState, Paragraph};
 
 use crate::todo::Todo;
-use crate::tui::App;
+use crate::tui::{App, Prompt};
 
 /// Draws the task list above a one-line status bar; `scroll` keeps the list's offset from one frame to the next.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
@@ -13,7 +13,10 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
 
     let tasks = app.tasks();
     if tasks.is_empty() {
-        frame.render_widget(Paragraph::new("nothing to do").dim(), list_area);
+        frame.render_widget(
+            Paragraph::new(if app.search.is_empty() { "nothing to do" } else { "no matching task" }).dim(),
+            list_area,
+        );
     } else {
         let lines = tasks.into_iter().map(|(number, todo)| Line::styled(line(number, todo), style(todo)));
         let list = List::new(lines).highlight_symbol("▸ ").highlight_style(Style::new().bg(Color::DarkGray));
@@ -21,9 +24,18 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
-    let status = match &app.input {
-        Some(input) => Line::from(format!(" add: {input}▌")),
-        None => Line::from_iter([" LIST".bold(), if app.show_done { "  +done" } else { "" }.into()]),
+    let status = match app.prompt {
+        Some(Prompt::Add) => Line::from(format!(" add: {}▌", app.input)),
+        Some(Prompt::Search) => Line::from(format!(" /{}▌", app.search)),
+        None => {
+            let search = if app.search.is_empty() {
+                String::new()
+            } else {
+                format!("  /{}", app.search)
+            };
+            let done = if app.show_done { "  +done" } else { "" };
+            Line::from_iter([" LIST".bold(), search.into(), done.into()])
+        }
     };
     frame.render_widget(Paragraph::new(status), status_area);
     if let Some(message) = &app.message {

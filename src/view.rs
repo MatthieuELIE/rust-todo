@@ -74,31 +74,38 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
         frame.render_stateful_widget(list, list_area, scroll);
     }
 
-    let status = if app.searching {
-        Line::from(format!(" /{}▌", app.search))
+    let (mode, colour, keys) = if app.searching {
+        ("SEARCH", Color::Yellow, "⏎ keep · esc clear")
+    } else if let Some(popup) = &app.popup {
+        match popup.editor.mode {
+            Mode::Insert => ("INSERT", Color::Green, "esc normal · ⏎ save"),
+            Mode::Normal => ("NORMAL", Color::Blue, "i/a insert · w/b/e word · x delete · ⏎ save · esc cancel"),
+        }
+    } else if app.panel {
+        ("PANEL", Color::Magenta, "j/k filter · esc all · tab back")
     } else {
-        let mode = if let Some(popup) = &app.popup {
-            match popup.editor.mode {
-                Mode::Insert => " INSERT",
-                Mode::Normal => " NORMAL",
-            }
-        } else if app.panel {
-            " PANEL"
-        } else {
-            " LIST"
-        };
+        (
+            "LIST",
+            Color::Blue,
+            "⏎ edit · o add · x done · dd delete · p priority · u undo · zM fold · / search · ? help",
+        )
+    };
+    let filters = if app.searching {
+        format!("/{}▌", app.search)
+    } else {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
         let done = app.show_done.then(|| "+done".to_string());
-        let filters: String = [app.filter.clone(), search, done]
-            .into_iter()
-            .flatten()
-            .map(|f| format!("  {f}"))
-            .collect();
-        Line::from_iter([mode.bold(), filters.into()])
+        [app.filter.clone(), search, done].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
+    let keys = format!("{}{keys}", if filters.is_empty() { "" } else { "  " }).dim();
+    let mut status = Line::from_iter([format!(" {mode} ").bold().black().bg(colour), format!(" {filters}").into()]);
+    if app.message.is_none() && status.width() + keys.width() <= status_area.width as usize {
+        status.push_span(keys);
+    }
     frame.render_widget(Paragraph::new(status), status_area);
-    let right = app.message.as_deref().map_or("? help ".dim(), |message| format!("{message} ").into());
-    frame.render_widget(Paragraph::new(right).right_aligned(), status_area);
+    if let Some(message) = &app.message {
+        frame.render_widget(Paragraph::new(format!("{message} ")).right_aligned(), status_area);
+    }
 
     if app.help {
         let area = main_area.centered(Constraint::Length(38), Constraint::Length(HELP.lines().count() as u16 + 2));
@@ -367,22 +374,45 @@ mod tests {
     }
 
     #[test]
-    fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_or_help_right() {
+    fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
         let mut app = app_of(&["Pay +rent"]);
         app.filter = Some("+rent".to_string());
         app.search = "pay".to_string();
         app.show_done = true;
         app.message = Some("reloaded".to_string());
 
-        let status = rows(&render(&app))[4].clone();
+        let buffer = render(&app);
+        let status = rows(&buffer)[4].clone();
         assert!(status.starts_with(" LIST  +rent  /pay  +done "), "{status}");
         assert!(status.ends_with(" reloaded"), "{status}");
+        assert_eq!((buffer[(1, 4)].bg, buffer[(1, 4)].fg), (Color::Blue, Color::Black));
+        assert!(buffer[(1, 4)].modifier.contains(Modifier::BOLD));
+        assert_eq!(buffer[(7, 4)].bg, Color::Reset);
+    }
 
+    #[test]
+    fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
+        let mut app = app_of(&["Pay +rent"]);
         app.panel = true;
+
+        let buffer = render(&app);
+        assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all · tab back");
+        assert_eq!(buffer[(1, 4)].bg, Color::Magenta);
+        assert!(buffer[(9, 4)].modifier.contains(Modifier::DIM));
+
+        app.message = Some("reloaded".to_string());
+        assert!(!rows(&render(&app))[4].contains("j/k"));
+
+        app.panel = false;
         app.message = None;
-        let status = rows(&render(&app))[4].clone();
-        assert!(status.starts_with(" PANEL  +rent"), "{status}");
-        assert!(status.ends_with(" ? help"), "{status}");
+        assert_eq!(rows(&render(&app))[4], " LIST");
+        assert!(rows(&render_in(&app, 100, 5))[4].ends_with("/ search · ? help"));
+
+        app.searching = true;
+        app.search = "ca".to_string();
+        let buffer = render(&app);
+        assert_eq!(rows(&buffer)[4], " SEARCH  /ca▌  ⏎ keep · esc clear");
+        assert_eq!(buffer[(1, 4)].bg, Color::Yellow);
     }
 
     #[test]
@@ -405,9 +435,12 @@ mod tests {
         assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
         assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
         assert!(rows[4].starts_with(" INSERT"), "{}", rows[4]);
+        assert_eq!(buffer[(1, 4)].bg, Color::Green);
 
         app.popup.as_mut().unwrap().editor.mode = Mode::Normal;
-        assert!(self::rows(&render(&app))[4].starts_with(" NORMAL"));
+        let buffer = render(&app);
+        assert!(self::rows(&buffer)[4].starts_with(" NORMAL"));
+        assert_eq!(buffer[(1, 4)].bg, Color::Blue);
     }
 
     fn style_of(line_text: &str, token: &str) -> Style {

@@ -6,6 +6,7 @@ use time::macros::format_description;
 const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]");
 
 /// A todo item, with optional priority and dates.
+#[derive(Clone)]
 pub struct Todo {
     /// Task text after the marker, priority and dates, with `+project`, `@context` and `key:value` kept verbatim.
     pub description: String,

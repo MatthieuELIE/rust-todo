@@ -34,7 +34,7 @@ pub struct App {
     store: Store,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`, `dd`) waiting for its second key.
+    /// First key of a two-key command (`gg`, `dd`, `p` and a letter) waiting for its second key.
     pending: Option<char>,
     /// Whether done tasks are listed too.
     pub show_done: bool,
@@ -178,6 +178,19 @@ impl App {
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
             KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
+            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
+                let priority = (c != ' ').then(|| c.to_ascii_uppercase());
+                if let Some(number) = selected
+                    && let todo = &mut self.store.todos[number - 1]
+                    && !todo.done
+                    && todo.priority != priority
+                {
+                    todo.priority = priority;
+                    self.follow(number, "priority set, hidden by the filter");
+                    write = true;
+                }
+            }
+            KeyCode::Char('p') => self.pending = Some('p'),
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
             KeyCode::Char('g') => self.pending = Some('g'),
             KeyCode::Char('G') => self.cursor = last,
@@ -702,10 +715,34 @@ mod tests {
     }
 
     #[test]
+    fn p_then_a_letter_sets_the_priority_and_the_cursor_follows_the_task() {
+        let mut app = app_of(&["one", "(A) two", "three"]);
+
+        assert!(press(&mut app, "jjpb"));
+        assert_eq!(shown(&app), ["(A) two", "(B) three", "one"]);
+        assert_eq!(app.cursor, 1);
+
+        assert!(press(&mut app, "kp "));
+        assert_eq!(shown(&app), ["(B) three", "one", "two"]);
+        assert_eq!(app.cursor, 2);
+    }
+
+    #[test]
+    fn p_does_nothing_with_another_key_the_same_priority_or_a_done_task() {
+        let mut app = app_of(&["(A) one", "x 2026-09-20 two"]);
+
+        assert!(!press(&mut app, "pz"));
+        assert!(!press(&mut app, "pa"));
+        assert!(!press(&mut app, "Hjpb"));
+
+        assert_eq!(shown(&app), ["(A) one", "x 2026-09-20 two"]);
+    }
+
+    #[test]
     fn x_and_dd_do_nothing_on_an_empty_list() {
         let mut app = app_of(&[]);
 
-        assert!(!press(&mut app, "xdd"));
+        assert!(!press(&mut app, "xddpa"));
     }
 
     #[test]

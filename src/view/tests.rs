@@ -406,3 +406,73 @@ fn projects_and_contexts_are_coloured_on_screen() {
     assert_eq!(buffer[(38, 0)].fg, Color::Cyan);
     assert_eq!(buffer[(27, 0)].fg, Color::Reset);
 }
+
+#[test]
+fn the_details_under_the_list_show_the_task_under_the_cursor() {
+    let app = app_of(&["(A) 2026-09-01 Appeler +client pour le devis @work wait:figma"]);
+
+    let buffer = render_in(&app, 70, 14);
+    let zone: Vec<String> = rows(&buffer)[7..13].iter().map(|row| row.chars().skip(20).collect()).collect();
+
+    assert_eq!(
+        zone,
+        [
+            format!(" DETAILS {}", "─".repeat(41)),
+            " Priority  A".to_string(),
+            " Text      Appeler +client pour le devis".to_string(),
+            " Created   2026-09-01".to_string(),
+            format!("{:<25} Contexts  @work", " Projects  +client"),
+            String::new(),
+        ]
+    );
+    assert!(buffer[(25, 7)].modifier.contains(Modifier::DIM));
+    assert!(buffer[(21, 8)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(31, 8)].fg, Color::Yellow);
+    assert_eq!(
+        (buffer[(39, 9)].fg, buffer[(31, 11)].fg, buffer[(56, 11)].fg),
+        (Color::Magenta, Color::Magenta, Color::Cyan)
+    );
+    assert!(!buffer[(31, 9)].modifier.contains(Modifier::DIM));
+}
+
+#[test]
+fn the_details_hide_when_the_list_would_get_fewer_than_five_rows() {
+    let app = app_of(&["Pay rent"]);
+
+    assert_eq!(rows(&render_in(&app, 70, 12))[5], format!("{:<19}│ DETAILS {}", "", "─".repeat(41)));
+    assert!(rows(&render_in(&app, 70, 11)).iter().all(|row| !row.contains("DETAILS")));
+}
+
+#[test]
+fn a_value_too_long_for_the_details_ends_with_an_ellipsis() {
+    let text = "A rather long description that will not fit here";
+
+    let buffer = render_in(&app_of(&[text]), 60, 12);
+
+    assert_eq!(
+        rows(&buffer)[7].chars().skip(20).collect::<String>(),
+        format!(" Text      {}…", &text[..28])
+    );
+}
+
+#[test]
+fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
+    let mut app = app_of(&["(A) a"]);
+    app.folded = vec![Group::Priority('A')];
+
+    let zone: Vec<String> = rows(&render_in(&app, 70, 12))[5..10]
+        .iter()
+        .map(|row| row.chars().skip(20).collect())
+        .collect();
+
+    assert_eq!(
+        zone,
+        [
+            format!(" DETAILS {}", "─".repeat(41)),
+            String::new(),
+            String::new(),
+            String::new(),
+            String::new()
+        ]
+    );
+}

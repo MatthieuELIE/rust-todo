@@ -103,6 +103,20 @@ impl Todo {
         names
     }
 
+    /// The description without its trailing run of `+project`, `@context` and `key:value` words.
+    pub fn text(&self) -> &str {
+        let mut text = self.description.as_str();
+        loop {
+            let trimmed = text.trim_end();
+            let (rest, last) = trimmed.rsplit_once(char::is_whitespace).unwrap_or(("", trimmed));
+            let tag = last.len() > 1 && last.starts_with(['+', '@']) || Todo::is_key_value(last);
+            if !tag {
+                return trimmed;
+            }
+            text = rest;
+        }
+    }
+
     /// Whether `c` is a priority letter, `A` to `E`.
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
@@ -240,6 +254,18 @@ mod tests {
 
         assert_eq!(task.projects(), ["bank", "Bank"]);
         assert_eq!(task.contexts(), ["phone", "home"]);
+    }
+
+    #[test]
+    fn the_text_is_the_description_without_its_trailing_tags_and_key_values() {
+        let text = |description: &str| Todo::from_line(description).text().to_string();
+
+        assert_eq!(text("Appeler +client pour le devis @work wait:figma"), "Appeler +client pour le devis");
+        assert_eq!(text("Pay rent +home  @web "), "Pay rent");
+        assert_eq!(text("Meet at 10:30"), "Meet at 10:30");
+        assert_eq!(text("Read http://example.com"), "Read http://example.com");
+        assert_eq!(text("Call a+b + Note:"), "Call a+b + Note:");
+        assert_eq!(text("+rent @home due:2026-10-01"), "");
     }
 
     #[test]

@@ -11,6 +11,12 @@ use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
 
+/// Height of the detail zone under the list: its rule and five rows.
+const DETAILS_HEIGHT: u16 = 6;
+
+/// Fewest rows the list keeps; on a screen too low for them and the detail zone, the zone is hidden.
+const MIN_LIST_ROWS: u16 = 5;
+
 /// Keys of the list shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
 const HELP_LIST: &str = "\
 LIST
@@ -72,7 +78,13 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
-    draw_list(frame, app, list_area, scroll);
+    if list_area.height >= MIN_LIST_ROWS + DETAILS_HEIGHT {
+        let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(DETAILS_HEIGHT)]).areas(list_area);
+        draw_list(frame, app, list_area, scroll);
+        draw_details(frame, app.selected_task(), details_area);
+    } else {
+        draw_list(frame, app, list_area, scroll);
+    }
     draw_status(frame, app, status_area);
     match &app.focus {
         Focus::Help => draw_help(frame, main_area),
@@ -124,6 +136,44 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
             .scroll_padding(1);
         scroll.select(rows.get(app.cursor).copied());
         frame.render_stateful_widget(list, area, scroll);
+    }
+}
+
+/// Draws the detail zone: a ` DETAILS ` rule, then the priority, text, creation date, projects and contexts of `todo`.
+fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
+    let block = Block::new()
+        .borders(Borders::TOP)
+        .border_style(Style::new().dim())
+        .title(" DETAILS ".dim());
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+    let Some(todo) = todo else {
+        return;
+    };
+    let [priority_row, text_row, created_row, tags_row, _] = Layout::vertical([Constraint::Length(1); 5]).areas(inner);
+    let [projects_area, contexts_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(tags_row);
+    let tags = |sigil: char, names: Vec<&str>| words(&names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "));
+    let priority = todo.priority.map(|letter| Span::styled(letter.to_string(), priority(letter)));
+    detail(frame, "Priority", priority.into_iter().collect(), priority_row);
+    detail(frame, "Text", words(todo.text()), text_row);
+    detail(
+        frame,
+        "Created",
+        todo.created.map(|date| date.to_string().into()).into_iter().collect(),
+        created_row,
+    );
+    detail(frame, "Projects", tags('+', todo.projects()), projects_area);
+    detail(frame, "Contexts", tags('@', todo.contexts()), contexts_area);
+}
+
+/// Draws a row of the detail zone, its `label` dimmed then its `value`, ended by `…` when it overflows `area`.
+fn detail(frame: &mut Frame, label: &str, value: Vec<Span<'static>>, area: Rect) {
+    let mut line = Line::from(format!(" {label:<10}").dim());
+    line.extend(value);
+    let overflows = line.width() > area.width as usize;
+    frame.render_widget(line, area);
+    if overflows {
+        frame.buffer_mut()[(area.right() - 1, area.y)].set_symbol("…");
     }
 }
 
@@ -312,13 +362,20 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     if let Some(created) = todo.created {
         spans.extend([created.to_string().dim(), " ".into()]);
     }
-    for (i, word) in todo.description.split(' ').enumerate() {
+    spans.extend(words(&todo.description));
+    Line::from(spans)
+}
+
+/// Words of `text`, each styled by `tag_style`, with the spaces between them kept.
+fn words(text: &str) -> Vec<Span<'static>> {
+    let mut spans = Vec::new();
+    for (i, word) in text.split(' ').enumerate() {
         if i > 0 {
             spans.push(" ".into());
         }
         spans.push(Span::styled(word.to_string(), tag_style(word)));
     }
-    Line::from(spans)
+    spans
 }
 
 /// Style of a word of a task: a `+project` magenta, an `@context` cyan, a `key:value` dimmed, anything else plain.

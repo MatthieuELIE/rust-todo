@@ -106,6 +106,12 @@ When a task on screen has a priority, the list is grouped under `PRIORITY A` to 
 `zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing.
 Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
 
+### Details
+
+Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date, its projects and its contexts.
+A value too long for its place ends with `…`.
+The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
+
 ### Filter panel
 
 The panel on the left lists `All tasks`, `Waiting` when a task shown waits, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.

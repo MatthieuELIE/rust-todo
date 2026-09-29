@@ -5,6 +5,9 @@ use ratatui::Terminal;
 use ratatui::backend::TestBackend;
 use ratatui::buffer::Buffer;
 use ratatui::style::Modifier;
+use time::macros::date;
+
+const TODAY: Date = date!(2026 - 09 - 26);
 
 fn app_of(lines: &[&str]) -> App {
     App::new(Store::new(lines.iter().map(|l| Todo::from_line(l)).collect()))
@@ -16,7 +19,7 @@ fn render(app: &App) -> Buffer {
 
 fn render_in(app: &App, width: u16, height: u16) -> Buffer {
     let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
-    terminal.draw(|frame| draw(frame, app, &mut ListState::default())).unwrap();
+    terminal.draw(|frame| draw(frame, app, &mut ListState::default(), TODAY)).unwrap();
     terminal.backend().buffer().clone()
 }
 
@@ -355,7 +358,7 @@ fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
 }
 
 fn style_of(line_text: &str, token: &str) -> Style {
-    let line = line(1, &Todo::from_line(line_text));
+    let line = line(1, &Todo::from_line(line_text), TODAY);
     line.iter().find(|span| span.content == token).expect(token).style
 }
 
@@ -363,7 +366,7 @@ fn style_of(line_text: &str, token: &str) -> Style {
 fn a_pending_line_keeps_its_text_and_styles_priority_date_projects_and_contexts() {
     let text = "(A) 2026-09-26 Call  +bank @phone due:2026-10-01 a+b + @";
 
-    assert_eq!(line(12, &Todo::from_line(text)).to_string(), format!(" 12  {text}"));
+    assert_eq!(line(12, &Todo::from_line(text), TODAY).to_string(), format!(" 12  {text}"));
     assert_eq!(style_of(text, "(A)"), Style::new().bold().yellow());
     assert_eq!(style_of(text, "2026-09-26"), Style::new().dim());
     assert_eq!(style_of(text, "+bank"), Style::new().magenta());
@@ -391,9 +394,9 @@ fn key_values_are_dimmed_but_not_urls_times_or_labels() {
 
 #[test]
 fn a_done_line_is_dimmed_all_through() {
-    let line = line(3, &Todo::from_line("x 2026-09-26 2026-09-20 Call +bank @phone"));
+    let line = line(3, &Todo::from_line("x 2026-09-26 2026-09-20 Call +bank @phone due:2026-09-01"), TODAY);
 
-    assert_eq!(line.to_string(), "  3  x 2026-09-26 2026-09-20 Call +bank @phone");
+    assert_eq!(line.to_string(), "  3  x 2026-09-26 2026-09-20 Call +bank @phone due:2026-09-01");
     assert!(line.iter().all(|span| span.style == Style::new().dim()));
 }
 
@@ -493,7 +496,7 @@ fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_valu
 
 #[test]
 fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_dimmed() {
-    let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work"]);
+    let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work due:2026-09-20"]);
     app.show_done = true;
 
     let buffer = render_in(&app, 70, 14);
@@ -501,4 +504,26 @@ fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_dimmed() {
     assert_eq!(rows(&buffer)[8].chars().skip(20).collect::<String>(), " Done      2026-09-28");
     assert!((20..70).all(|x| (8..13).all(|y| buffer[(x, y)].modifier.contains(Modifier::DIM))));
     assert_eq!(buffer[(31, 11)].fg, Color::Magenta);
+    assert_eq!(buffer[(56, 10)].fg, Color::Reset);
+}
+
+#[test]
+fn a_due_date_is_red_once_past_yellow_on_the_day_and_dimmed_later_or_when_not_a_date() {
+    let text = "Ship due:2026-09-25 due:2026-09-26 due:2026-09-27 due:someday";
+
+    assert_eq!(style_of(text, "due:2026-09-25"), Style::new().red());
+    assert_eq!(style_of(text, "due:2026-09-26"), Style::new().yellow());
+    assert_eq!(style_of(text, "due:2026-09-27"), Style::new().dim());
+    assert_eq!(style_of(text, "due:someday"), Style::new().dim());
+}
+
+#[test]
+fn the_due_date_in_the_details_is_red_once_past() {
+    let buffer = render_in(&app_of(&["Ship it due:2026-09-20"]), 70, 14);
+
+    assert_eq!(
+        rows(&buffer)[10].chars().skip(20).collect::<String>(),
+        format!("{:<25} Due       2026-09-20", " Created")
+    );
+    assert_eq!(buffer[(56, 10)].fg, Color::Red);
 }

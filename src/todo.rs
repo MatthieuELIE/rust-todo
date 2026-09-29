@@ -169,9 +169,14 @@ fn strip_priority(rest: &mut &str) -> Option<char> {
 /// Take a leading `YYYY-MM-DD ` off `rest` and return the date.
 fn strip_date(rest: &mut &str) -> Option<Date> {
     let (token, remainder) = rest.split_once(' ')?;
-    let date = Date::parse(token, DATE_FORMAT).ok()?;
+    let date = parse_date(token)?;
     *rest = remainder;
     Some(date)
+}
+
+/// Parse a `YYYY-MM-DD` date.
+pub fn parse_date(text: &str) -> Option<Date> {
+    Date::parse(text, DATE_FORMAT).ok()
 }
 
 /// Format a date as `YYYY-MM-DD`.

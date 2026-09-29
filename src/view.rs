@@ -308,7 +308,7 @@ pub fn draw_error(frame: &mut Frame, message: &str) {
 }
 
 /// A listed task, its number then its todo.txt line: a done task all dimmed, a pending one with its priority styled, its
-/// creation date dimmed, `+projects` magenta and `@contexts` cyan.
+/// creation date and `key:value` words dimmed, `+projects` magenta and `@contexts` cyan.
 pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     let number = format!("{number:>3}  ");
     if todo.done {
@@ -328,6 +328,7 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
         let style = match word.chars().next() {
             Some('+') if word.len() > 1 => Style::new().magenta(),
             Some('@') if word.len() > 1 => Style::new().cyan(),
+            _ if Todo::is_key_value(word) => Style::new().dim(),
             _ => Style::new(),
         };
         spans.push(Span::styled(word.to_string(), style));

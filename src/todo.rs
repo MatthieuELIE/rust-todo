@@ -104,6 +104,18 @@ impl Todo {
     pub fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
     }
+
+    /// Whether `word` is a `key:value`: a key starting with a letter, made of letters, digits, `-` and `_`, then a value neither
+    /// empty nor starting with `//`, so that URLs, times and `Note:` are left out.
+    pub fn is_key_value(word: &str) -> bool {
+        let Some((key, value)) = word.split_once(':') else {
+            return false;
+        };
+        key.starts_with(char::is_alphabetic)
+            && key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
+            && !value.is_empty()
+            && !value.starts_with("//")
+    }
 }
 
 /// Take a leading `(A) ` off `rest` and return its letter.

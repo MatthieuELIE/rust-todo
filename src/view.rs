@@ -20,7 +20,7 @@ const DETAILS_HEIGHT: u16 = 6;
 /// Fewest rows the list keeps; on a screen too low for them and the detail zone, the zone is hidden.
 const MIN_LIST_ROWS: u16 = 5;
 
-/// Keys of the list shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
+/// Keys of the list and of the date picker shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
 const HELP_LIST: &str = "\
 LIST
 j/k/↓/↑      move
@@ -39,7 +39,13 @@ H            show, hide done
 Tab          panel
 Esc          drop filter and search
 ?            these keys
-q            quit";
+q            quit
+
+DATE
+h/l/←/→      day
+k/j/↑/↓      week
+H/L          month
+Enter/Esc    pick, close";
 
 /// Keys of the popup's two modes and of the panel shown by `?`, each under its mode's name, one per line.
 const HELP_EDIT: &str = "\
@@ -91,7 +97,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     draw_status(frame, app, status_area);
     match &app.focus {
         Focus::Help => draw_help(frame, main_area),
-        Focus::Popup(popup) => draw_popup(frame, app, popup, main_area),
+        Focus::Popup(popup) => draw_popup(frame, app, popup, main_area, today),
         _ => {}
     }
     for cell in frame.buffer_mut().content.iter_mut().filter(|cell| cell.bg == Color::Reset) {
@@ -207,6 +213,7 @@ fn draw_cut(frame: &mut Frame, line: Line, area: Rect) {
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, keys) = match &app.focus {
         Focus::Search => ("SEARCH", "⏎ keep · esc clear"),
+        Focus::Popup(popup) if popup.picker.is_some() => ("DATE", "hjkl move · H/L month · ⏎ pick · esc close"),
         Focus::Popup(popup) => match popup.editor.mode {
             Mode::Insert if app.completions().0.is_empty() => ("INSERT", "esc normal · ⏎ save"),
             Mode::Insert => ("INSERT", "esc normal · ⏎ save · tab complete"),
@@ -257,7 +264,7 @@ fn draw_help(frame: &mut Frame, area: Rect) {
 fn help_lines(text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {
-            if matches!(line, "LIST" | "INSERT" | "NORMAL" | "PANEL") {
+            if matches!(line, "LIST" | "INSERT" | "NORMAL" | "PANEL" | "DATE") {
                 return Line::from(mode_block(line));
             }
             let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));
@@ -281,13 +288,14 @@ fn mode_block(mode: &str) -> Span<'static> {
         "INSERT" => Color::Green,
         "PANEL" => Color::Magenta,
         "SEARCH" => Color::Yellow,
+        "DATE" => Color::Cyan,
         _ => Color::Blue,
     };
     format!(" {mode} ").bold().black().bg(colour)
 }
 
-/// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions.
-fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
+/// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions or the date picker.
+fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => format!(" EDIT {number} "),
         (Target::Add, Some(term)) if term != WAITING => format!(" ADD ({term}) "),
@@ -310,6 +318,45 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
         let start = Position::new(cursor.x.saturating_sub(tag.chars().count() as u16), cursor.y);
         draw_completions(frame, &names, selected, start, bounds);
     }
+    if let (Some(date), Some(cursor)) = (popup.picker, cursor) {
+        draw_picker(
+            frame,
+            date,
+            today,
+            Position::new(cursor.x.saturating_sub(DUE.len() as u16), cursor.y),
+            bounds,
+        );
+    }
+}
+
+/// Draws the date picker under the word at `word`: `date`'s month from Monday, `date` highlighted and `today` bold.
+fn draw_picker(frame: &mut Frame, date: Date, today: Date, word: Position, bounds: Rect) {
+    let first = date.replace_day(1).expect("every month has a first day");
+    let offset = first.weekday().number_days_from_monday();
+    let mut lines = vec![Line::from("Mo Tu We Th Fr Sa Su".dim())];
+    let mut week = Line::from("   ".repeat(offset.into()));
+    for day in 1..=date.month().length(date.year()) {
+        let mut style = Style::new();
+        if day == date.day() {
+            style = style.bg(Color::DarkGray);
+        }
+        if first.replace_day(day) == Ok(today) {
+            style = style.bold();
+        }
+        week.push_span(Span::styled(format!("{day:>2}"), style));
+        if (offset + day).is_multiple_of(7) {
+            lines.push(std::mem::take(&mut week));
+        } else {
+            week.push_span(" ");
+        }
+    }
+    if !week.spans.is_empty() {
+        lines.push(week);
+    }
+    let title = format!(" {} {} ", date.month().to_string().to_uppercase(), date.year());
+    let area = drop_down(word, 22, lines.len() as u16 + 2, bounds);
+    frame.render_widget(Clear, area);
+    frame.render_widget(Paragraph::new(lines).block(Block::bordered().title(title)), area);
 }
 
 /// Draws the completion `names`, five rows at most, under the tag at `tag` or above it without room, `selected` highlighted.
@@ -321,16 +368,20 @@ fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usiz
     let rows = names
         .iter()
         .map(|(name, count)| Line::from_iter([Span::styled(format!("{name:<width$}"), tag_style(name)), format!(" {count:>3}").dim()]));
-    let height = names.len().min(5) as u16 + 2;
-    let y = if tag.y + 1 + height <= bounds.bottom() {
-        tag.y + 1
-    } else {
-        tag.y.saturating_sub(height)
-    };
-    let area = Rect::new(tag.x.saturating_sub(1), y, width as u16 + 6, height).intersection(bounds);
+    let area = drop_down(tag, width as u16 + 6, names.len().min(5) as u16 + 2, bounds);
     let list = List::new(rows).highlight_style(Style::new().bg(Color::DarkGray)).block(Block::bordered());
     frame.render_widget(Clear, area);
     frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
+}
+
+/// Area of `width` × `height` dropping down under the word at `word`, or above it without room, within `bounds`.
+fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
+    let y = if word.y + 1 + height <= bounds.bottom() {
+        word.y + 1
+    } else {
+        word.y.saturating_sub(height)
+    };
+    Rect::new(word.x.saturating_sub(1), y, width, height).intersection(bounds)
 }
 
 /// The popup's text with the character under the cursor, or a space past the end, in reverse video.

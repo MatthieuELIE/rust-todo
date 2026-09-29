@@ -5,6 +5,9 @@ use time::macros::format_description;
 /// A date format for parsing and formatting dates in the todo.txt format (YYYY-MM-DD).
 const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]");
 
+/// Key of the `key:value` naming what a task waits for, as in `wait:figma`.
+pub const WAIT: &str = "wait:";
+
 /// A todo item, with optional priority and dates.
 #[derive(Clone)]
 pub struct Todo {
@@ -107,9 +110,20 @@ impl Todo {
 
     /// Whether the description holds a `wait:` key:value, what the task waits for.
     pub fn is_waiting(&self) -> bool {
-        self.description
-            .split_whitespace()
-            .any(|word| word.starts_with("wait:") && Todo::is_key_value(word))
+        !self.waits().is_empty()
+    }
+
+    /// Values of the `wait:` key:values in the description, once each in order of appearance.
+    pub fn waits(&self) -> Vec<&str> {
+        let mut values = Vec::new();
+        for word in self.description.split_whitespace().filter(|word| Todo::is_key_value(word)) {
+            if let Some(value) = word.strip_prefix(WAIT)
+                && !values.contains(&value)
+            {
+                values.push(value);
+            }
+        }
+        values
     }
 
     /// Whether `word` is a `key:value`: a key starting with a letter, made of letters, digits, `-` and `_`, then a value neither

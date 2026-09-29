@@ -326,6 +326,21 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
 }
 
 #[test]
+fn wait_completions_are_dimmed_like_the_key_values_of_a_line() {
+    let mut app = app_of(&["Design wait:figma"]);
+    add_popup(&mut app, "Draw wait:", 0);
+
+    let buffer = render_in(&app, 50, 12);
+    let rows = rows(&buffer);
+    let y = rows.iter().position(|row| row.contains("│wait:figma")).expect("drop-down row");
+    let x = rows[y].split("│wait:figma").next().expect("row").chars().count() + 1;
+    let (x, y) = (x as u16, y as u16);
+
+    assert_eq!(buffer[(x, y)].fg, Color::Reset);
+    assert!(buffer[(x, y)].modifier.contains(Modifier::DIM));
+}
+
+#[test]
 fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
     let mut app = app_of(&["Pay +bank", "Call @phone"]);
     add_popup(&mut app, "Call the bank about the loan and ask @ph", 0);

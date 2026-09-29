@@ -250,8 +250,12 @@ fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usiz
     }
     let width = names.iter().map(|(name, _)| name.chars().count()).max().unwrap_or_default();
     let rows = names.iter().map(|(name, count)| {
-        let colour = if name.starts_with('+') { Color::Magenta } else { Color::Cyan };
-        Line::from_iter([Span::styled(format!("{name:<width$}"), colour), format!(" {count:>3}").dim()])
+        let style = match name.chars().next() {
+            Some('+') => Style::new().magenta(),
+            Some('@') => Style::new().cyan(),
+            _ => Style::new().dim(),
+        };
+        Line::from_iter([Span::styled(format!("{name:<width$}"), style), format!(" {count:>3}").dim()])
     });
     let height = names.len().min(5) as u16 + 2;
     let y = if tag.y + 1 + height <= bounds.bottom() {

@@ -420,9 +420,9 @@ fn the_details_under_the_list_show_the_task_under_the_cursor() {
             format!(" DETAILS {}", "─".repeat(41)),
             " Priority  A".to_string(),
             " Text      Appeler +client pour le devis".to_string(),
-            " Created   2026-09-01".to_string(),
+            format!("{:<25} Due", " Created   2026-09-01"),
             format!("{:<25} Contexts  @work", " Projects  +client"),
-            String::new(),
+            " wait:figma".to_string(),
         ]
     );
     assert!(buffer[(25, 7)].modifier.contains(Modifier::DIM));
@@ -475,4 +475,30 @@ fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
             String::new()
         ]
     );
+}
+
+#[test]
+fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_values_on_the_last_row() {
+    let app = app_of(&["2026-09-01 Ship it due:2026-10-15 wait:figma rec:1w"]);
+
+    let buffer = render_in(&app, 70, 14);
+    let zone: Vec<String> = rows(&buffer)[8..13].iter().map(|row| row.chars().skip(20).collect()).collect();
+
+    assert_eq!(zone[1], " Text      Ship it");
+    assert_eq!(zone[2], format!("{:<25} Due       2026-10-15", " Created   2026-09-01"));
+    assert_eq!(zone[4], " wait:figma  rec:1w");
+    assert!(buffer[(21, 12)].modifier.contains(Modifier::DIM));
+    assert!(!buffer[(26, 12)].modifier.contains(Modifier::DIM));
+}
+
+#[test]
+fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_dimmed() {
+    let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work"]);
+    app.show_done = true;
+
+    let buffer = render_in(&app, 70, 14);
+
+    assert_eq!(rows(&buffer)[8].chars().skip(20).collect::<String>(), " Done      2026-09-28");
+    assert!((20..70).all(|x| (8..13).all(|y| buffer[(x, y)].modifier.contains(Modifier::DIM))));
+    assert_eq!(buffer[(31, 11)].fg, Color::Magenta);
 }

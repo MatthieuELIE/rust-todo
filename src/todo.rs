@@ -8,6 +8,9 @@ const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[
 /// Key of the `key:value` naming what a task waits for, as in `wait:figma`.
 pub const WAIT: &str = "wait:";
 
+/// Key of the `key:value` holding a task's due date, as in `due:2026-10-15`.
+pub const DUE: &str = "due:";
+
 /// A todo item, with optional priority and dates.
 #[derive(Clone)]
 pub struct Todo {

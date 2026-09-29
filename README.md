@@ -90,7 +90,7 @@ A paste goes in at the cursor as one line, its line breaks turned into spaces; o
 While a word starting with `+` or `@` is typed, a drop-down lists the projects or contexts of the whole file, done tasks included, that start like it whatever the case, the most used first.
 `↓` `↑` or `Ctrl-N` `Ctrl-P` pick one, and `Tab` writes it in place of the word, followed by a space; `Esc` and `Enter` keep their meaning.
 
-An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word.
+An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word; under `Waiting` it gets nothing and the panel goes back to `All tasks`.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task; an add stays open.
 
@@ -108,9 +108,10 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ### Filter panel
 
-The panel on the left lists `All tasks`, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
+The panel on the left lists `All tasks`, `Waiting` when a task shown waits, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
 Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
+`Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`; `/wait:figma` narrows it to one.
 
 ### Search
 

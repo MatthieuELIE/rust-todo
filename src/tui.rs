@@ -141,8 +141,7 @@ impl App {
         tasks
     }
 
-    /// Groups of the tasks on screen with how many tasks each holds, in display order and without empty ones; none at all when
-    /// no task on screen has a priority.
+    /// Groups of the tasks on screen with their counts, in display order; none when no task on screen has a priority.
     pub fn groups(&self) -> Vec<(Group, usize)> {
         let mut groups: Vec<(Group, usize)> = Vec::new();
         for (_, todo) in self.tasks() {
@@ -196,8 +195,7 @@ impl App {
         }
     }
 
-    /// Panel entries with how many tasks each shows, the search left out: `All tasks`, `Waiting` unless no task shown waits, then
-    /// the `+projects` and `@contexts` of the tasks shown, each alphabetical.
+    /// Panel entries with their counts, search left out: `All tasks`, `Waiting` if any task waits, then `+projects` and `@contexts`.
     pub fn filters(&self) -> Vec<(String, usize)> {
         let shown = self.store.list(self.show_done, &[]);
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
@@ -222,9 +220,7 @@ impl App {
         filters
     }
 
-    /// Completions of the tag typed in the popup and the row picked among them: the `+projects`, `@contexts` or `wait:` values of every task, done
-    /// ones included, starting like the tag whatever the case, with how many tasks have each, the most used first, then
-    /// alphabetical.
+    /// Names completing the popup's tag, from every task, with their counts, most used first; and the row picked among them.
     pub fn completions(&self) -> (Vec<(String, usize)>, usize) {
         let Focus::Popup(popup) = &self.focus else {
             return Default::default();
@@ -256,8 +252,7 @@ impl App {
         }
     }
 
-    /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
-    /// A change, other than a step through the history, keeps the tasks as they were for `u`.
+    /// Applies one key dated `today`, keeping the tasks before a change for `u`; tells whether the file must be rewritten.
     pub fn handle_key(&mut self, key: KeyEvent, today: Date) -> bool {
         let before = self.store.todos.clone();
         let history = (self.undo.len(), self.redo.len());
@@ -270,8 +265,7 @@ impl App {
         write
     }
 
-    /// Types pasted `text`, its lines joined by spaces, into the popup or the search line; anywhere else it does nothing, so a
-    /// pasted line never acts as keys.
+    /// Types pasted `text` as one line into the popup or the search, and drops it elsewhere so it never acts as keys.
     pub fn paste(&mut self, text: &str) {
         let text = text.lines().collect::<Vec<_>>().join(" ");
         match &mut self.focus {
@@ -315,8 +309,7 @@ impl App {
         write
     }
 
-    /// Applies a key typed in the popup, the arrows, `Ctrl-N`, `Ctrl-P` and `Tab` going to the completions while there are some,
-    /// and tells whether the file must be rewritten.
+    /// Applies a key typed in the popup, arrows and `Tab` going to the completions when shown; tells whether to write.
     fn popup_key(&mut self, key: KeyEvent, today: Date) -> bool {
         let (names, selected) = self.completions();
         let Focus::Popup(popup) = &mut self.focus else {
@@ -397,8 +390,7 @@ impl App {
         }
     }
 
-    /// Applies a key typed in the list, after the first key of a two-key command when `pending`, and tells whether the file must
-    /// be rewritten.
+    /// Applies a key typed in the list, `pending` being the first key of a two-key command; tells whether to write.
     fn list_key(&mut self, key: KeyEvent, pending: Option<char>, today: Date) -> bool {
         let rows = self.rows();
         let last = rows.len().saturating_sub(1);
@@ -527,8 +519,7 @@ impl App {
         self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
     }
 
-    /// Adds the task typed as `text`, dated `today`, with the cursor on it; a rejected text only leaves a message.
-    /// Under a panel filter the term is appended when the task would not match it.
+    /// Adds the task typed as `text`, cursor on it, the panel term appended when missing; a rejected text leaves a message.
     fn add(&mut self, text: &str, today: Date) -> bool {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
@@ -550,8 +541,7 @@ impl App {
         }
     }
 
-    /// Replaces task `number` with the line `text` as typed, with the cursor on it; an empty description only leaves a message,
-    /// and an unchanged line changes nothing.
+    /// Replaces task `number` with the line `text`, cursor on it; an empty description is refused, an unchanged line ignored.
     fn edit(&mut self, number: usize, text: &str) -> bool {
         let todo = Todo::from_line(text);
         if todo.description.trim().is_empty() {
@@ -573,8 +563,7 @@ impl App {
         }
     }
 
-    /// Brings back the tasks as they were before the last change (`back`) or before the last `u`, keeping the current ones for
-    /// the way back; with no such state it only says so.
+    /// Undoes (`back`) or redoes the last change, keeping the current tasks for the way back; says so when there is none.
     fn step(&mut self, back: bool) -> bool {
         let (from, to, done, none) = if back {
             (&mut self.undo, &mut self.redo, "undone", "nothing to undo")
@@ -594,8 +583,7 @@ impl App {
         }
     }
 
-    /// Replaces the tasks with a fresh read of the file, keeping the cursor on its row and forgetting the history.
-    /// An edit is cancelled, since its task number may now name another task.
+    /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit is cancelled as its number may shift.
     pub fn reload(&mut self, store: Store) {
         self.store = store;
         self.undo.clear();
@@ -620,8 +608,7 @@ fn has_word(todo: &Todo, term: &str) -> bool {
     todo.description.split_whitespace().any(|word| word == term)
 }
 
-/// Runs the interactive list until the user quits, saving to `path` after every change.
-/// `text` is the file as last read or written: when the file no longer matches it, the list is reloaded and the key ignored.
+/// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
 pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
     let mut app = App::new(store);
     let mut scroll = ListState::default();

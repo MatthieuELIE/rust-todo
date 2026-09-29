@@ -30,8 +30,7 @@ pub enum Mode {
 pub struct Editor {
     /// The text typed so far.
     pub text: String,
-    /// Position of the cursor, in characters: in insert mode the next character typed goes before the one at this position, in
-    /// normal mode it is on a character.
+    /// Cursor position in characters: before the next typed character in insert mode, on a character in normal mode.
     pub cursor: usize,
     /// Whether keys are typed or are commands.
     pub mode: Mode,
@@ -73,8 +72,7 @@ impl Editor {
         }
     }
 
-    /// The `+project`, `@context` or `wait:` value being typed: in insert mode, the word before the cursor when it starts with `+`,
-    /// `@` or `wait:`.
+    /// The `+project`, `@context` or `wait:` value being typed before the cursor, in insert mode only.
     pub fn tag(&self) -> Option<&str> {
         let word = self.text[..self.byte(self.cursor)].rsplit(char::is_whitespace).next()?;
         (self.mode == Mode::Insert && (word.starts_with(['+', '@']) || word.starts_with(WAIT))).then_some(word)
@@ -179,8 +177,7 @@ impl Editor {
         }
     }
 
-    /// Writes the priority `c`, `a` to `e`, at the start of a pending line in place of the one there, or drops it for a space;
-    /// the cursor stays on its character.
+    /// Writes priority `c`, `a` to `e` or a space to drop it, at the start of a pending line, the cursor kept on its character.
     fn set_priority(&mut self, c: char) {
         let todo = Todo::from_line(&self.text);
         if todo.done {

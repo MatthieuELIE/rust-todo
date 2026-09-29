@@ -1,3 +1,5 @@
+use std::cmp::Ordering;
+
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
@@ -6,7 +8,7 @@ use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListState, Paddi
 use time::Date;
 
 use crate::editor::{Editor, Mode};
-use crate::todo::{DUE, Todo};
+use crate::todo::{DUE, Todo, parse_date};
 use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
@@ -65,8 +67,8 @@ j/k          pick a filter
 Esc          all tasks
 Tab/Enter    back to the list";
 
-/// Draws the filter panel and the task list above the status bar; `scroll` keeps the list's offset between frames.
-pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
+/// Draws the filter panel and the task list above the status bar, due dates against `today`; `scroll` keeps the list's offset between frames.
+pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
 
@@ -81,10 +83,10 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
 
     if list_area.height >= MIN_LIST_ROWS + DETAILS_HEIGHT {
         let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(DETAILS_HEIGHT)]).areas(list_area);
-        draw_list(frame, app, list_area, scroll);
-        draw_details(frame, app.selected_task(), details_area);
+        draw_list(frame, app, list_area, scroll, today);
+        draw_details(frame, app.selected_task(), details_area, today);
     } else {
-        draw_list(frame, app, list_area, scroll);
+        draw_list(frame, app, list_area, scroll, today);
     }
     draw_status(frame, app, status_area);
     match &app.focus {
@@ -98,7 +100,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
 }
 
 /// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset between frames.
-fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
+fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, today: Date) {
     let tasks = app.tasks();
     if tasks.is_empty() {
         frame.render_widget(
@@ -111,7 +113,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
             area,
         );
     } else {
-        let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo));
+        let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo, today));
         let (mut lines, mut rows) = (Vec::new(), Vec::new());
         for (group, count) in app.groups() {
             let folded = app.folded.contains(&group);
@@ -141,7 +143,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
 }
 
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
-fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
+fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date) {
     let block = Block::new()
         .borders(Borders::TOP)
         .border_style(Style::new().dim())
@@ -154,13 +156,14 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
     let [first_row, text_row, dates_row, tags_row, key_values_row] = Layout::vertical([Constraint::Length(1); 5]).areas(inner);
     let [created_area, due_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(dates_row);
     let [projects_area, contexts_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(tags_row);
-    let tags = |sigil: char, names: Vec<&str>| words(&names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "));
+    let today = (!todo.done).then_some(today);
+    let tags = |sigil: char, names: Vec<&str>| words(&names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "), today);
     let date = |date: Option<Date>| date.map(|date| date.to_string().into()).into_iter().collect();
     let key_values: Vec<&str> = todo.description.split_whitespace().filter(|word| Todo::is_key_value(word)).collect();
     let due = key_values
         .iter()
         .find_map(|word| word.strip_prefix(DUE))
-        .map(|value| value.to_string().into());
+        .map(|value| Span::styled(value.to_string(), due_style(value, today).unwrap_or_default()));
     let mut others = Line::from(" ");
     for (i, word) in key_values.iter().filter(|word| !word.starts_with(DUE)).enumerate() {
         let (key, value) = word.split_once(':').unwrap_or_default();
@@ -173,7 +176,7 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
         let priority = todo.priority.map(|letter| Span::styled(letter.to_string(), priority(letter)));
         detail(frame, "Priority", priority.into_iter().collect(), first_row);
     }
-    detail(frame, "Text", words(todo.text()), text_row);
+    detail(frame, "Text", words(todo.text(), today), text_row);
     detail(frame, "Created", date(todo.created), created_area);
     detail(frame, "Due", due.into_iter().collect(), due_area);
     detail(frame, "Projects", tags('+', todo.projects()), projects_area);
@@ -372,8 +375,8 @@ pub fn draw_error(frame: &mut Frame, message: &str) {
     frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
 
-/// A listed task: its number then its todo.txt line, styled word by word, or all dimmed when done.
-pub fn line(number: usize, todo: &Todo) -> Line<'static> {
+/// A listed task: its number then its todo.txt line, styled word by word with due dates against `today`, or all dimmed when done.
+pub fn line(number: usize, todo: &Todo, today: Date) -> Line<'static> {
     let number = format!("{number:>3}  ");
     if todo.done {
         return Line::from(format!("{number}{}", todo.to_line()).dim());
@@ -385,20 +388,31 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     if let Some(created) = todo.created {
         spans.extend([created.to_string().dim(), " ".into()]);
     }
-    spans.extend(words(&todo.description));
+    spans.extend(words(&todo.description, Some(today)));
     Line::from(spans)
 }
 
-/// Words of `text`, each styled by `tag_style`, with the spaces between them kept.
-fn words(text: &str) -> Vec<Span<'static>> {
+/// Words of `text`, a `due:` date styled against `today` when given, any other word by `tag_style`, with the spaces between them kept.
+fn words(text: &str, today: Option<Date>) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     for (i, word) in text.split(' ').enumerate() {
         if i > 0 {
             spans.push(" ".into());
         }
-        spans.push(Span::styled(word.to_string(), tag_style(word)));
+        let due = word.strip_prefix(DUE).and_then(|value| due_style(value, today));
+        spans.push(Span::styled(word.to_string(), due.unwrap_or_else(|| tag_style(word))));
     }
     spans
+}
+
+/// Style of a due date: red once past `today`, yellow on the day, none when later, not a date, or with no `today`.
+fn due_style(value: &str, today: Option<Date>) -> Option<Style> {
+    let (due, today) = (parse_date(value)?, today?);
+    match due.cmp(&today) {
+        Ordering::Less => Some(Style::new().red()),
+        Ordering::Equal => Some(Style::new().yellow()),
+        Ordering::Greater => None,
+    }
 }
 
 /// Style of a word of a task: a `+project` magenta, an `@context` cyan, a `key:value` dimmed, anything else plain.

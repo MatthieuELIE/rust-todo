@@ -171,6 +171,14 @@ impl App {
         rows
     }
 
+    /// The task under the cursor, none when the cursor stands on a folded group or the list is empty.
+    pub fn selected_task(&self) -> Option<&Todo> {
+        match self.rows().get(self.cursor) {
+            Some(Row::Task(number)) => Some(&self.store.todos[number - 1]),
+            _ => None,
+        }
+    }
+
     /// Row of the first task on screen in `group`.
     fn first_task(&self, group: Group) -> Option<Row> {
         self.tasks()

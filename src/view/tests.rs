@@ -346,12 +346,25 @@ fn a_pending_line_keeps_its_text_and_styles_priority_date_projects_and_contexts(
     assert_eq!(style_of(text, "2026-09-26"), Style::new().dim());
     assert_eq!(style_of(text, "+bank"), Style::new().magenta());
     assert_eq!(style_of(text, "@phone"), Style::new().cyan());
-    for plain in ["Call", "due:2026-10-01", "a+b", "+", "@"] {
+    assert_eq!(style_of(text, "due:2026-10-01"), Style::new().dim());
+    for plain in ["Call", "a+b", "+", "@"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }
     assert_eq!(style_of("(B) x", "(B)"), Style::new().bold().green());
     assert_eq!(style_of("(C) x", "(C)"), Style::new().bold().blue());
     assert_eq!(style_of("(D) x", "(D)"), Style::new().bold());
+}
+
+#[test]
+fn key_values_are_dimmed_but_not_urls_times_or_labels() {
+    let text = "Call wait:figma rec:1w a:b:c é-t_2:x https://herdr.dev 10:30 Note: wait: :x _a:b a/b:c";
+
+    for dimmed in ["wait:figma", "rec:1w", "a:b:c", "é-t_2:x"] {
+        assert_eq!(style_of(text, dimmed), Style::new().dim(), "{dimmed}");
+    }
+    for plain in ["https://herdr.dev", "10:30", "Note:", "wait:", ":x", "_a:b", "a/b:c"] {
+        assert_eq!(style_of(text, plain), Style::new(), "{plain}");
+    }
 }
 
 #[test]

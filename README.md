@@ -127,6 +127,7 @@ Flags go before terms: in `todo list +work --all`, `--all` is one more term, exc
 Pending tasks come first, prioritised ones by priority, then the rest; ties keep the file order.
 stdout carries task lines only, coloured when it is a terminal and plain text when piped.
 Each element of a line has its own style: a priority bold, tinted yellow, green and blue for A to C as `todo.sh` does, the creation date dimmed, `+projects` magenta and `@contexts` cyan.
+`key:value` words such as `due:2026-10-01` are dimmed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
 A done task is dimmed as a whole.
 An empty listing says so on stderr and still exits 0.
 

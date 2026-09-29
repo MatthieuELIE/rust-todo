@@ -249,14 +249,9 @@ fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usiz
         return;
     }
     let width = names.iter().map(|(name, _)| name.chars().count()).max().unwrap_or_default();
-    let rows = names.iter().map(|(name, count)| {
-        let style = match name.chars().next() {
-            Some('+') => Style::new().magenta(),
-            Some('@') => Style::new().cyan(),
-            _ => Style::new().dim(),
-        };
-        Line::from_iter([Span::styled(format!("{name:<width$}"), style), format!(" {count:>3}").dim()])
-    });
+    let rows = names
+        .iter()
+        .map(|(name, count)| Line::from_iter([Span::styled(format!("{name:<width$}"), tag_style(name)), format!(" {count:>3}").dim()]));
     let height = names.len().min(5) as u16 + 2;
     let y = if tag.y + 1 + height <= bounds.bottom() {
         tag.y + 1
@@ -285,11 +280,12 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let (mut lines, mut row) = (Vec::new(), None);
     for (i, (term, count)) in filters.iter().enumerate() {
         let sigil = term.chars().next();
-        let (header, style) = match sigil {
-            Some('+') => (" PROJECTS", Style::new().magenta()),
-            Some('@') => (" CONTEXTS", Style::new().cyan()),
-            _ => ("", Style::new().bold()),
+        let header = match sigil {
+            Some('+') => " PROJECTS",
+            Some('@') => " CONTEXTS",
+            _ => "",
         };
+        let style = if header.is_empty() { Style::new().bold() } else { tag_style(term) };
         if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
             lines.extend([Line::default(), Line::from(Span::styled(header, style.bold()))]);
         }
@@ -329,15 +325,19 @@ pub fn line(number: usize, todo: &Todo) -> Line<'static> {
         if i > 0 {
             spans.push(" ".into());
         }
-        let style = match word.chars().next() {
-            Some('+') if word.len() > 1 => Style::new().magenta(),
-            Some('@') if word.len() > 1 => Style::new().cyan(),
-            _ if Todo::is_key_value(word) => Style::new().dim(),
-            _ => Style::new(),
-        };
-        spans.push(Span::styled(word.to_string(), style));
+        spans.push(Span::styled(word.to_string(), tag_style(word)));
     }
     Line::from(spans)
+}
+
+/// Style of a word of a task: a `+project` magenta, an `@context` cyan, a `key:value` dimmed, anything else plain.
+fn tag_style(word: &str) -> Style {
+    match word.chars().next() {
+        Some('+') if word.len() > 1 => Style::new().magenta(),
+        Some('@') if word.len() > 1 => Style::new().cyan(),
+        _ if Todo::is_key_value(word) => Style::new().dim(),
+        _ => Style::new(),
+    }
 }
 
 /// Header of a group of the list: its count, its title, then a rule filling `width`, ended by ` ▸` when the group is folded.

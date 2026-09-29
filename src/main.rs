@@ -98,8 +98,7 @@ fn main() -> ExitCode {
     ExitCode::SUCCESS
 }
 
-/// Builds the task to add from its text and the `--priority` flag, refusing a priority given both ways.
-/// Lives here rather than in `Todo`: only the CLI can supply a priority twice.
+/// Builds the task to add, refusing a priority given both inline and by `--priority`, which only the CLI can do.
 fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
     let mut todo = Todo::new_from_input(text, today())?;
     match (todo.priority, flag_priority) {

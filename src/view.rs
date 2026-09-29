@@ -8,8 +8,7 @@ use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
 use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 
-/// Background of every cell no widget paints: Catppuccin Mocha's mantle, the colour herdr gives its popups, so the list and the
-/// popup's frame read as one surface.
+/// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
 
 /// Keys of the list shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
@@ -59,8 +58,7 @@ j/k          pick a filter
 Esc          all tasks
 Tab/Enter    back to the list";
 
-/// Draws the filter panel and the task list above a one-line status bar, on the background; `scroll` keeps the list's offset from
-/// one frame to the next.
+/// Draws the filter panel and the task list above the status bar; `scroll` keeps the list's offset between frames.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
@@ -86,8 +84,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState) {
     }
 }
 
-/// Draws the tasks on screen under their group headers, a blank row before each group but the first, or says there is none;
-/// `scroll` keeps the offset from one frame to the next.
+/// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset between frames.
 fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     let tasks = app.tasks();
     if tasks.is_empty() {
@@ -130,8 +127,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     }
 }
 
-/// Draws the status bar: the mode block, the active filters, then the mode's keys, bold before their dimmed action, when they fit
-/// and no message is shown, which goes on the right.
+/// Draws the status bar: mode block, active filters, then the mode's keys when they fit, or the message on the right.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, keys) = match &app.focus {
         Focus::Search => ("SEARCH", "⏎ keep · esc clear"),
@@ -181,8 +177,7 @@ fn draw_help(frame: &mut Frame, area: Rect) {
     frame.render_widget(Paragraph::new(help_lines(HELP_EDIT)), edit);
 }
 
-/// Lines of a help column: a mode name as its status bar block, then each key bold, the `/` between alternatives and the action
-/// dimmed.
+/// Lines of a help column: a mode name as its status bar block, keys bold, the `/` between alternatives and actions dimmed.
 fn help_lines(text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {
@@ -215,8 +210,7 @@ fn mode_block(mode: &str) -> Span<'static> {
     format!(" {mode} ").bold().black().bg(colour)
 }
 
-/// Draws the popup centred in `bounds`, its title naming the task edited or the panel filter an added task gets, and the
-/// completions of the tag typed.
+/// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions.
 fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => format!(" EDIT {number} "),
@@ -242,8 +236,7 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
     }
 }
 
-/// Draws the completion `names` in a box of five rows at most under the tag starting at `tag`, or above it when there is no
-/// room below, the `selected` one highlighted.
+/// Draws the completion `names`, five rows at most, under the tag at `tag` or above it without room, `selected` highlighted.
 fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usize, tag: Position, bounds: Rect) {
     if names.is_empty() {
         return;
@@ -272,8 +265,7 @@ fn field(editor: &Editor) -> Line<'static> {
     Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
 }
 
-/// Rows of the filter panel and the one of the active filter when it is among them: `All tasks` in bold, then the projects and
-/// the contexts, each section after a blank row and a header, and left out when empty.
+/// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.
 fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let filters = app.filters();
     let active = app.filter_row(&filters);
@@ -307,8 +299,7 @@ pub fn draw_error(frame: &mut Frame, message: &str) {
     frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
 
-/// A listed task, its number then its todo.txt line: a done task all dimmed, a pending one with its priority styled, its
-/// creation date and `key:value` words dimmed, `+projects` magenta and `@contexts` cyan.
+/// A listed task: its number then its todo.txt line, styled word by word, or all dimmed when done.
 pub fn line(number: usize, todo: &Todo) -> Line<'static> {
     let number = format!("{number:>3}  ");
     if todo.done {

@@ -126,8 +126,7 @@ impl Todo {
         values
     }
 
-    /// Whether `word` is a `key:value`: a key starting with a letter, made of letters, digits, `-` and `_`, then a value neither
-    /// empty nor starting with `//`, so that URLs, times and `Note:` are left out.
+    /// Whether `word` is a `key:value`: a key of letters, digits, `-` and `_` starting with a letter, a value neither empty nor `//`.
     pub fn is_key_value(word: &str) -> bool {
         let Some((key, value)) = word.split_once(':') else {
             return false;

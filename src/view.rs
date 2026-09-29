@@ -6,7 +6,7 @@ use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListState, Paddi
 
 use crate::editor::{Editor, Mode};
 use crate::todo::Todo;
-use crate::tui::{App, Focus, Group, Popup, Target};
+use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 
 /// Background of every cell no widget paints: Catppuccin Mocha's mantle, the colour herdr gives its popups, so the list and the
 /// popup's frame read as one surface.
@@ -220,8 +220,8 @@ fn mode_block(mode: &str) -> Span<'static> {
 fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect) {
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => format!(" EDIT {number} "),
-        (Target::Add, Some(term)) => format!(" ADD ({term}) "),
-        (Target::Add, None) => " ADD ".to_string(),
+        (Target::Add, Some(term)) if term != WAITING => format!(" ADD ({term}) "),
+        (Target::Add, _) => " ADD ".to_string(),
     };
     let field = Paragraph::new(field(&popup.editor))
         .wrap(Wrap { trim: false })
@@ -286,7 +286,7 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
             Some('@') => (" CONTEXTS", Style::new().cyan()),
             _ => ("", Style::new().bold()),
         };
-        if i > 0 && filters[i - 1].0.chars().next() != sigil {
+        if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
             lines.extend([Line::default(), Line::from(Span::styled(header, style.bold()))]);
         }
         let marker = if Some(i) == active {

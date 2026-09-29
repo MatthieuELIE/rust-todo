@@ -15,6 +15,9 @@ use crate::store::Store;
 use crate::todo::Todo;
 use crate::view;
 
+/// Panel entry of the tasks waiting for something, right under `All tasks`.
+pub const WAITING: &str = "Waiting";
+
 /// Said when the key after `p` is not a priority.
 const NOT_PRIORITY: &str = "priority is a to e, or space";
 
@@ -133,7 +136,7 @@ impl App {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
         let mut tasks = self.store.list(self.show_done, &terms);
         if let Some(filter) = &self.filter {
-            tasks.retain(|(_, todo)| has_word(todo, filter));
+            tasks.retain(|(_, todo)| shows(todo, filter));
         }
         tasks
     }
@@ -193,8 +196,8 @@ impl App {
         }
     }
 
-    /// Panel entries with how many tasks each shows, the search left out: `All tasks`, then the `+projects` and `@contexts` of
-    /// the tasks shown, each alphabetical.
+    /// Panel entries with how many tasks each shows, the search left out: `All tasks`, `Waiting` unless no task shown waits, then
+    /// the `+projects` and `@contexts` of the tasks shown, each alphabetical.
     pub fn filters(&self) -> Vec<(String, usize)> {
         let shown = self.store.list(self.show_done, &[]);
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
@@ -208,6 +211,10 @@ impl App {
             terms
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
+        let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
+        if waiting > 0 {
+            filters.push((WAITING.to_string(), waiting));
+        }
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
             let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
             filters.push((term, count));
@@ -525,7 +532,9 @@ impl App {
     fn add(&mut self, text: &str, today: Date) -> bool {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
-                if let Some(term) = &self.filter
+                if self.filter.as_deref() == Some(WAITING) {
+                    self.filter = None;
+                } else if let Some(term) = &self.filter
                     && !has_word(&todo, term)
                 {
                     todo.description = format!("{} {term}", todo.description);
@@ -599,6 +608,11 @@ impl App {
             self.message = Some("reloaded, edit cancelled".to_string());
         }
     }
+}
+
+/// Whether the panel entry `term` keeps `todo` on screen.
+fn shows(todo: &Todo, term: &str) -> bool {
+    if term == WAITING { todo.is_waiting() } else { has_word(todo, term) }
 }
 
 /// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.

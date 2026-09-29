@@ -105,6 +105,13 @@ impl Todo {
         ('A'..='E').contains(&c)
     }
 
+    /// Whether the description holds a `wait:` key:value, what the task waits for.
+    pub fn is_waiting(&self) -> bool {
+        self.description
+            .split_whitespace()
+            .any(|word| word.starts_with("wait:") && Todo::is_key_value(word))
+    }
+
     /// Whether `word` is a `key:value`: a key starting with a letter, made of letters, digits, `-` and `_`, then a value neither
     /// empty nor starting with `//`, so that URLs, times and `Note:` are left out.
     pub fn is_key_value(word: &str) -> bool {

@@ -107,6 +107,13 @@ fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empt
     );
     assert!(buffer[(18, 3)].modifier.contains(Modifier::DIM));
 
+    let waiting = rows(&render_in(&app_of(&["Design wait:figma +app"]), 50, 9));
+    let panel: Vec<String> = waiting
+        .iter()
+        .map(|row| row.chars().take(19).collect::<String>().trim_end().to_string())
+        .collect();
+    assert_eq!(panel[..4], ["▸ All tasks       1", "  Waiting         1", "", " PROJECTS"]);
+
     let contexts_only = rows(&render_in(&app_of(&["Call @phone"]), 50, 9));
     assert_eq!(contexts_only[2].chars().take(9).collect::<String>(), " CONTEXTS");
     assert!(!contexts_only.iter().any(|row| row.contains("PROJECTS")));

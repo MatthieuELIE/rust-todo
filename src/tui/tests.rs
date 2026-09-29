@@ -318,6 +318,31 @@ fn a_task_added_under_a_panel_filter_gets_its_term_unless_it_has_that_exact_word
 }
 
 #[test]
+fn waiting_follows_all_tasks_and_shows_the_tasks_with_a_wait_key_value() {
+    let mut app = app_of(&["Design wait:figma +app", "Mail wait:designer", "Note wait: later", "Pay +rent"]);
+
+    let counts = [("All tasks", 4), (WAITING, 2), ("+app", 1), ("+rent", 1)];
+    assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
+
+    app.filter = Some(WAITING.to_string());
+    assert_eq!(shown(&app), ["Design wait:figma +app", "Mail wait:designer"]);
+}
+
+#[test]
+fn a_task_added_under_waiting_gets_nothing_and_brings_back_all_tasks_with_the_cursor_on_it() {
+    let mut app = app_of(&["Design wait:figma", "Pay rent"]);
+    app.filter = Some(WAITING.to_string());
+
+    press(&mut app, "oCall landlord");
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.store.todos[2].to_line(), "2026-09-26 Call landlord");
+    assert_eq!(app.filter, None);
+    assert_eq!(app.cursor, 2);
+    assert_eq!(app.message, None);
+}
+
+#[test]
 fn a_panel_entry_counts_and_shows_the_tasks_with_that_exact_word() {
     let mut app = app_of(&[
         "Learn +rust",

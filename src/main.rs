@@ -51,9 +51,9 @@ fn main() -> ExitCode {
             if tasks.is_empty() {
                 eprintln!("{}", if terms.is_empty() { "nothing to do" } else { "no matching task" });
             }
-            let colour = std::io::stdout().is_terminal();
+            let (colour, today) = (std::io::stdout().is_terminal(), today());
             for (number, todo) in tasks {
-                let line = view::line(number, todo);
+                let line = view::line(number, todo, today);
                 if colour {
                     let spans: String = line
                         .iter()

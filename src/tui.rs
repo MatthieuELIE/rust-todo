@@ -7,12 +7,12 @@ use std::time::Duration;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::widgets::ListState;
-use time::Date;
+use time::{Date, Month};
 
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
 use crate::store::Store;
-use crate::todo::{Todo, WAIT};
+use crate::todo::{DUE, Todo, WAIT};
 use crate::view;
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
@@ -37,6 +37,8 @@ pub struct Popup {
     pub target: Target,
     /// Row picked among the completions of the tag being typed.
     pub selected: usize,
+    /// Date picked in the date picker, open while set.
+    pub picker: Option<Date>,
 }
 
 /// Where the keys go.
@@ -277,7 +279,7 @@ impl App {
     pub fn paste(&mut self, text: &str) {
         let text = text.lines().collect::<Vec<_>>().join(" ");
         match &mut self.focus {
-            Focus::Popup(popup) => popup.editor.paste(&text),
+            Focus::Popup(popup) if popup.picker.is_none() => popup.editor.paste(&text),
             Focus::Search => self.search.push_str(&text),
             _ => {}
         }
@@ -317,12 +319,23 @@ impl App {
         write
     }
 
-    /// Applies a key typed in the popup, arrows and `Tab` going to the completions when shown; tells whether to write.
+    /// Applies a key typed in the popup, to the date picker when open, arrows and `Tab` to the completions when shown; tells whether to write.
     fn popup_key(&mut self, key: KeyEvent, today: Date) -> bool {
         let (names, selected) = self.completions();
         let Focus::Popup(popup) = &mut self.focus else {
             unreachable!("the popup is open");
         };
+        if let Some(date) = popup.picker {
+            popup.picker = match key.code {
+                KeyCode::Enter => {
+                    popup.editor.complete(&format!("{DUE}{date}"));
+                    None
+                }
+                KeyCode::Esc => None,
+                code => Some(shift(date, code)),
+            };
+            return false;
+        }
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match (key.code, ctrl) {
             _ if names.is_empty() => {}
@@ -342,7 +355,11 @@ impl App {
             _ => {}
         }
         popup.selected = 0;
-        match popup.editor.handle_key(key) {
+        let outcome = popup.editor.handle_key(key);
+        if popup.editor.wants_date() {
+            popup.picker = Some(today);
+        }
+        match outcome {
             Outcome::Continue => false,
             Outcome::NotPriority => {
                 self.message = Some(NOT_PRIORITY.to_string());
@@ -453,6 +470,7 @@ impl App {
                     editor: Editor::default(),
                     target: Target::Add,
                     selected: 0,
+                    picker: None,
                 })
             }
             KeyCode::Char('/') => {
@@ -471,6 +489,7 @@ impl App {
                         editor: Editor::new(self.store.todos[number - 1].to_line(), Mode::Normal),
                         target: Target::Edit(number),
                         selected: 0,
+                        picker: None,
                     })
                 }
             }
@@ -604,6 +623,27 @@ impl App {
             self.message = Some("reloaded, edit cancelled".to_string());
         }
     }
+}
+
+/// `date` moved by a date picker key: a day with `h` `l`, a week with `k` `j`, a month with `H` `L`, arrows as their letters.
+fn shift(date: Date, code: KeyCode) -> Date {
+    match code {
+        KeyCode::Char('h') | KeyCode::Left => date.previous_day().unwrap_or(date),
+        KeyCode::Char('l') | KeyCode::Right => date.next_day().unwrap_or(date),
+        KeyCode::Char('k') | KeyCode::Up => date.checked_sub(time::Duration::WEEK).unwrap_or(date),
+        KeyCode::Char('j') | KeyCode::Down => date.checked_add(time::Duration::WEEK).unwrap_or(date),
+        KeyCode::Char('H') => add_months(date, -1),
+        KeyCode::Char('L') => add_months(date, 1),
+        _ => date,
+    }
+}
+
+/// `date` moved by `months`, its day brought back to the last one of a shorter month.
+fn add_months(date: Date, months: i32) -> Date {
+    let index = date.year() * 12 + i32::from(u8::from(date.month())) - 1 + months;
+    let year = index.div_euclid(12);
+    let month = Month::try_from(index.rem_euclid(12) as u8 + 1).expect("a month is 1 to 12");
+    Date::from_calendar_date(year, month, date.day().min(month.length(year))).unwrap_or(date)
 }
 
 /// Whether the panel entry `term` keeps `todo` on screen.

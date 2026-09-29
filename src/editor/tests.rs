@@ -308,7 +308,7 @@ fn p_leaves_a_done_line_alone_and_is_a_letter_in_insert_mode() {
 }
 
 #[test]
-fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_or_an_at_in_insert_mode() {
+fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_an_at_or_wait_colon_in_insert_mode() {
     assert_eq!(editor("Call +ba", 8).tag(), Some("+ba"));
     assert_eq!(editor("Call +bank now", 7).tag(), Some("+b"));
     assert_eq!(editor("Call @", 6).tag(), Some("@"));
@@ -316,6 +316,9 @@ fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_or_an_at_in_
     assert_eq!(editor("Call +bank", 5).tag(), None);
     assert_eq!(editor("a+b", 3).tag(), None);
     assert_eq!(normal("Call +bank", 7).tag(), None);
+    assert_eq!(editor("Design wait:", 12).tag(), Some("wait:"));
+    assert_eq!(editor("Design wait:fi", 14).tag(), Some("wait:fi"));
+    assert_eq!(editor("Design wai", 10).tag(), None);
 }
 
 #[test]

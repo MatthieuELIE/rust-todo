@@ -1,6 +1,6 @@
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::todo::Todo;
+use crate::todo::{Todo, WAIT};
 
 /// What a key did to the line being edited.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -73,10 +73,11 @@ impl Editor {
         }
     }
 
-    /// The `+project` or `@context` being typed: in insert mode, the word before the cursor when it starts with `+` or `@`.
+    /// The `+project`, `@context` or `wait:` value being typed: in insert mode, the word before the cursor when it starts with `+`,
+    /// `@` or `wait:`.
     pub fn tag(&self) -> Option<&str> {
         let word = self.text[..self.byte(self.cursor)].rsplit(char::is_whitespace).next()?;
-        (self.mode == Mode::Insert && word.starts_with(['+', '@'])).then_some(word)
+        (self.mode == Mode::Insert && (word.starts_with(['+', '@']) || word.starts_with(WAIT))).then_some(word)
     }
 
     /// Writes `name` over the whole word at the cursor, then a space unless one follows, the cursor after it.

@@ -12,7 +12,7 @@ use time::Date;
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
 use crate::store::Store;
-use crate::todo::Todo;
+use crate::todo::{Todo, WAIT};
 use crate::view;
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
@@ -222,7 +222,7 @@ impl App {
         filters
     }
 
-    /// Completions of the tag typed in the popup and the row picked among them: the `+projects` or `@contexts` of every task, done
+    /// Completions of the tag typed in the popup and the row picked among them: the `+projects`, `@contexts` or `wait:` values of every task, done
     /// ones included, starting like the tag whatever the case, with how many tasks have each, the most used first, then
     /// alphabetical.
     pub fn completions(&self) -> (Vec<(String, usize)>, usize) {
@@ -232,10 +232,10 @@ impl App {
         let Some(tag) = popup.editor.tag() else {
             return Default::default();
         };
-        let (sigil, names): (char, fn(&Todo) -> Vec<&str>) = if tag.starts_with('+') {
-            ('+', Todo::projects)
-        } else {
-            ('@', Todo::contexts)
+        let (sigil, names): (&str, fn(&Todo) -> Vec<&str>) = match tag.chars().next() {
+            Some('+') => ("+", Todo::projects),
+            Some('@') => ("@", Todo::contexts),
+            _ => (WAIT, Todo::waits),
         };
         let mut counts = HashMap::new();
         for name in self.store.todos.iter().flat_map(names) {

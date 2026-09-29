@@ -511,6 +511,24 @@ fn a_tag_typed_in_the_popup_lists_the_names_of_the_file_starting_like_it_most_us
 }
 
 #[test]
+fn wait_colon_typed_in_the_popup_lists_the_wait_values_of_the_file_most_used_first() {
+    let mut app = app_of(&[
+        "Design wait:figma",
+        "x 2026-09-20 Mock wait:figma",
+        "Mail wait:designer",
+        "Note wait: later",
+        "Pay +rent",
+    ]);
+
+    press(&mut app, "oDraw wait:");
+    assert_eq!(names(&app), ["wait:figma 2", "wait:designer 1"]);
+    press(&mut app, "d");
+    assert_eq!(names(&app), ["wait:designer 1"]);
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    assert_eq!(popup(&app).editor.text, "Draw wait:designer ");
+}
+
+#[test]
 fn arrows_and_ctrl_n_p_pick_a_name_that_tab_writes_in_place_of_the_tag() {
     let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
     let pick = |app: &mut App, code: KeyCode, modifiers: KeyModifiers| {

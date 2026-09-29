@@ -90,6 +90,10 @@ A paste goes in at the cursor as one line, its line breaks turned into spaces; o
 While a word starting with `+`, `@` or `wait:` is typed, a drop-down lists the projects, contexts or `wait:` values of the whole file, done tasks included, that start like it whatever the case, the most used first.
 `↓` `↑` or `Ctrl-N` `Ctrl-P` pick one, and `Tab` writes it in place of the word, followed by a space; `Esc` and `Enter` keep their meaning.
 
+When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it, weeks from Monday, on today.
+`h` `l` move by a day, `k` `j` by a week, `H` `L` by a month, the arrows as their letters; `Enter` writes the date after `due:`, followed by a space, and `Esc` closes it, leaving `due:` to be typed by hand.
+Any other key and a paste are ignored while it is open.
+
 An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word; under `Waiting` it gets nothing and the panel goes back to `All tasks`.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task; an add stays open.

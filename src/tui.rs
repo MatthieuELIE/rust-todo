@@ -623,7 +623,7 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
     ratatui::run(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;
         while !app.quit {
-            terminal.draw(|frame| view::draw(frame, &app, &mut scroll))?;
+            terminal.draw(|frame| view::draw(frame, &app, &mut scroll, crate::today()))?;
             let event = if event::poll(Duration::from_millis(250))? {
                 Some(event::read()?)
             } else {

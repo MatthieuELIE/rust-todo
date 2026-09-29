@@ -108,7 +108,7 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ### Details
 
-Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, its projects and contexts, and its other `key:value` words.
+Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
 A done task shows its completion date in place of the priority, and the whole zone is dimmed.
 A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
@@ -135,8 +135,9 @@ Flags go before terms: in `todo list +work --all`, `--all` is one more term, exc
 Pending tasks come first, prioritised ones by priority, then the rest; ties keep the file order.
 stdout carries task lines only, coloured when it is a terminal and plain text when piped.
 Each element of a line has its own style: a priority bold, tinted yellow, green and blue for A to C as `todo.sh` does, the creation date dimmed, `+projects` magenta and `@contexts` cyan.
-`key:value` words such as `due:2026-10-01` are dimmed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
-A done task is dimmed as a whole.
+`key:value` words such as `wait:figma` are dimmed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
+A `due:` date is red once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is dimmed like any `key:value`.
+A done task is dimmed as a whole, whatever its due date.
 An empty listing says so on stderr and still exits 0.
 
 ### Differences from `todo.sh`

@@ -1,6 +1,6 @@
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
-use crate::todo::{Todo, WAIT};
+use crate::todo::{DUE, Todo, WAIT};
 
 /// What a key did to the line being edited.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -74,8 +74,18 @@ impl Editor {
 
     /// The `+project`, `@context` or `wait:` value being typed before the cursor, in insert mode only.
     pub fn tag(&self) -> Option<&str> {
-        let word = self.text[..self.byte(self.cursor)].rsplit(char::is_whitespace).next()?;
+        let word = self.word();
         (self.mode == Mode::Insert && (word.starts_with(['+', '@']) || word.starts_with(WAIT))).then_some(word)
+    }
+
+    /// Whether the word before the cursor is a bare `due:` waiting for its date, in insert mode only.
+    pub fn wants_date(&self) -> bool {
+        self.mode == Mode::Insert && self.word() == DUE
+    }
+
+    /// The word before the cursor, empty after a space.
+    fn word(&self) -> &str {
+        self.text[..self.byte(self.cursor)].rsplit(char::is_whitespace).next().unwrap_or_default()
     }
 
     /// Writes `name` over the whole word at the cursor, then a space unless one follows, the cursor after it.

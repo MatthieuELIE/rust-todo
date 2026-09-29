@@ -270,6 +270,7 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
         editor,
         target: Target::Add,
         selected: 0,
+        picker: None,
     });
 
     let buffer = render(&app);
@@ -301,6 +302,7 @@ fn add_popup(app: &mut App, text: &str, selected: usize) {
         editor,
         target: Target::Add,
         selected,
+        picker: None,
     });
 }
 
@@ -526,4 +528,40 @@ fn the_due_date_in_the_details_is_red_once_past() {
         format!("{:<25} Due       2026-09-20", " Created")
     );
     assert_eq!(buffer[(56, 10)].fg, Color::Red);
+}
+
+#[test]
+fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pick_highlighted_and_today_bold() {
+    let mut app = app_of(&["Pay rent"]);
+    add_popup(&mut app, "Ship due:", 0);
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.picker = Some(date!(2026 - 09 - 28));
+    }
+
+    let buffer = render_in(&app, 60, 20);
+    let rows = rows(&buffer);
+    let y = rows.iter().position(|row| row.contains("│Mo Tu")).expect("weekdays row");
+    let x = rows[y].split("│Mo Tu").next().expect("row").chars().count();
+
+    assert_eq!(cells(&rows[y - 2], x + 1, 4), "due:");
+    assert_eq!(
+        (y - 1..y + 7).map(|y| cells(&rows[y], x, 22)).collect::<Vec<_>>(),
+        [
+            "┌ SEPTEMBER 2026 ────┐",
+            "│Mo Tu We Th Fr Sa Su│",
+            "│    1  2  3  4  5  6│",
+            "│ 7  8  9 10 11 12 13│",
+            "│14 15 16 17 18 19 20│",
+            "│21 22 23 24 25 26 27│",
+            "│28 29 30            │",
+            "└────────────────────┘",
+        ]
+    );
+    let (x, y) = (x as u16, y as u16);
+    assert!(buffer[(x + 1, y)].modifier.contains(Modifier::DIM));
+    assert!(buffer[(x + 16, y + 4)].modifier.contains(Modifier::BOLD));
+    assert!(!buffer[(x + 13, y + 4)].modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(x + 1, y + 5)].bg, buffer[(x + 4, y + 5)].bg), (Color::DarkGray, BACKGROUND));
+    assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
+    assert_eq!(buffer[(1, 19)].bg, Color::Cyan);
 }

@@ -3,9 +3,10 @@ use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
 use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListState, Padding, Paragraph, Wrap};
+use time::Date;
 
 use crate::editor::{Editor, Mode};
-use crate::todo::Todo;
+use crate::todo::{DUE, Todo};
 use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
@@ -139,7 +140,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState) {
     }
 }
 
-/// Draws the detail zone: a ` DETAILS ` rule, then the priority, text, creation date, projects and contexts of `todo`.
+/// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
 fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
     let block = Block::new()
         .borders(Borders::TOP)
@@ -150,26 +151,48 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect) {
     let Some(todo) = todo else {
         return;
     };
-    let [priority_row, text_row, created_row, tags_row, _] = Layout::vertical([Constraint::Length(1); 5]).areas(inner);
+    let [first_row, text_row, dates_row, tags_row, key_values_row] = Layout::vertical([Constraint::Length(1); 5]).areas(inner);
+    let [created_area, due_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(dates_row);
     let [projects_area, contexts_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(tags_row);
     let tags = |sigil: char, names: Vec<&str>| words(&names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "));
-    let priority = todo.priority.map(|letter| Span::styled(letter.to_string(), priority(letter)));
-    detail(frame, "Priority", priority.into_iter().collect(), priority_row);
+    let date = |date: Option<Date>| date.map(|date| date.to_string().into()).into_iter().collect();
+    let key_values: Vec<&str> = todo.description.split_whitespace().filter(|word| Todo::is_key_value(word)).collect();
+    let due = key_values
+        .iter()
+        .find_map(|word| word.strip_prefix(DUE))
+        .map(|value| value.to_string().into());
+    let mut others = Line::from(" ");
+    for (i, word) in key_values.iter().filter(|word| !word.starts_with(DUE)).enumerate() {
+        let (key, value) = word.split_once(':').unwrap_or_default();
+        others.extend([if i > 0 { "  " } else { "" }.into(), format!("{key}:").dim(), value.to_string().into()]);
+    }
+
+    if todo.done {
+        detail(frame, "Done", date(todo.completed), first_row);
+    } else {
+        let priority = todo.priority.map(|letter| Span::styled(letter.to_string(), priority(letter)));
+        detail(frame, "Priority", priority.into_iter().collect(), first_row);
+    }
     detail(frame, "Text", words(todo.text()), text_row);
-    detail(
-        frame,
-        "Created",
-        todo.created.map(|date| date.to_string().into()).into_iter().collect(),
-        created_row,
-    );
+    detail(frame, "Created", date(todo.created), created_area);
+    detail(frame, "Due", due.into_iter().collect(), due_area);
     detail(frame, "Projects", tags('+', todo.projects()), projects_area);
     detail(frame, "Contexts", tags('@', todo.contexts()), contexts_area);
+    draw_cut(frame, others, key_values_row);
+    if todo.done {
+        frame.buffer_mut().set_style(inner, Style::new().dim());
+    }
 }
 
-/// Draws a row of the detail zone, its `label` dimmed then its `value`, ended by `…` when it overflows `area`.
+/// Draws a row of the detail zone, its `label` dimmed then its `value`.
 fn detail(frame: &mut Frame, label: &str, value: Vec<Span<'static>>, area: Rect) {
     let mut line = Line::from(format!(" {label:<10}").dim());
     line.extend(value);
+    draw_cut(frame, line, area);
+}
+
+/// Draws `line` in `area`, ended by `…` when it overflows.
+fn draw_cut(frame: &mut Frame, line: Line, area: Rect) {
     let overflows = line.width() > area.width as usize;
     frame.render_widget(line, area);
     if overflows {

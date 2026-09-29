@@ -108,7 +108,8 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ### Details
 
-Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date, its projects and its contexts.
+Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, its projects and contexts, and its other `key:value` words.
+A done task shows its completion date in place of the priority, and the whole zone is dimmed.
 A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
 

@@ -35,7 +35,7 @@ fn rows(buffer: &Buffer) -> Vec<String> {
 }
 
 #[test]
-fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted() {
+fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_in_the_accent_and_highlighted() {
     let mut app = app_of(&["Pay +rent", "Call +bank @phone", "x 2026-09-20 Old +rent"]);
     app.cursor = 1;
 
@@ -44,30 +44,33 @@ fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_and_highlighted()
     assert_eq!(
         rows(&buffer)[..4],
         [
-            "▸ All tasks       2│    1  Pay +rent",
-            "                   │▸   2  Call +bank @phone",
+            "→ All tasks       2│    1  Pay +rent",
+            "                   │→   2  Call +bank @phone",
             " PROJECTS          │",
             "  +bank           1│",
         ]
     );
-    assert_eq!(buffer[(30, 1)].bg, Color::DarkGray);
+    assert_eq!((buffer[(30, 1)].bg, buffer[(20, 1)].fg), (SELECTED, ACCENT));
     assert_eq!(buffer[(30, 0)].bg, BACKGROUND);
+    assert_eq!((buffer[(0, 0)].fg, buffer[(5, 0)].bg), (TERTIARY, BACKGROUND));
     assert!(buffer[(2, 0)].modifier.contains(Modifier::BOLD));
     assert!(!buffer[(2, 3)].modifier.contains(Modifier::BOLD));
 }
 
 #[test]
-fn the_active_filter_is_marked_in_the_panel_and_highlighted_once_the_panel_has_focus() {
+fn the_accent_and_the_highlight_follow_the_focus_between_the_panel_and_the_list() {
     let mut app = app_of(&["Pay +rent", "Call +bank"]);
     app.filter = Some("+rent".to_string());
 
     let buffer = render_in(&app, 50, 8);
     assert!(rows(&buffer)[0].starts_with("  All tasks "));
-    assert!(rows(&buffer)[4].starts_with("▸ +rent "));
-    assert_eq!(buffer[(5, 4)].bg, BACKGROUND);
+    assert!(rows(&buffer)[4].starts_with("→ +rent "));
+    assert_eq!((buffer[(5, 4)].bg, buffer[(0, 4)].fg), (BACKGROUND, TERTIARY));
 
     app.focus = Focus::Panel;
-    assert_eq!(render_in(&app, 50, 8)[(5, 4)].bg, Color::DarkGray);
+    let buffer = render_in(&app, 50, 8);
+    assert_eq!((buffer[(5, 4)].bg, buffer[(0, 4)].fg), (SELECTED, ACCENT));
+    assert_eq!((buffer[(30, 0)].bg, buffer[(20, 0)].fg), (BACKGROUND, TERTIARY));
 }
 
 #[test]
@@ -77,7 +80,7 @@ fn a_filter_gone_from_the_panel_marks_no_entry() {
     app.focus = Focus::Panel;
 
     let buffer = render_in(&app, 50, 8);
-    assert!(rows(&buffer).iter().all(|row| !row.starts_with('▸')));
+    assert!(rows(&buffer).iter().all(|row| !row.starts_with('→')));
     assert_eq!(buffer[(5, 0)].bg, BACKGROUND);
 }
 
@@ -92,7 +95,7 @@ fn the_panel_puts_coloured_projects_and_contexts_under_grey_headers_and_drops_an
     assert_eq!(
         panel[..8],
         [
-            "▸ All tasks       2",
+            "→ All tasks       2",
             "",
             " PROJECTS",
             "  +bank           1",
@@ -112,7 +115,7 @@ fn the_panel_puts_coloured_projects_and_contexts_under_grey_headers_and_drops_an
         .iter()
         .map(|row| row.chars().take(19).collect::<String>().trim_end().to_string())
         .collect();
-    assert_eq!(panel[..4], ["▸ All tasks       1", "  Waiting         1", "", " PROJECTS"]);
+    assert_eq!(panel[..4], ["→ All tasks       1", "  Waiting         1", "", " PROJECTS"]);
 
     let contexts_only = rows(&render_in(&app_of(&["Call @phone"]), 50, 9));
     assert_eq!(contexts_only[2].chars().take(9).collect::<String>(), " CONTEXTS");
@@ -134,13 +137,13 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
             "    3   A  a".to_string(),
             String::new(),
             format!("   (1)  PRIORITY B  {}", "─".repeat(10)),
-            "▸   2   B  b".to_string(),
+            "→   2   B  b".to_string(),
             String::new(),
             format!("   (1)  NO PRIORITY  {}", "─".repeat(9)),
             "    1  c".to_string(),
         ]
     );
-    assert_eq!(buffer[(30, 4)].bg, Color::DarkGray);
+    assert_eq!(buffer[(30, 4)].bg, SELECTED);
     assert_eq!((buffer[(28, 0)].fg, buffer[(28, 3)].fg), (PRIORITIES[0], PRIORITIES[1]));
     assert_eq!(
         (buffer[(28, 6)].fg, buffer[(49, 0)].fg, buffer[(23, 0)].fg),
@@ -162,13 +165,13 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
         [
             format!("   (2)  PRIORITY A  {} ▸", "─".repeat(8)),
             String::new(),
-            format!("▸  (1)  PRIORITY B  {} ▸", "─".repeat(8)),
+            format!("→  (1)  PRIORITY B  {} ▸", "─".repeat(8)),
             String::new(),
             format!("   (1)  NO PRIORITY  {} ▸", "─".repeat(7)),
             String::new(),
         ]
     );
-    assert_eq!(buffer[(30, 2)].bg, Color::DarkGray);
+    assert_eq!(buffer[(30, 2)].bg, SELECTED);
 }
 
 #[test]
@@ -329,7 +332,7 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
     );
     let y = y as u16;
     assert_eq!((buffer[(10, y + 2)].fg, buffer[(19, y + 2)].fg), (PROJECT, TERTIARY));
-    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (BACKGROUND, Color::DarkGray));
+    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (BACKGROUND, SELECTED));
     assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
 }
 
@@ -412,7 +415,7 @@ fn a_done_line_is_greyed_and_struck_through_after_its_number() {
 fn projects_and_contexts_are_coloured_on_screen() {
     let buffer = render(&app_of(&["Call +bank @phone"]));
 
-    assert_eq!(rows(&buffer)[0], "▸ All tasks       1│▸   1  Call +bank @phone");
+    assert_eq!(rows(&buffer)[0], "→ All tasks       1│→   1  Call +bank @phone");
     assert_eq!((buffer[(32, 0)].fg, buffer[(38, 0)].fg, buffer[(27, 0)].fg), (PROJECT, CONTEXT, PRIMARY));
 }
 
@@ -537,7 +540,7 @@ fn the_due_date_in_the_details_is_red_once_past() {
 }
 
 #[test]
-fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pick_highlighted_and_today_bold() {
+fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pick_in_the_accent_and_today_yellow() {
     let mut app = app_of(&["Pay rent"]);
     add_popup(&mut app, "Ship due:", 0);
     if let Focus::Popup(popup) = &mut app.focus {
@@ -565,9 +568,11 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
     );
     let (x, y) = (x as u16, y as u16);
     assert_eq!(buffer[(x + 1, y)].fg, TERTIARY);
-    assert!(buffer[(x + 16, y + 4)].modifier.contains(Modifier::BOLD));
-    assert!(!buffer[(x + 13, y + 4)].modifier.contains(Modifier::BOLD));
-    assert_eq!((buffer[(x + 1, y + 5)].bg, buffer[(x + 4, y + 5)].bg), (Color::DarkGray, BACKGROUND));
+    let pick = &buffer[(x + 1, y + 5)];
+    assert_eq!((pick.fg, pick.bg), (ACCENT, SELECTED));
+    assert!(pick.modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(x + 4, y + 5)].bg, buffer[(x + 4, y + 5)].fg), (BACKGROUND, PRIMARY));
+    assert_eq!((buffer[(x + 16, y + 4)].fg, buffer[(x + 13, y + 4)].fg), (DUE_TODAY, TERTIARY));
     assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
     assert_eq!(buffer[(1, 19)].bg, ACCENT);
 }

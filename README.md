@@ -70,6 +70,7 @@ height = "75%"
 The rows are those of `todo list`: same numbers, order and colours.
 The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, rather than left to the terminal's; outside herdr it stays that colour.
 Text is in Mocha's `text` colour, and greyer the less it needs reading: labels and section names, then dates, counts, `key:value` words and done tasks.
+The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach; the popups float over them on a lighter background.
 The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
@@ -114,7 +115,7 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ### Details
 
-Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
+Under the list, a `DETAILS` card shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
 A done task shows its completion date in place of the priority, and the whole zone is greyed, not struck through, so it stays readable.
 A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.

@@ -83,6 +83,7 @@ The status bar shows the mode in a peach block, the active filters coloured as i
 
 `o` and `Enter` open a centred popup holding one todo.txt line, which wraps when long.
 `o` opens it empty in insert mode; `Enter` opens it on the task's line in normal mode, with the cursor at the start.
+The line is coloured as you type, as in the list, and the terminal's cursor is a bar in insert mode and a block in normal mode, as in Neovim.
 
 In insert mode, characters go in at the cursor, and `←` `→`, `Home` `End`, `Backspace` `Delete`, `Ctrl-W` (the word before the cursor) and `Ctrl-U` (back to the start) edit the line.
 Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `E`, `x`, `D`, `C`, `dw` `cw` `dW` `cW`, `i` `a` `I` `A`.

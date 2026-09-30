@@ -82,7 +82,7 @@ fn a_filter_gone_from_the_panel_marks_no_entry() {
 }
 
 #[test]
-fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empty_section() {
+fn the_panel_puts_coloured_projects_and_contexts_under_grey_headers_and_drops_an_empty_section() {
     let buffer = render_in(&app_of(&["Pay +rent", "Call +bank @phone"]), 50, 9);
     let panel: Vec<String> = rows(&buffer)
         .iter()
@@ -102,13 +102,10 @@ fn the_panel_puts_projects_and_contexts_under_coloured_headers_and_drops_an_empt
             "  @phone          1"
         ]
     );
-    assert_eq!((buffer[(1, 2)].fg, buffer[(1, 6)].fg), (Color::Magenta, Color::Cyan));
+    assert_eq!((buffer[(1, 2)].fg, buffer[(1, 6)].fg), (SECONDARY, SECONDARY));
     assert!(buffer[(1, 2)].modifier.contains(Modifier::BOLD));
-    assert_eq!(
-        (buffer[(2, 3)].fg, buffer[(2, 7)].fg, buffer[(2, 0)].fg),
-        (Color::Magenta, Color::Cyan, Color::Reset)
-    );
-    assert!(buffer[(18, 3)].modifier.contains(Modifier::DIM));
+    assert_eq!((buffer[(2, 3)].fg, buffer[(2, 7)].fg, buffer[(2, 0)].fg), (PROJECT, CONTEXT, PRIMARY));
+    assert_eq!(buffer[(18, 3)].fg, TERTIARY);
 
     let waiting = rows(&render_in(&app_of(&["Design wait:figma +app"]), 50, 9));
     let panel: Vec<String> = waiting
@@ -134,19 +131,21 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
         list[..8],
         [
             format!("   (1)  PRIORITY A  {}", "─".repeat(10)),
-            "    3  (A) a".to_string(),
+            "    3   A  a".to_string(),
             String::new(),
             format!("   (1)  PRIORITY B  {}", "─".repeat(10)),
-            "▸   2  (B) b".to_string(),
+            "▸   2   B  b".to_string(),
             String::new(),
             format!("   (1)  NO PRIORITY  {}", "─".repeat(9)),
             "    1  c".to_string(),
         ]
     );
     assert_eq!(buffer[(30, 4)].bg, Color::DarkGray);
-    assert_eq!((buffer[(28, 0)].fg, buffer[(28, 3)].fg), (Color::Yellow, Color::Green));
-    assert!(buffer[(28, 6)].modifier.contains(Modifier::DIM));
-    assert!(buffer[(49, 0)].modifier.contains(Modifier::DIM));
+    assert_eq!((buffer[(28, 0)].fg, buffer[(28, 3)].fg), (PRIORITIES[0], PRIORITIES[1]));
+    assert_eq!(
+        (buffer[(28, 6)].fg, buffer[(49, 0)].fg, buffer[(23, 0)].fg),
+        (SECONDARY, STRUCTURE, TERTIARY)
+    );
 }
 
 #[test]
@@ -173,7 +172,7 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
 }
 
 #[test]
-fn the_help_shows_each_mode_s_keys_under_its_block_keys_bold_actions_and_slashes_dimmed() {
+fn the_help_shows_each_mode_s_keys_under_its_name_keys_bold_actions_and_slashes_greyed() {
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help;
 
@@ -193,17 +192,18 @@ fn the_help_shows_each_mode_s_keys_under_its_block_keys_bold_actions_and_slashes
     assert_eq!(rows.iter().filter(|row| row.contains("p Space      no priority")).count(), 2);
 
     let y = y as u16;
-    assert_eq!((buffer[(8, y)].bg, buffer[(46, y)].bg), (Color::Blue, Color::Green));
+    assert_eq!((buffer[(9, y)].fg, buffer[(47, y)].fg), (SECONDARY, SECONDARY));
+    assert!(buffer[(9, y)].modifier.contains(Modifier::BOLD));
     let (key, slash, action) = (&buffer[(8, y + 1)], &buffer[(9, y + 1)], &buffer[(21, y + 1)]);
-    assert!(key.modifier.contains(Modifier::BOLD) && !key.modifier.contains(Modifier::DIM));
-    assert!(slash.modifier.contains(Modifier::DIM) && !slash.modifier.contains(Modifier::BOLD));
-    assert!(action.modifier.contains(Modifier::DIM) && !action.modifier.contains(Modifier::BOLD));
+    assert!(key.fg == PRIMARY && key.modifier.contains(Modifier::BOLD));
+    assert!(slash.fg == SEPARATOR && !slash.modifier.contains(Modifier::BOLD));
+    assert!(action.fg == TERTIARY && !action.modifier.contains(Modifier::BOLD));
     let search = rows.iter().position(|row| row.contains("/            search")).expect("search key") as u16;
-    assert!(!buffer[(8, search)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(8, search)].fg, PRIMARY);
 }
 
 #[test]
-fn every_cell_left_unpainted_takes_the_background_even_under_a_cleared_box() {
+fn every_cell_left_unpainted_takes_the_background_and_the_text_colour_even_under_a_cleared_box() {
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help;
 
@@ -211,7 +211,7 @@ fn every_cell_left_unpainted_takes_the_background_even_under_a_cleared_box() {
 
     assert_eq!(buffer[(79, 1)].bg, BACKGROUND);
     assert_eq!(buffer[(40, 15)].bg, BACKGROUND);
-    assert!(buffer.content.iter().all(|cell| cell.bg != Color::Reset));
+    assert!(buffer.content.iter().all(|cell| cell.bg != Color::Reset && cell.fg != Color::Reset));
 }
 
 #[test]
@@ -226,9 +226,14 @@ fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
     let status = rows(&buffer)[4].clone();
     assert!(status.starts_with(" LIST  +rent  /pay  +done "), "{status}");
     assert!(status.ends_with(" reloaded"), "{status}");
-    assert_eq!((buffer[(1, 4)].bg, buffer[(1, 4)].fg), (Color::Blue, Color::Black));
+    assert_eq!((buffer[(1, 4)].bg, buffer[(1, 4)].fg), (ACCENT, ON_ACCENT));
     assert!(buffer[(1, 4)].modifier.contains(Modifier::BOLD));
     assert_eq!(buffer[(7, 4)].bg, BACKGROUND);
+    assert_eq!((buffer[(7, 4)].fg, buffer[(14, 4)].fg, buffer[(20, 4)].fg), (PROJECT, PRIMARY, PRIMARY));
+    assert_eq!(buffer[(45, 4)].fg, SECONDARY);
+
+    app.refused = true;
+    assert_eq!(render(&app)[(45, 4)].fg, ALERT);
 }
 
 #[test]
@@ -238,11 +243,10 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
 
     let buffer = render(&app);
     assert_eq!(rows(&buffer)[4], " PANEL  j/k filter · esc all tasks · tab back");
-    assert_eq!(buffer[(1, 4)].bg, Color::Magenta);
-    assert!(buffer[(8, 4)].modifier.contains(Modifier::BOLD));
-    assert!(!buffer[(8, 4)].modifier.contains(Modifier::DIM));
-    assert!(buffer[(12, 4)].modifier.contains(Modifier::DIM));
-    assert!(!buffer[(12, 4)].modifier.contains(Modifier::BOLD));
+    assert_eq!(buffer[(1, 4)].bg, ACCENT);
+    assert!(buffer[(8, 4)].fg == PRIMARY && buffer[(8, 4)].modifier.contains(Modifier::BOLD));
+    assert!(buffer[(12, 4)].fg == TERTIARY && !buffer[(12, 4)].modifier.contains(Modifier::BOLD));
+    assert_eq!(buffer[(19, 4)].fg, SEPARATOR);
 
     app.message = Some("reloaded".to_string());
     assert!(!rows(&render(&app))[4].contains("j/k"));
@@ -256,7 +260,7 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     app.search = "ca".to_string();
     let buffer = render(&app);
     assert_eq!(rows(&buffer)[4], " SEARCH  /ca▌  ⏎ keep · esc clear");
-    assert_eq!(buffer[(1, 4)].bg, Color::Yellow);
+    assert_eq!(buffer[(1, 4)].bg, ACCENT);
 }
 
 #[test]
@@ -284,14 +288,14 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
     assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
     assert_eq!(rows[4], " INSERT  +rent  esc normal · ⏎ save");
-    assert_eq!(buffer[(1, 4)].bg, Color::Green);
+    assert_eq!(buffer[(1, 4)].bg, ACCENT);
 
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = Mode::Normal;
     }
     let buffer = render_in(&app, 70, 5);
     assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · p priority · ⏎ save · esc cancel");
-    assert_eq!(buffer[(1, 4)].bg, Color::Blue);
+    assert_eq!(buffer[(1, 4)].bg, ACCENT);
 }
 
 fn add_popup(app: &mut App, text: &str, selected: usize) {
@@ -324,14 +328,13 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
         ["┌──────────┐", "│+bank    2│", "│+books   1│", "└──────────┘"]
     );
     let y = y as u16;
-    assert_eq!(buffer[(10, y + 2)].fg, Color::Magenta);
-    assert!(buffer[(19, y + 2)].modifier.contains(Modifier::DIM));
+    assert_eq!((buffer[(10, y + 2)].fg, buffer[(19, y + 2)].fg), (PROJECT, TERTIARY));
     assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (BACKGROUND, Color::DarkGray));
     assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
 }
 
 #[test]
-fn wait_completions_are_dimmed_like_the_key_values_of_a_line() {
+fn wait_completions_are_greyed_like_the_key_values_of_a_line() {
     let mut app = app_of(&["Design wait:figma"]);
     add_popup(&mut app, "Draw wait:", 0);
 
@@ -341,8 +344,7 @@ fn wait_completions_are_dimmed_like_the_key_values_of_a_line() {
     let x = rows[y].split("│wait:figma").next().expect("row").chars().count() + 1;
     let (x, y) = (x as u16, y as u16);
 
-    assert_eq!(buffer[(x, y)].fg, Color::Reset);
-    assert!(buffer[(x, y)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(x, y)].fg, TERTIARY);
 }
 
 #[test]
@@ -365,29 +367,33 @@ fn style_of(line_text: &str, token: &str) -> Style {
 }
 
 #[test]
-fn a_pending_line_keeps_its_text_and_styles_priority_date_projects_and_contexts() {
-    let text = "(A) 2026-09-26 Call  +bank @phone due:2026-10-01 a+b + @";
+fn a_pending_line_keeps_its_text_but_shows_its_priority_as_a_badge_and_colours_date_projects_and_contexts() {
+    let text = "2026-09-26 Call  +bank @phone due:2026-10-01 a+b + @";
 
-    assert_eq!(line(12, &Todo::from_line(text), TODAY).to_string(), format!(" 12  {text}"));
-    assert_eq!(style_of(text, "(A)"), Style::new().bold().yellow());
-    assert_eq!(style_of(text, "2026-09-26"), Style::new().dim());
-    assert_eq!(style_of(text, "+bank"), Style::new().magenta());
-    assert_eq!(style_of(text, "@phone"), Style::new().cyan());
-    assert_eq!(style_of(text, "due:2026-10-01"), Style::new().dim());
+    assert_eq!(
+        line(12, &Todo::from_line(&format!("(A) {text}")), TODAY).to_string(),
+        format!(" 12   A  {text}")
+    );
+    let badge = |letter: usize| Style::new().bold().fg(PRIORITIES[letter]).bg(BADGE);
+    assert_eq!(style_of(&format!("(A) {text}"), " A "), badge(0));
+    assert_eq!(style_of(text, "2026-09-26"), Style::new().fg(TERTIARY));
+    assert_eq!(style_of(text, "+bank"), Style::new().fg(PROJECT));
+    assert_eq!(style_of(text, "@phone"), Style::new().fg(CONTEXT));
+    assert_eq!(style_of(text, "due:2026-10-01"), Style::new().fg(TERTIARY));
     for plain in ["Call", "a+b", "+", "@"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }
-    assert_eq!(style_of("(B) x", "(B)"), Style::new().bold().green());
-    assert_eq!(style_of("(C) x", "(C)"), Style::new().bold().blue());
-    assert_eq!(style_of("(D) x", "(D)"), Style::new().bold());
+    for (i, letter) in ['B', 'C', 'D', 'E'].into_iter().enumerate() {
+        assert_eq!(style_of(&format!("({letter}) x"), &format!(" {letter} ")), badge(i + 1), "{letter}");
+    }
 }
 
 #[test]
-fn key_values_are_dimmed_but_not_urls_times_or_labels() {
+fn key_values_are_greyed_but_not_urls_times_or_labels() {
     let text = "Call wait:figma rec:1w a:b:c é-t_2:x https://herdr.dev 10:30 Note: wait: :x _a:b a/b:c";
 
-    for dimmed in ["wait:figma", "rec:1w", "a:b:c", "é-t_2:x"] {
-        assert_eq!(style_of(text, dimmed), Style::new().dim(), "{dimmed}");
+    for greyed in ["wait:figma", "rec:1w", "a:b:c", "é-t_2:x"] {
+        assert_eq!(style_of(text, greyed), Style::new().fg(TERTIARY), "{greyed}");
     }
     for plain in ["https://herdr.dev", "10:30", "Note:", "wait:", ":x", "_a:b", "a/b:c"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
@@ -395,11 +401,11 @@ fn key_values_are_dimmed_but_not_urls_times_or_labels() {
 }
 
 #[test]
-fn a_done_line_is_dimmed_all_through() {
+fn a_done_line_is_greyed_and_struck_through_after_its_number() {
     let line = line(3, &Todo::from_line("x 2026-09-26 2026-09-20 Call +bank @phone due:2026-09-01"), TODAY);
 
     assert_eq!(line.to_string(), "  3  x 2026-09-26 2026-09-20 Call +bank @phone due:2026-09-01");
-    assert!(line.iter().all(|span| span.style == Style::new().dim()));
+    assert!(line.iter().skip(1).all(|span| span.style == Style::new().fg(TERTIARY).crossed_out()));
 }
 
 #[test]
@@ -407,9 +413,7 @@ fn projects_and_contexts_are_coloured_on_screen() {
     let buffer = render(&app_of(&["Call +bank @phone"]));
 
     assert_eq!(rows(&buffer)[0], "▸ All tasks       1│▸   1  Call +bank @phone");
-    assert_eq!(buffer[(32, 0)].fg, Color::Magenta);
-    assert_eq!(buffer[(38, 0)].fg, Color::Cyan);
-    assert_eq!(buffer[(27, 0)].fg, Color::Reset);
+    assert_eq!((buffer[(32, 0)].fg, buffer[(38, 0)].fg, buffer[(27, 0)].fg), (PROJECT, CONTEXT, PRIMARY));
 }
 
 #[test]
@@ -423,21 +427,24 @@ fn the_details_under_the_list_show_the_task_under_the_cursor() {
         zone,
         [
             format!(" DETAILS {}", "─".repeat(41)),
-            " Priority  A".to_string(),
+            " Priority   A".to_string(),
             " Text      Appeler +client pour le devis".to_string(),
             format!("{:<25} Due", " Created   2026-09-01"),
             format!("{:<25} Contexts  @work", " Projects  +client"),
             " wait:figma".to_string(),
         ]
     );
-    assert!(buffer[(25, 7)].modifier.contains(Modifier::DIM));
-    assert!(buffer[(21, 8)].modifier.contains(Modifier::DIM));
-    assert_eq!(buffer[(31, 8)].fg, Color::Yellow);
+    assert_eq!(
+        (buffer[(25, 7)].fg, buffer[(45, 7)].fg, buffer[(21, 8)].fg),
+        (SECONDARY, STRUCTURE, LABEL)
+    );
+    assert!(buffer[(25, 7)].modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(32, 8)].fg, buffer[(31, 8)].bg), (PRIORITIES[0], BADGE));
     assert_eq!(
         (buffer[(39, 9)].fg, buffer[(31, 11)].fg, buffer[(56, 11)].fg),
-        (Color::Magenta, Color::Magenta, Color::Cyan)
+        (PROJECT, PROJECT, CONTEXT)
     );
-    assert!(!buffer[(31, 9)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(31, 9)].fg, PRIMARY);
 }
 
 #[test]
@@ -492,31 +499,30 @@ fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_valu
     assert_eq!(zone[1], " Text      Ship it");
     assert_eq!(zone[2], format!("{:<25} Due       2026-10-15", " Created   2026-09-01"));
     assert_eq!(zone[4], " wait:figma  rec:1w");
-    assert!(buffer[(21, 12)].modifier.contains(Modifier::DIM));
-    assert!(!buffer[(26, 12)].modifier.contains(Modifier::DIM));
+    assert_eq!((buffer[(21, 12)].fg, buffer[(26, 12)].fg), (TERTIARY, PRIMARY));
 }
 
 #[test]
-fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_dimmed() {
+fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_greyed_but_not_struck_through() {
     let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work due:2026-09-20"]);
     app.show_done = true;
 
     let buffer = render_in(&app, 70, 14);
 
     assert_eq!(rows(&buffer)[8].chars().skip(20).collect::<String>(), " Done      2026-09-28");
-    assert!((20..70).all(|x| (8..13).all(|y| buffer[(x, y)].modifier.contains(Modifier::DIM))));
-    assert_eq!(buffer[(31, 11)].fg, Color::Magenta);
-    assert_eq!(buffer[(56, 10)].fg, Color::Reset);
+    let zone = (20..70).flat_map(|x| (8..13).map(move |y| (x, y)));
+    assert!(zone.clone().all(|cell| buffer[cell].fg == TERTIARY));
+    assert!(zone.clone().all(|cell| !buffer[cell].modifier.contains(Modifier::CROSSED_OUT)));
 }
 
 #[test]
-fn a_due_date_is_red_once_past_yellow_on_the_day_and_dimmed_later_or_when_not_a_date() {
+fn a_due_date_is_red_once_past_yellow_on_the_day_and_greyed_later_or_when_not_a_date() {
     let text = "Ship due:2026-09-25 due:2026-09-26 due:2026-09-27 due:someday";
 
-    assert_eq!(style_of(text, "due:2026-09-25"), Style::new().red());
-    assert_eq!(style_of(text, "due:2026-09-26"), Style::new().yellow());
-    assert_eq!(style_of(text, "due:2026-09-27"), Style::new().dim());
-    assert_eq!(style_of(text, "due:someday"), Style::new().dim());
+    assert_eq!(style_of(text, "due:2026-09-25"), Style::new().fg(ALERT));
+    assert_eq!(style_of(text, "due:2026-09-26"), Style::new().fg(DUE_TODAY));
+    assert_eq!(style_of(text, "due:2026-09-27"), Style::new().fg(TERTIARY));
+    assert_eq!(style_of(text, "due:someday"), Style::new().fg(TERTIARY));
 }
 
 #[test]
@@ -527,7 +533,7 @@ fn the_due_date_in_the_details_is_red_once_past() {
         rows(&buffer)[10].chars().skip(20).collect::<String>(),
         format!("{:<25} Due       2026-09-20", " Created")
     );
-    assert_eq!(buffer[(56, 10)].fg, Color::Red);
+    assert_eq!(buffer[(56, 10)].fg, ALERT);
 }
 
 #[test]
@@ -558,10 +564,10 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
         ]
     );
     let (x, y) = (x as u16, y as u16);
-    assert!(buffer[(x + 1, y)].modifier.contains(Modifier::DIM));
+    assert_eq!(buffer[(x + 1, y)].fg, TERTIARY);
     assert!(buffer[(x + 16, y + 4)].modifier.contains(Modifier::BOLD));
     assert!(!buffer[(x + 13, y + 4)].modifier.contains(Modifier::BOLD));
     assert_eq!((buffer[(x + 1, y + 5)].bg, buffer[(x + 4, y + 5)].bg), (Color::DarkGray, BACKGROUND));
     assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
-    assert_eq!(buffer[(1, 19)].bg, Color::Cyan);
+    assert_eq!(buffer[(1, 19)].bg, ACCENT);
 }

@@ -100,6 +100,8 @@ pub struct App {
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
     pub message: Option<String>,
+    /// Whether the message tells of something refused rather than done.
+    pub refused: bool,
     /// Where the keys go.
     pub focus: Focus,
     /// Search terms, separated by whitespace, as `todo list` takes them.
@@ -124,6 +126,7 @@ impl App {
             show_done: false,
             quit: false,
             message: None,
+            refused: false,
             focus: Focus::List,
             search: String::new(),
             filter: None,
@@ -295,6 +298,7 @@ impl App {
     fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
         let pending = self.pending.take();
         self.message = None;
+        self.refused = false;
         if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL && !matches!(self.focus, Focus::Help) {
             self.quit = true;
             return false;
@@ -362,7 +366,7 @@ impl App {
         match outcome {
             Outcome::Continue => false,
             Outcome::NotPriority => {
-                self.message = Some(NOT_PRIORITY.to_string());
+                self.refuse(NOT_PRIORITY);
                 false
             }
             outcome => self.close_popup(outcome, today),
@@ -438,7 +442,7 @@ impl App {
                     write = true;
                 }
             }
-            _ if pending == Some('p') => self.message = Some(NOT_PRIORITY.to_string()),
+            _ if pending == Some('p') => self.refuse(NOT_PRIORITY),
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
             KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
@@ -562,7 +566,7 @@ impl App {
                 true
             }
             Err(e) => {
-                self.message = Some(e);
+                self.refuse(&e);
                 false
             }
         }
@@ -573,7 +577,7 @@ impl App {
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
         if todo.description.trim().is_empty() {
-            self.message = Some("a task needs a description".to_string());
+            self.refuse("a task needs a description");
             return false;
         }
         if todo.to_line() == self.store.todos[number - 1].to_line() {
@@ -582,6 +586,12 @@ impl App {
         self.store.todos[number - 1] = todo;
         self.follow(number, "edited, hidden by the filter");
         true
+    }
+
+    /// Leaves `message` in the status bar as a refusal.
+    fn refuse(&mut self, message: &str) {
+        self.message = Some(message.to_string());
+        self.refused = true;
     }
 
     /// Puts the cursor on task `number`, or on its folded group, or says `hidden` when neither is on screen.
@@ -685,7 +695,7 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
                         if let Ok((_, todos)) = repository::load(path) {
                             app.reload(Store::new(todos));
                         }
-                        app.message = Some(format!("could not save: {e} (file left unchanged)"));
+                        app.refuse(&format!("could not save: {e} (file left unchanged)"));
                     }
                 }
             } else if let Some(Event::Paste(pasted)) = event {

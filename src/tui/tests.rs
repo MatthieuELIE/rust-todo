@@ -163,6 +163,25 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
 }
 
 #[test]
+fn a_trailing_space_is_dropped_on_add_and_edit() {
+    let mut app = app_of(&["one"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+
+    press(&mut app, "oShip ");
+    assert!(app.handle_key(enter, TODAY));
+    assert_eq!(shown(&app), ["one", "2026-09-26 Ship"]);
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "A ");
+    assert!(!app.handle_key(enter, TODAY));
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "A it ");
+    assert!(app.handle_key(enter, TODAY));
+    assert_eq!(shown(&app), ["one", "2026-09-26 Ship it"]);
+}
+
+#[test]
 fn enter_on_an_empty_list_opens_nothing() {
     let mut app = app_of(&[]);
 

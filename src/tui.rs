@@ -570,12 +570,13 @@ impl App {
 
     /// Replaces task `number` with the line `text`, cursor on it; an empty description is refused, an unchanged line ignored.
     fn edit(&mut self, number: usize, text: &str) -> bool {
-        let todo = Todo::from_line(text);
+        let mut todo = Todo::from_line(text);
+        todo.description.truncate(todo.description.trim_end().len());
         if todo.description.trim().is_empty() {
             self.message = Some("a task needs a description".to_string());
             return false;
         }
-        if text == self.store.todos[number - 1].to_line() {
+        if todo.to_line() == self.store.todos[number - 1].to_line() {
             return false;
         }
         self.store.todos[number - 1] = todo;

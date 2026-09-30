@@ -62,6 +62,7 @@ impl Todo {
     /// Build a pending task from user input, stamped with `today` unless it carries a creation date.
     pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
         let mut todo = Todo::from_line(text);
+        todo.description.truncate(todo.description.trim_end().len());
         if todo.done {
             return Err("cannot add a task that is already done".to_string());
         }

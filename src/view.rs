@@ -4,7 +4,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Borders, Clear, List, ListState, Padding, Paragraph, Wrap};
+use ratatui::widgets::{Block, BorderType, Clear, List, ListState, Padding, Paragraph, Wrap};
 use time::Date;
 
 use crate::editor::{Editor, Mode};
@@ -14,7 +14,7 @@ use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
 
-/// Where the keys go: the mode block (peach).
+/// Where the keys go: the mode block, the border of the focused card or floating window (peach).
 const ACCENT: Color = Color::Rgb(0xfa, 0xb3, 0x87);
 
 /// Text on the accent (crust).
@@ -35,10 +35,13 @@ const TERTIARY: Color = Color::Rgb(0x7f, 0x84, 0x9c);
 /// Rules and borders (surface1).
 const STRUCTURE: Color = Color::Rgb(0x45, 0x47, 0x5a);
 
+/// Background of a floating window, a step above the screen's (base).
+const RAISED: Color = Color::Rgb(0x1e, 0x1e, 0x2e);
+
 /// Background of the row under the cursor in the zone that gets the keys (surface0).
 const SELECTED: Color = Color::Rgb(0x31, 0x32, 0x44);
 
-/// Separators between keys (surface2).
+/// Separators between keys, border of a floating window without the keys (surface2).
 const SEPARATOR: Color = Color::Rgb(0x58, 0x5b, 0x70);
 
 /// Background of a priority badge (surface1).
@@ -65,10 +68,13 @@ const PRIORITIES: [Color; 5] = [
     Color::Rgb(0x89, 0xdc, 0xeb),
 ];
 
-/// Height of the detail zone under the list: its rule and five rows.
-const DETAILS_HEIGHT: u16 = 6;
+/// Height of the detail card under the list: its borders and five rows.
+const DETAILS_HEIGHT: u16 = 7;
 
-/// Fewest rows the list keeps; on a screen too low for them and the detail zone, the zone is hidden.
+/// Width of the filter panel's card, its borders included.
+const PANEL_WIDTH: u16 = 22;
+
+/// Fewest rows the list keeps inside its card; on a screen too low for them and the detail card, that card is hidden.
 const MIN_LIST_ROWS: u16 = 5;
 
 /// Keys of the list and of the date picker shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
@@ -127,16 +133,19 @@ Tab/Enter    back to the list";
 /// Draws the filter panel and the task list above the status bar, due dates against `today`; `scroll` keeps the list's offset between frames.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
-    let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
+    let [panel_area, list_area] = Layout::horizontal([Constraint::Length(PANEL_WIDTH), Constraint::Fill(1)])
+        .spacing(1)
+        .areas(main_area);
 
     let (entries, row) = panel(app);
-    let panel = List::new(entries)
-        .highlight_style(highlight(matches!(app.focus, Focus::Panel)))
-        .block(Block::new().borders(Borders::RIGHT));
+    let panel_focused = matches!(app.focus, Focus::Panel);
+    let panel = List::new(entries).highlight_style(highlight(panel_focused)).block(card(panel_focused));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
-    if list_area.height >= MIN_LIST_ROWS + DETAILS_HEIGHT {
-        let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(DETAILS_HEIGHT)]).areas(list_area);
+    if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
+        let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(DETAILS_HEIGHT)])
+            .spacing(1)
+            .areas(list_area);
         draw_list(frame, app, list_area, scroll, today);
         draw_details(frame, app.selected_task(), details_area, today);
     } else {
@@ -160,6 +169,11 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
 
 /// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset between frames.
 fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, today: Date) {
+    let focused = matches!(app.focus, Focus::List | Focus::Search);
+    let block = card(focused);
+    let inner = block.inner(area);
+    frame.render_widget(block, area);
+    let area = inner;
     let tasks = app.tasks();
     if tasks.is_empty() {
         frame.render_widget(
@@ -192,7 +206,6 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
             rows.push(lines.len());
             lines.push(task);
         }
-        let focused = matches!(app.focus, Focus::List | Focus::Search);
         let list = List::new(lines)
             .highlight_symbol(arrow(focused))
             .highlight_style(highlight(focused))
@@ -204,10 +217,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
 
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
 fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date) {
-    let block = Block::new()
-        .borders(Borders::TOP)
-        .border_style(Style::new().fg(STRUCTURE))
-        .title(" DETAILS ".fg(SECONDARY).bold());
+    let block = card(false).title(" DETAILS ".fg(SECONDARY).bold());
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let Some(todo) = todo else {
@@ -315,9 +325,8 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
 fn draw_help(frame: &mut Frame, area: Rect) {
     let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 4;
     let area = area.centered(Constraint::Length(82), Constraint::Length(height));
-    let block = Block::bordered()
-        .border_type(BorderType::Rounded)
-        .title(" HELP ".bold())
+    let block = floating(true)
+        .title(" HELP ")
         .title_bottom(Line::from(" any key closes ".fg(TERTIARY)).right_aligned())
         .padding(Padding::new(3, 3, 1, 1));
     let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
@@ -357,13 +366,15 @@ fn mode_block(mode: &str) -> Span<'static> {
 /// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions or the date picker.
 fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
     let title = match (&popup.target, app.filter.as_deref()) {
-        (Target::Edit(number), _) => format!(" EDIT {number} "),
-        (Target::Add, Some(term)) if term != WAITING => format!(" ADD ({term}) "),
-        (Target::Add, _) => " ADD ".to_string(),
+        (Target::Edit(number), _) => Line::from(format!(" EDIT {number} ")),
+        (Target::Add, Some(term)) if term != WAITING => {
+            Line::from_iter([" ADD (".into(), Span::styled(term.to_string(), tag_style(term)), ") ".into()])
+        }
+        (Target::Add, _) => Line::from(" ADD "),
     };
     let field = Paragraph::new(field(&popup.editor))
         .wrap(Wrap { trim: false })
-        .block(Block::bordered().title(title));
+        .block(floating(popup.picker.is_none()).title(title));
     let width = bounds.width * 4 / 5;
     let height = field.line_count(width.saturating_sub(2)) as u16;
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
@@ -415,7 +426,7 @@ fn draw_picker(frame: &mut Frame, date: Date, today: Date, word: Position, bound
     let title = format!(" {} {} ", date.month().to_string().to_uppercase(), date.year());
     let area = drop_down(word, 22, lines.len() as u16 + 2, bounds);
     frame.render_widget(Clear, area);
-    frame.render_widget(Paragraph::new(lines).block(Block::bordered().title(title)), area);
+    frame.render_widget(Paragraph::new(lines).block(floating(true).title(title)), area);
 }
 
 /// Draws the completion `names`, five rows at most, under the tag at `tag` or above it without room, `selected` highlighted.
@@ -431,7 +442,7 @@ fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usiz
         ])
     });
     let area = drop_down(tag, width as u16 + 6, names.len().min(5) as u16 + 2, bounds);
-    let list = List::new(rows).highlight_style(highlight(true)).block(Block::bordered());
+    let list = List::new(rows).highlight_style(highlight(true)).block(floating(true));
     frame.render_widget(Clear, area);
     frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
 }
@@ -561,6 +572,22 @@ fn header(group: Group, count: usize, folded: bool, width: usize) -> Line<'stati
         rule.fg(STRUCTURE),
         end.into(),
     ])
+}
+
+/// A zone's card: a rounded border, in the accent when the zone gets the keys.
+fn card(focused: bool) -> Block<'static> {
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .border_style(Style::new().fg(if focused { ACCENT } else { STRUCTURE }))
+}
+
+/// A floating window's frame: rounded on a raised background, its border in the accent when it gets the keys, its titles bold.
+fn floating(focused: bool) -> Block<'static> {
+    Block::bordered()
+        .border_type(BorderType::Rounded)
+        .border_style(Style::new().fg(if focused { ACCENT } else { SEPARATOR }))
+        .title_style(Style::new().fg(PRIMARY).bold())
+        .style(Style::new().bg(RAISED))
 }
 
 /// The cursor's mark, in the accent when its zone gets the keys.

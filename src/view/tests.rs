@@ -34,27 +34,48 @@ fn rows(buffer: &Buffer) -> Vec<String> {
     (0..buffer.area.height).map(row).collect()
 }
 
+/// Rows of the panel card's inside.
+fn panel_rows(buffer: &Buffer) -> Vec<String> {
+    columns(buffer, 1, PANEL_WIDTH - 1)
+}
+
+/// Rows of the right column's cards' inside, the list's and the details'.
+fn list_rows(buffer: &Buffer) -> Vec<String> {
+    columns(buffer, PANEL_WIDTH + 2, buffer.area.width - 1)
+}
+
+fn columns(buffer: &Buffer, from: u16, to: u16) -> Vec<String> {
+    let row = |y| (from..to).map(|x| buffer[(x, y)].symbol()).collect::<String>().trim_end().to_string();
+    (0..buffer.area.height).map(row).collect()
+}
+
 #[test]
-fn the_list_sits_right_of_the_panel_with_the_cursor_row_marked_in_the_accent_and_highlighted() {
+fn the_list_card_sits_right_of_the_panel_card_with_the_cursor_row_marked_in_the_accent_and_highlighted() {
     let mut app = app_of(&["Pay +rent", "Call +bank @phone", "x 2026-09-20 Old +rent"]);
     app.cursor = 1;
 
-    let buffer = render(&app);
+    let buffer = render_in(&app, 50, 7);
 
     assert_eq!(
-        rows(&buffer)[..4],
+        rows(&buffer)[..6],
         [
-            "→ All tasks       2│    1  Pay +rent",
-            "                   │→   2  Call +bank @phone",
-            " PROJECTS          │",
-            "  +bank           1│",
+            "╭────────────────────╮ ╭─────────────────────────╮",
+            "│→ All tasks       2 │ │    1  Pay +rent         │",
+            "│                    │ │→   2  Call +bank @phone │",
+            "│ PROJECTS           │ │                         │",
+            "│  +bank           1 │ │                         │",
+            "╰────────────────────╯ ╰─────────────────────────╯",
         ]
     );
-    assert_eq!((buffer[(30, 1)].bg, buffer[(20, 1)].fg), (SELECTED, ACCENT));
-    assert_eq!(buffer[(30, 0)].bg, BACKGROUND);
-    assert_eq!((buffer[(0, 0)].fg, buffer[(5, 0)].bg), (TERTIARY, BACKGROUND));
-    assert!(buffer[(2, 0)].modifier.contains(Modifier::BOLD));
-    assert!(!buffer[(2, 3)].modifier.contains(Modifier::BOLD));
+    assert_eq!(
+        (buffer[(23, 0)].fg, buffer[(0, 0)].fg, buffer[(22, 0)].bg),
+        (ACCENT, STRUCTURE, BACKGROUND)
+    );
+    assert_eq!((buffer[(34, 2)].bg, buffer[(24, 2)].fg), (SELECTED, ACCENT));
+    assert_eq!(buffer[(34, 1)].bg, BACKGROUND);
+    assert_eq!((buffer[(1, 1)].fg, buffer[(6, 1)].bg), (TERTIARY, BACKGROUND));
+    assert!(buffer[(3, 1)].modifier.contains(Modifier::BOLD));
+    assert!(!buffer[(3, 4)].modifier.contains(Modifier::BOLD));
 }
 
 #[test]
@@ -63,14 +84,20 @@ fn the_accent_and_the_highlight_follow_the_focus_between_the_panel_and_the_list(
     app.filter = Some("+rent".to_string());
 
     let buffer = render_in(&app, 50, 8);
-    assert!(rows(&buffer)[0].starts_with("  All tasks "));
-    assert!(rows(&buffer)[4].starts_with("→ +rent "));
-    assert_eq!((buffer[(5, 4)].bg, buffer[(0, 4)].fg), (BACKGROUND, TERTIARY));
+    assert!(panel_rows(&buffer)[1].starts_with("  All tasks "));
+    assert!(panel_rows(&buffer)[5].starts_with("→ +rent "));
+    assert_eq!(
+        (buffer[(6, 5)].bg, buffer[(1, 5)].fg, buffer[(0, 0)].fg),
+        (BACKGROUND, TERTIARY, STRUCTURE)
+    );
 
     app.focus = Focus::Panel;
     let buffer = render_in(&app, 50, 8);
-    assert_eq!((buffer[(5, 4)].bg, buffer[(0, 4)].fg), (SELECTED, ACCENT));
-    assert_eq!((buffer[(30, 0)].bg, buffer[(20, 0)].fg), (BACKGROUND, TERTIARY));
+    assert_eq!((buffer[(6, 5)].bg, buffer[(1, 5)].fg, buffer[(0, 0)].fg), (SELECTED, ACCENT, ACCENT));
+    assert_eq!(
+        (buffer[(34, 1)].bg, buffer[(24, 1)].fg, buffer[(23, 0)].fg),
+        (BACKGROUND, TERTIARY, STRUCTURE)
+    );
 }
 
 #[test]
@@ -80,20 +107,17 @@ fn a_filter_gone_from_the_panel_marks_no_entry() {
     app.focus = Focus::Panel;
 
     let buffer = render_in(&app, 50, 8);
-    assert!(rows(&buffer).iter().all(|row| !row.starts_with('→')));
-    assert_eq!(buffer[(5, 0)].bg, BACKGROUND);
+    assert_eq!(panel_rows(&buffer)[1], "  All tasks       1");
+    assert!(panel_rows(&buffer).iter().all(|row| !row.starts_with('→')));
+    assert_eq!(buffer[(6, 1)].bg, BACKGROUND);
 }
 
 #[test]
 fn the_panel_puts_coloured_projects_and_contexts_under_grey_headers_and_drops_an_empty_section() {
-    let buffer = render_in(&app_of(&["Pay +rent", "Call +bank @phone"]), 50, 9);
-    let panel: Vec<String> = rows(&buffer)
-        .iter()
-        .map(|row| row.chars().take(19).collect::<String>().trim_end().to_string())
-        .collect();
+    let buffer = render_in(&app_of(&["Pay +rent", "Call +bank @phone"]), 50, 11);
 
     assert_eq!(
-        panel[..8],
+        panel_rows(&buffer)[1..9],
         [
             "→ All tasks       2",
             "",
@@ -105,20 +129,16 @@ fn the_panel_puts_coloured_projects_and_contexts_under_grey_headers_and_drops_an
             "  @phone          1"
         ]
     );
-    assert_eq!((buffer[(1, 2)].fg, buffer[(1, 6)].fg), (SECONDARY, SECONDARY));
-    assert!(buffer[(1, 2)].modifier.contains(Modifier::BOLD));
-    assert_eq!((buffer[(2, 3)].fg, buffer[(2, 7)].fg, buffer[(2, 0)].fg), (PROJECT, CONTEXT, PRIMARY));
-    assert_eq!(buffer[(18, 3)].fg, TERTIARY);
+    assert_eq!((buffer[(2, 3)].fg, buffer[(2, 7)].fg), (SECONDARY, SECONDARY));
+    assert!(buffer[(2, 3)].modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(3, 4)].fg, buffer[(3, 8)].fg, buffer[(3, 1)].fg), (PROJECT, CONTEXT, PRIMARY));
+    assert_eq!(buffer[(19, 4)].fg, TERTIARY);
 
-    let waiting = rows(&render_in(&app_of(&["Design wait:figma +app"]), 50, 9));
-    let panel: Vec<String> = waiting
-        .iter()
-        .map(|row| row.chars().take(19).collect::<String>().trim_end().to_string())
-        .collect();
-    assert_eq!(panel[..4], ["→ All tasks       1", "  Waiting         1", "", " PROJECTS"]);
+    let waiting = panel_rows(&render_in(&app_of(&["Design wait:figma +app"]), 50, 11));
+    assert_eq!(waiting[1..5], ["→ All tasks       1", "  Waiting         1", "", " PROJECTS"]);
 
-    let contexts_only = rows(&render_in(&app_of(&["Call @phone"]), 50, 9));
-    assert_eq!(contexts_only[2].chars().take(9).collect::<String>(), " CONTEXTS");
+    let contexts_only = panel_rows(&render_in(&app_of(&["Call @phone"]), 50, 11));
+    assert_eq!(contexts_only[3], " CONTEXTS");
     assert!(!contexts_only.iter().any(|row| row.contains("PROJECTS")));
 }
 
@@ -127,11 +147,10 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
     let mut app = app_of(&["c", "(B) b", "(A) a"]);
     app.cursor = 1;
 
-    let buffer = render_in(&app, 50, 10);
-    let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
+    let buffer = render_in(&app, 55, 11);
 
     assert_eq!(
-        list[..8],
+        list_rows(&buffer)[1..9],
         [
             format!("   (1)  PRIORITY A  {}", "─".repeat(10)),
             "    3   A  a".to_string(),
@@ -143,10 +162,10 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
             "    1  c".to_string(),
         ]
     );
-    assert_eq!(buffer[(30, 4)].bg, SELECTED);
-    assert_eq!((buffer[(28, 0)].fg, buffer[(28, 3)].fg), (PRIORITIES[0], PRIORITIES[1]));
+    assert_eq!(buffer[(34, 5)].bg, SELECTED);
+    assert_eq!((buffer[(32, 1)].fg, buffer[(32, 4)].fg), (PRIORITIES[0], PRIORITIES[1]));
     assert_eq!(
-        (buffer[(28, 6)].fg, buffer[(49, 0)].fg, buffer[(23, 0)].fg),
+        (buffer[(32, 7)].fg, buffer[(53, 1)].fg, buffer[(27, 1)].fg),
         (SECONDARY, STRUCTURE, TERTIARY)
     );
 }
@@ -157,11 +176,10 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
     app.folded = vec![Group::Priority('A'), Group::Priority('B'), Group::Unprioritised];
     app.cursor = 1;
 
-    let buffer = render_in(&app, 50, 8);
-    let list: Vec<String> = rows(&buffer).iter().map(|row| row.chars().skip(20).collect()).collect();
+    let buffer = render_in(&app, 55, 9);
 
     assert_eq!(
-        list[..6],
+        list_rows(&buffer)[1..7],
         [
             format!("   (2)  PRIORITY A  {} ▸", "─".repeat(8)),
             String::new(),
@@ -171,7 +189,7 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
             String::new(),
         ]
     );
-    assert_eq!(buffer[(30, 2)].bg, SELECTED);
+    assert_eq!(buffer[(34, 3)].bg, SELECTED);
 }
 
 #[test]
@@ -184,6 +202,8 @@ fn the_help_shows_each_mode_s_keys_under_its_name_keys_bold_actions_and_slashes_
     let y = rows.iter().position(|row| row.contains(" LIST ")).expect("list block");
 
     assert!(rows[y - 2].contains("╭ HELP ─"), "{}", rows[y - 2]);
+    let corner = rows[y - 2].chars().position(|c| c == '╭').expect("corner") as u16;
+    assert_eq!(buffer[(corner, y as u16 - 2)].fg, ACCENT);
     assert!(rows.iter().any(|row| row.contains("─ any key closes ╯")));
     assert!(rows[y].contains(" INSERT "), "{}", rows[y]);
     assert!(rows[y + 1].contains("j/k/↓/↑      move"), "{}", rows[y + 1]);
@@ -206,14 +226,13 @@ fn the_help_shows_each_mode_s_keys_under_its_name_keys_bold_actions_and_slashes_
 }
 
 #[test]
-fn every_cell_left_unpainted_takes_the_background_and_the_text_colour_even_under_a_cleared_box() {
+fn every_cell_left_unpainted_takes_the_background_and_the_text_colour_and_a_floating_window_its_raised_one() {
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help;
 
     let buffer = render_in(&app, 80, 30);
 
-    assert_eq!(buffer[(79, 1)].bg, BACKGROUND);
-    assert_eq!(buffer[(40, 15)].bg, BACKGROUND);
+    assert_eq!((buffer[(40, 15)].bg, buffer[(79, 29)].bg), (RAISED, BACKGROUND));
     assert!(buffer.content.iter().all(|cell| cell.bg != Color::Reset && cell.fg != Color::Reset));
 }
 
@@ -283,10 +302,14 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let buffer = render(&app);
     let rows = rows(&buffer);
 
-    assert!(rows[0].contains("┌ ADD (+rent) ───"), "{}", rows[0]);
+    assert!(rows[0].contains("╭ ADD (+rent) ───"), "{}", rows[0]);
     assert!(rows[1].contains("│Call the bank about the loan and ask  │"), "{}", rows[1]);
     assert!(rows[2].contains("│for a quote                           │"), "{}", rows[2]);
-    assert!(rows[3].contains("└───"), "{}", rows[3]);
+    assert!(rows[3].contains("╰───"), "{}", rows[3]);
+    let corner = rows[0].split("╭ ADD").next().expect("row").chars().count() as u16;
+    assert_eq!((buffer[(corner, 0)].fg, buffer[(corner + 1, 1)].bg), (ACCENT, RAISED));
+    assert!(buffer[(corner + 2, 0)].modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(corner + 7, 0)].fg, buffer[(corner + 2, 0)].fg), (PROJECT, PRIMARY));
     assert_eq!(buffer[(11, 1)].symbol(), "t");
     assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
     assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
@@ -328,11 +351,12 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
 
     assert_eq!(
         (y + 1..y + 5).map(|y| cells(&rows[y], 9, 12)).collect::<Vec<_>>(),
-        ["┌──────────┐", "│+bank    2│", "│+books   1│", "└──────────┘"]
+        ["╭──────────╮", "│+bank    2│", "│+books   1│", "╰──────────╯"]
     );
     let y = y as u16;
     assert_eq!((buffer[(10, y + 2)].fg, buffer[(19, y + 2)].fg), (PROJECT, TERTIARY));
-    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (BACKGROUND, SELECTED));
+    assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (RAISED, SELECTED));
+    assert_eq!(buffer[(9, y + 1)].fg, ACCENT);
     assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
 }
 
@@ -360,7 +384,7 @@ fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
 
     assert_eq!(
         (y - 3..y).map(|y| cells(&rows[y], 5, 12)).collect::<Vec<_>>(),
-        ["┌──────────┐", "│@phone   1│", "└──────────┘"]
+        ["╭──────────╮", "│@phone   1│", "╰──────────╯"]
     );
 }
 
@@ -415,20 +439,20 @@ fn a_done_line_is_greyed_and_struck_through_after_its_number() {
 fn projects_and_contexts_are_coloured_on_screen() {
     let buffer = render(&app_of(&["Call +bank @phone"]));
 
-    assert_eq!(rows(&buffer)[0], "→ All tasks       1│→   1  Call +bank @phone");
-    assert_eq!((buffer[(32, 0)].fg, buffer[(38, 0)].fg, buffer[(27, 0)].fg), (PROJECT, CONTEXT, PRIMARY));
+    assert_eq!(list_rows(&buffer)[1], "→   1  Call +bank @phone");
+    assert_eq!((buffer[(36, 1)].fg, buffer[(42, 1)].fg, buffer[(31, 1)].fg), (PROJECT, CONTEXT, PRIMARY));
 }
 
 #[test]
-fn the_details_under_the_list_show_the_task_under_the_cursor() {
+fn the_details_card_under_the_list_shows_the_task_under_the_cursor() {
     let app = app_of(&["(A) 2026-09-01 Appeler +client pour le devis @work wait:figma"]);
 
-    let buffer = render_in(&app, 70, 14);
-    let zone: Vec<String> = rows(&buffer)[7..13].iter().map(|row| row.chars().skip(20).collect()).collect();
+    let buffer = render_in(&app, 75, 18);
 
     assert_eq!(
-        zone,
+        list_rows(&buffer)[9..16],
         [
+            String::new(),
             format!(" DETAILS {}", "─".repeat(41)),
             " Priority   A".to_string(),
             " Text      Appeler +client pour le devis".to_string(),
@@ -437,37 +461,38 @@ fn the_details_under_the_list_show_the_task_under_the_cursor() {
             " wait:figma".to_string(),
         ]
     );
+    assert_eq!(rows(&buffer)[16].chars().nth(23), Some('╰'));
     assert_eq!(
-        (buffer[(25, 7)].fg, buffer[(45, 7)].fg, buffer[(21, 8)].fg),
-        (SECONDARY, STRUCTURE, LABEL)
+        (buffer[(29, 10)].fg, buffer[(49, 10)].fg, buffer[(23, 10)].fg, buffer[(25, 11)].fg),
+        (SECONDARY, STRUCTURE, STRUCTURE, LABEL)
     );
-    assert!(buffer[(25, 7)].modifier.contains(Modifier::BOLD));
-    assert_eq!((buffer[(32, 8)].fg, buffer[(31, 8)].bg), (PRIORITIES[0], BADGE));
+    assert!(buffer[(29, 10)].modifier.contains(Modifier::BOLD));
+    assert_eq!((buffer[(36, 11)].fg, buffer[(35, 11)].bg), (PRIORITIES[0], BADGE));
     assert_eq!(
-        (buffer[(39, 9)].fg, buffer[(31, 11)].fg, buffer[(56, 11)].fg),
+        (buffer[(43, 12)].fg, buffer[(35, 14)].fg, buffer[(60, 14)].fg),
         (PROJECT, PROJECT, CONTEXT)
     );
-    assert_eq!(buffer[(31, 9)].fg, PRIMARY);
+    assert_eq!(buffer[(35, 12)].fg, PRIMARY);
 }
 
 #[test]
 fn the_details_hide_when_the_list_would_get_fewer_than_five_rows() {
     let app = app_of(&["Pay rent"]);
 
-    assert_eq!(rows(&render_in(&app, 70, 12))[5], format!("{:<19}│ DETAILS {}", "", "─".repeat(41)));
-    assert!(rows(&render_in(&app, 70, 11)).iter().all(|row| !row.contains("DETAILS")));
+    let buffer = render_in(&app, 75, 16);
+    assert_eq!(list_rows(&buffer)[1..6].iter().filter(|row| !row.is_empty()).count(), 1);
+    assert!(list_rows(&buffer)[6].starts_with('─'));
+    assert_eq!(list_rows(&buffer)[8], format!(" DETAILS {}", "─".repeat(41)));
+    assert!(rows(&render_in(&app, 75, 15)).iter().all(|row| !row.contains("DETAILS")));
 }
 
 #[test]
 fn a_value_too_long_for_the_details_ends_with_an_ellipsis() {
     let text = "A rather long description that will not fit here";
 
-    let buffer = render_in(&app_of(&[text]), 60, 12);
+    let buffer = render_in(&app_of(&[text]), 65, 16);
 
-    assert_eq!(
-        rows(&buffer)[7].chars().skip(20).collect::<String>(),
-        format!(" Text      {}…", &text[..28])
-    );
+    assert_eq!(list_rows(&buffer)[10], format!(" Text      {}…", &text[..28]));
 }
 
 #[test]
@@ -475,15 +500,11 @@ fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
     let mut app = app_of(&["(A) a"]);
     app.folded = vec![Group::Priority('A')];
 
-    let zone: Vec<String> = rows(&render_in(&app, 70, 12))[5..10]
-        .iter()
-        .map(|row| row.chars().skip(20).collect())
-        .collect();
-
     assert_eq!(
-        zone,
+        list_rows(&render_in(&app, 75, 16))[8..14],
         [
             format!(" DETAILS {}", "─".repeat(41)),
+            String::new(),
             String::new(),
             String::new(),
             String::new(),
@@ -496,13 +517,13 @@ fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
 fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_values_on_the_last_row() {
     let app = app_of(&["2026-09-01 Ship it due:2026-10-15 wait:figma rec:1w"]);
 
-    let buffer = render_in(&app, 70, 14);
-    let zone: Vec<String> = rows(&buffer)[8..13].iter().map(|row| row.chars().skip(20).collect()).collect();
+    let buffer = render_in(&app, 75, 18);
+    let zone = &list_rows(&buffer)[11..16];
 
     assert_eq!(zone[1], " Text      Ship it");
     assert_eq!(zone[2], format!("{:<25} Due       2026-10-15", " Created   2026-09-01"));
     assert_eq!(zone[4], " wait:figma  rec:1w");
-    assert_eq!((buffer[(21, 12)].fg, buffer[(26, 12)].fg), (TERTIARY, PRIMARY));
+    assert_eq!((buffer[(25, 15)].fg, buffer[(30, 15)].fg), (TERTIARY, PRIMARY));
 }
 
 #[test]
@@ -510,10 +531,10 @@ fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_greyed_but_not
     let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work due:2026-09-20"]);
     app.show_done = true;
 
-    let buffer = render_in(&app, 70, 14);
+    let buffer = render_in(&app, 75, 18);
 
-    assert_eq!(rows(&buffer)[8].chars().skip(20).collect::<String>(), " Done      2026-09-28");
-    let zone = (20..70).flat_map(|x| (8..13).map(move |y| (x, y)));
+    assert_eq!(list_rows(&buffer)[11], " Done      2026-09-28");
+    let zone = (24..74).flat_map(|x| (11..16).map(move |y| (x, y)));
     assert!(zone.clone().all(|cell| buffer[cell].fg == TERTIARY));
     assert!(zone.clone().all(|cell| !buffer[cell].modifier.contains(Modifier::CROSSED_OUT)));
 }
@@ -530,13 +551,10 @@ fn a_due_date_is_red_once_past_yellow_on_the_day_and_greyed_later_or_when_not_a_
 
 #[test]
 fn the_due_date_in_the_details_is_red_once_past() {
-    let buffer = render_in(&app_of(&["Ship it due:2026-09-20"]), 70, 14);
+    let buffer = render_in(&app_of(&["Ship it due:2026-09-20"]), 75, 18);
 
-    assert_eq!(
-        rows(&buffer)[10].chars().skip(20).collect::<String>(),
-        format!("{:<25} Due       2026-09-20", " Created")
-    );
-    assert_eq!(buffer[(56, 10)].fg, ALERT);
+    assert_eq!(list_rows(&buffer)[13], format!("{:<25} Due       2026-09-20", " Created"));
+    assert_eq!(buffer[(60, 13)].fg, ALERT);
 }
 
 #[test]
@@ -556,14 +574,14 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
     assert_eq!(
         (y - 1..y + 7).map(|y| cells(&rows[y], x, 22)).collect::<Vec<_>>(),
         [
-            "┌ SEPTEMBER 2026 ────┐",
+            "╭ SEPTEMBER 2026 ────╮",
             "│Mo Tu We Th Fr Sa Su│",
             "│    1  2  3  4  5  6│",
             "│ 7  8  9 10 11 12 13│",
             "│14 15 16 17 18 19 20│",
             "│21 22 23 24 25 26 27│",
             "│28 29 30            │",
-            "└────────────────────┘",
+            "╰────────────────────╯",
         ]
     );
     let (x, y) = (x as u16, y as u16);
@@ -571,7 +589,11 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
     let pick = &buffer[(x + 1, y + 5)];
     assert_eq!((pick.fg, pick.bg), (ACCENT, SELECTED));
     assert!(pick.modifier.contains(Modifier::BOLD));
-    assert_eq!((buffer[(x + 4, y + 5)].bg, buffer[(x + 4, y + 5)].fg), (BACKGROUND, PRIMARY));
+    assert_eq!((buffer[(x + 4, y + 5)].bg, buffer[(x + 4, y + 5)].fg), (RAISED, PRIMARY));
+    assert_eq!(buffer[(x, y - 1)].fg, ACCENT);
+    let popup = rows.iter().position(|row| row.contains("╭ ADD ")).expect("popup top");
+    let corner = rows[popup].split("╭ ADD").next().expect("row").chars().count() as u16;
+    assert_eq!(buffer[(corner, popup as u16)].fg, SEPARATOR);
     assert_eq!((buffer[(x + 16, y + 4)].fg, buffer[(x + 13, y + 4)].fg), (DUE_TODAY, TERTIARY));
     assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
     assert_eq!(buffer[(1, 19)].bg, ACCENT);

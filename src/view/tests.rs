@@ -18,9 +18,15 @@ fn render(app: &App) -> Buffer {
 }
 
 fn render_in(app: &App, width: u16, height: u16) -> Buffer {
+    render_with_cursor(app, width, height).0
+}
+
+/// The screen and where the terminal's cursor stands, `None` when hidden.
+fn render_with_cursor(app: &App, width: u16, height: u16) -> (Buffer, Option<Position>) {
     let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
     terminal.draw(|frame| draw(frame, app, &mut ListState::default(), TODAY)).unwrap();
-    terminal.backend().buffer().clone()
+    let backend = terminal.backend();
+    (backend.buffer().clone(), backend.cursor_visible().then(|| backend.cursor_position()))
 }
 
 fn rows(buffer: &Buffer) -> Vec<String> {
@@ -286,7 +292,7 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
 }
 
 #[test]
-fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_the_status_bar_says_insert() {
+fn the_popup_wraps_its_text_under_its_title_with_the_terminal_cursor_on_its_cell_while_the_status_bar_says_insert() {
     let mut app = app_of(&["Pay +rent"]);
     app.filter = Some("+rent".to_string());
     let mut editor = Editor::default();
@@ -299,7 +305,7 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
         picker: None,
     });
 
-    let buffer = render(&app);
+    let (buffer, cursor) = render_with_cursor(&app, 50, 5);
     let rows = rows(&buffer);
 
     assert!(rows[0].contains("╭ ADD (+rent) ───"), "{}", rows[0]);
@@ -311,8 +317,9 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     assert!(buffer[(corner + 2, 0)].modifier.contains(Modifier::BOLD));
     assert_eq!((buffer[(corner + 7, 0)].fg, buffer[(corner + 2, 0)].fg), (PROJECT, PRIMARY));
     assert_eq!(buffer[(11, 1)].symbol(), "t");
-    assert!(buffer[(11, 1)].modifier.contains(Modifier::REVERSED));
-    assert!(!buffer[(10, 1)].modifier.contains(Modifier::REVERSED));
+    assert_eq!(cursor, Some(Position::new(11, 1)));
+    assert!(buffer.content.iter().all(|cell| !cell.modifier.contains(Modifier::REVERSED)));
+    assert_eq!(render_with_cursor(&app_of(&["Pay +rent"]), 50, 5).1, None);
     assert_eq!(rows[4], " INSERT  +rent  esc normal · ⏎ save");
     assert_eq!(buffer[(1, 4)].bg, ACCENT);
 
@@ -322,6 +329,22 @@ fn the_popup_wraps_its_text_under_its_title_with_the_cursor_cell_reversed_while_
     let buffer = render_in(&app, 70, 5);
     assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · p priority · ⏎ save · esc cancel");
     assert_eq!(buffer[(1, 4)].bg, ACCENT);
+}
+
+#[test]
+fn the_popup_colours_its_text_as_the_list_colours_a_task() {
+    let mut app = app_of(&["Pay rent"]);
+    add_popup(&mut app, "(A) 2026-09-01 Call +bank @phone due:2026-09-20 wait:x", 0);
+
+    let (buffer, cursor) = render_with_cursor(&app, 80, 7);
+    let row = rows(&buffer).iter().position(|row| row.contains("(A) 2026")).expect("popup line");
+    let x = rows(&buffer)[row].split("(A)").next().expect("row").chars().count() as u16;
+    let at = |offset: u16| &buffer[(x + offset, row as u16)];
+
+    assert_eq!((at(1).fg, at(4).fg, at(20).fg, at(26).fg), (PRIORITIES[0], TERTIARY, PROJECT, CONTEXT));
+    assert!(at(1).modifier.contains(Modifier::BOLD));
+    assert_eq!((at(15).fg, at(33).fg, at(48).fg), (PRIMARY, ALERT, TERTIARY));
+    assert_eq!(cursor, Some(Position::new(x + 54, row as u16)));
 }
 
 fn add_popup(app: &mut App, text: &str, selected: usize) {
@@ -594,6 +617,7 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
     let popup = rows.iter().position(|row| row.contains("╭ ADD ")).expect("popup top");
     let corner = rows[popup].split("╭ ADD").next().expect("row").chars().count() as u16;
     assert_eq!(buffer[(corner, popup as u16)].fg, SEPARATOR);
+    assert_eq!(render_with_cursor(&app, 60, 20).1, None);
     assert_eq!((buffer[(x + 16, y + 4)].fg, buffer[(x + 13, y + 4)].fg), (DUE_TODAY, TERTIARY));
     assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
     assert_eq!(buffer[(1, 19)].bg, ACCENT);

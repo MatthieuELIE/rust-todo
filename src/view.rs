@@ -372,7 +372,7 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
         }
         (Target::Add, _) => Line::from(" ADD "),
     };
-    let field = Paragraph::new(field(&popup.editor))
+    let field = Paragraph::new(field(&popup.editor, today))
         .wrap(Wrap { trim: false })
         .block(floating(popup.picker.is_none()).title(title));
     let width = bounds.width * 4 / 5;
@@ -380,10 +380,17 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
     frame.render_widget(Clear, area);
     frame.render_widget(field, area);
-    // The cursor's cell is read back from the buffer: the paragraph does not tell where it wrapped the text.
+    // The cursor's cell is marked reversed then read back from the buffer, since the paragraph does not tell where it wrapped
+    // the text; the mark is taken off and the terminal's own cursor stands there.
     let cursor = area
         .positions()
         .find(|&cell| frame.buffer_mut()[cell].modifier.contains(Modifier::REVERSED));
+    if let Some(cursor) = cursor {
+        frame.buffer_mut()[cursor].modifier.remove(Modifier::REVERSED);
+        if popup.picker.is_none() {
+            frame.set_cursor_position(cursor);
+        }
+    }
     if let (Some(tag), Some(cursor)) = (popup.editor.tag(), cursor) {
         let (names, selected) = app.completions();
         let start = Position::new(cursor.x.saturating_sub(tag.chars().count() as u16), cursor.y);
@@ -457,12 +464,35 @@ fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
     Rect::new(word.x.saturating_sub(1), y, width, height).intersection(bounds)
 }
 
-/// The popup's text with the character under the cursor, or a space past the end, in reverse video.
-fn field(editor: &Editor) -> Line<'static> {
-    let mut chars = editor.text.chars();
-    let before: String = chars.by_ref().take(editor.cursor).collect();
-    let under = chars.next().map_or(" ".to_string(), String::from);
-    Line::from_iter([before.into(), under.reversed(), chars.collect::<String>().into()])
+/// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, reversed.
+fn field(editor: &Editor, today: Date) -> Line<'static> {
+    let mut chars: Vec<Span<'static>> = typed(&editor.text, today)
+        .into_iter()
+        .flat_map(|span| span.content.chars().map(|c| Span::styled(c.to_string(), span.style)).collect::<Vec<_>>())
+        .collect();
+    if editor.cursor >= chars.len() {
+        chars.push(" ".into());
+    }
+    chars[editor.cursor].style = chars[editor.cursor].style.reversed();
+    Line::from(chars)
+}
+
+/// Words of a line being typed, the priority and dates before the description styled as in the list, then its words.
+fn typed(text: &str, today: Date) -> Vec<Span<'static>> {
+    let description = Todo::from_line(text).description;
+    let head = &text[..text.len() - description.len()];
+    let mut spans = Vec::new();
+    for word in head.split_inclusive(' ') {
+        let letter = word.trim_end().strip_prefix('(').and_then(|rest| rest.strip_suffix(')'));
+        let style = match letter.and_then(|letter| letter.parse::<char>().ok()) {
+            Some(letter) => Style::new().bold().fg(priority(letter)),
+            None if parse_date(word.trim_end()).is_some() => Style::new().fg(TERTIARY),
+            None => Style::new(),
+        };
+        spans.push(Span::styled(word.to_string(), style));
+    }
+    spans.extend(words(&description, Some(today)));
+    spans
 }
 
 /// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.

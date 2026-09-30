@@ -4,6 +4,7 @@ use std::io;
 use std::path::Path;
 use std::time::Duration;
 
+use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use ratatui::crossterm::execute;
 use ratatui::widgets::ListState;
@@ -174,6 +175,14 @@ impl App {
             }
         }
         rows
+    }
+
+    /// The terminal cursor's shape: a bar while typing in the popup, a block otherwise, as in Neovim.
+    pub fn cursor_shape(&self) -> SetCursorStyle {
+        match &self.focus {
+            Focus::Popup(popup) if popup.editor.mode == Mode::Insert => SetCursorStyle::SteadyBar,
+            _ => SetCursorStyle::SteadyBlock,
+        }
     }
 
     /// The task under the cursor, none when the cursor stands on a folded group or the list is empty.
@@ -675,6 +684,7 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
         execute!(io::stdout(), EnableBracketedPaste)?;
         while !app.quit {
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll, crate::today()))?;
+            execute!(io::stdout(), app.cursor_shape())?;
             let event = if event::poll(Duration::from_millis(250))? {
                 Some(event::read()?)
             } else {
@@ -702,7 +712,7 @@ pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
                 app.paste(&pasted);
             }
         }
-        execute!(io::stdout(), DisableBracketedPaste)
+        execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)
     })
 }
 

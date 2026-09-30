@@ -193,6 +193,18 @@ fn a_refusal_is_told_apart_from_an_information_until_the_next_key() {
 }
 
 #[test]
+fn the_cursor_is_a_bar_while_typing_in_the_popup_and_a_block_otherwise() {
+    let mut app = app_of(&["one"]);
+    assert_eq!(app.cursor_shape(), SetCursorStyle::SteadyBlock);
+
+    press(&mut app, "o");
+    assert_eq!(app.cursor_shape(), SetCursorStyle::SteadyBar);
+
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    assert_eq!(app.cursor_shape(), SetCursorStyle::SteadyBlock);
+}
+
+#[test]
 fn enter_on_an_empty_list_opens_nothing() {
     let mut app = app_of(&[]);
 

@@ -4,7 +4,7 @@ A small editor for a [todo.txt](https://github.com/todotxt/todo.txt) file: a com
 
 ## Install
 
-It needs Rust 1.88 or later.
+It needs Rust 1.88 or later, and a terminal showing 24-bit colour: the colours are Catppuccin Mocha's, set as RGB rather than taken from the terminal's theme.
 
 ```sh
 cargo install --locked --git https://github.com/MatthieuELIE/rust-todo --tag v0.1.0
@@ -69,11 +69,12 @@ height = "75%"
 
 The rows are those of `todo list`: same numbers, order and colours.
 The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, rather than left to the terminal's; outside herdr it stays that colour.
+Text is in Mocha's `text` colour, and greyer the less it needs reading: labels and section names, then dates, counts, `key:value` words and done tasks.
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.
 `p` leaves a done task alone, since todo.txt drops the priority of a completed task.
-The status bar shows the mode in a coloured block, the active filters, then the mode's main keys, bold before their dimmed action, when they fit and no message is shown; a message goes on the right.
+The status bar shows the mode in a peach block, the active filters coloured as in the list, then the mode's main keys, bold before their greyed action, when they fit and no message is shown; a message goes on the right, red when something was refused.
 `?` shows every key, grouped by mode, and any key closes it.
 
 ### The popup
@@ -113,7 +114,7 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 ### Details
 
 Under the list, a `DETAILS` zone shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
-A done task shows its completion date in place of the priority, and the whole zone is dimmed.
+A done task shows its completion date in place of the priority, and the whole zone is greyed, not struck through, so it stays readable.
 A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
 
@@ -137,11 +138,11 @@ A task is listed when its line contains every term, compared as a case-insensiti
 Flags go before terms: in `todo list +work --all`, `--all` is one more term, excluding `-all`, and done tasks stay hidden.
 
 Pending tasks come first, prioritised ones by priority, then the rest; ties keep the file order.
-stdout carries task lines only, coloured when it is a terminal and plain text when piped.
-Each element of a line has its own style: a priority bold, tinted yellow, green and blue for A to C as `todo.sh` does, the creation date dimmed, `+projects` magenta and `@contexts` cyan.
-`key:value` words such as `wait:figma` are dimmed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
-A `due:` date is red once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is dimmed like any `key:value`.
-A done task is dimmed as a whole, whatever its due date.
+stdout carries task lines only, coloured when it is a terminal and `NO_COLOR` is unset or empty, otherwise plain todo.txt lines.
+Each element of a line has its own style: the priority as a badge, ` A ` in its colour on a dark background (A pink, B green, C blue, D lavender, E sky), the creation date greyed, `+projects` mauve and `@contexts` teal.
+`key:value` words such as `wait:figma` are greyed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
+A `due:` date is red once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is greyed like any `key:value`.
+A done task is greyed and struck through as a whole, whatever its due date.
 An empty listing says so on stderr and still exits 0.
 
 ### Differences from `todo.sh`

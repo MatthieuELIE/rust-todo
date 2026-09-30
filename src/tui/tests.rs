@@ -182,6 +182,17 @@ fn a_trailing_space_is_dropped_on_add_and_edit() {
 }
 
 #[test]
+fn a_refusal_is_told_apart_from_an_information_until_the_next_key() {
+    let mut app = app_of(&["one"]);
+
+    press(&mut app, "pz");
+    assert_eq!((app.message.as_deref(), app.refused), (Some(NOT_PRIORITY), true));
+
+    press(&mut app, "u");
+    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing to undo"), false));
+}
+
+#[test]
 fn enter_on_an_empty_list_opens_nothing() {
     let mut app = app_of(&[]);
 

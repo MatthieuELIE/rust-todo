@@ -51,17 +51,17 @@ fn main() -> ExitCode {
             if tasks.is_empty() {
                 eprintln!("{}", if terms.is_empty() { "nothing to do" } else { "no matching task" });
             }
-            let (colour, today) = (std::io::stdout().is_terminal(), today());
+            let colour = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty());
+            let today = today();
             for (number, todo) in tasks {
-                let line = view::line(number, todo, today);
                 if colour {
-                    let spans: String = line
+                    let spans: String = view::line(number, todo, today)
                         .iter()
                         .map(|span| span.style.into_crossterm().apply(&span.content).to_string())
                         .collect();
                     println!("{spans}");
                 } else {
-                    println!("{line}");
+                    println!("{number:>3}  {}", todo.to_line());
                 }
             }
             return ExitCode::SUCCESS;

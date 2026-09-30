@@ -70,6 +70,7 @@ height = "75%"
 The rows are those of `todo list`: same numbers, order and colours.
 The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, rather than left to the terminal's; outside herdr it stays that colour.
 Text is in Mocha's `text` colour, and greyer the less it needs reading: labels and section names, then dates, counts, `key:value` words and done tasks.
+The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.
@@ -91,7 +92,7 @@ A paste goes in at the cursor as one line, its line breaks turned into spaces; o
 While a word starting with `+`, `@` or `wait:` is typed, a drop-down lists the projects, contexts or `wait:` values of the whole file, done tasks included, that start like it whatever the case, the most used first.
 `↓` `↑` or `Ctrl-N` `Ctrl-P` pick one, and `Tab` writes it in place of the word, followed by a space; `Esc` and `Enter` keep their meaning.
 
-When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it, weeks from Monday, on today.
+When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it, weeks from Monday, on today: the picked date peach, today yellow, past days greyed.
 `h` `l` move by a day, `k` `j` by a week, `H` `L` by a month, the arrows as their letters; `Enter` writes the date after `due:`, followed by a space, and `Esc` closes it, leaving `due:` to be typed by hand.
 Any other key and a paste are ignored while it is open.
 

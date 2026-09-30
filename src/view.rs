@@ -35,6 +35,9 @@ const TERTIARY: Color = Color::Rgb(0x7f, 0x84, 0x9c);
 /// Rules and borders (surface1).
 const STRUCTURE: Color = Color::Rgb(0x45, 0x47, 0x5a);
 
+/// Background of the row under the cursor in the zone that gets the keys (surface0).
+const SELECTED: Color = Color::Rgb(0x31, 0x32, 0x44);
+
 /// Separators between keys (surface2).
 const SEPARATOR: Color = Color::Rgb(0x58, 0x5b, 0x70);
 
@@ -127,12 +130,9 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(20), Constraint::Fill(1)]).areas(main_area);
 
     let (entries, row) = panel(app);
-    let highlight = if matches!(app.focus, Focus::Panel) {
-        Style::new().bg(Color::DarkGray)
-    } else {
-        Style::new()
-    };
-    let panel = List::new(entries).highlight_style(highlight).block(Block::new().borders(Borders::RIGHT));
+    let panel = List::new(entries)
+        .highlight_style(highlight(matches!(app.focus, Focus::Panel)))
+        .block(Block::new().borders(Borders::RIGHT));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
     if list_area.height >= MIN_LIST_ROWS + DETAILS_HEIGHT {
@@ -192,9 +192,10 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
             rows.push(lines.len());
             lines.push(task);
         }
+        let focused = matches!(app.focus, Focus::List | Focus::Search);
         let list = List::new(lines)
-            .highlight_symbol("▸ ")
-            .highlight_style(Style::new().bg(Color::DarkGray))
+            .highlight_symbol(arrow(focused))
+            .highlight_style(highlight(focused))
             .scroll_padding(1);
         scroll.select(rows.get(app.cursor).copied());
         frame.render_stateful_widget(list, area, scroll);
@@ -388,20 +389,19 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
     }
 }
 
-/// Draws the date picker under the word at `word`: `date`'s month from Monday, `date` highlighted and `today` bold.
+/// Draws the date picker under the word at `word`: `date`'s month from Monday, `date` in the accent, `today` yellow, past days greyed.
 fn draw_picker(frame: &mut Frame, date: Date, today: Date, word: Position, bounds: Rect) {
     let first = date.replace_day(1).expect("every month has a first day");
     let offset = first.weekday().number_days_from_monday();
     let mut lines = vec![Line::from("Mo Tu We Th Fr Sa Su".fg(TERTIARY))];
     let mut week = Line::from("   ".repeat(offset.into()));
     for day in 1..=date.month().length(date.year()) {
-        let mut style = Style::new();
-        if day == date.day() {
-            style = style.bg(Color::DarkGray);
-        }
-        if first.replace_day(day) == Ok(today) {
-            style = style.bold();
-        }
+        let style = match first.replace_day(day).map(|shown| shown.cmp(&today)) {
+            _ if day == date.day() => Style::new().bold().fg(ACCENT).bg(SELECTED),
+            Ok(Ordering::Less) => Style::new().fg(TERTIARY),
+            Ok(Ordering::Equal) => Style::new().fg(DUE_TODAY),
+            _ => Style::new(),
+        };
         week.push_span(Span::styled(format!("{day:>2}"), style));
         if (offset + day).is_multiple_of(7) {
             lines.push(std::mem::take(&mut week));
@@ -431,7 +431,7 @@ fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usiz
         ])
     });
     let area = drop_down(tag, width as u16 + 6, names.len().min(5) as u16 + 2, bounds);
-    let list = List::new(rows).highlight_style(Style::new().bg(Color::DarkGray)).block(Block::bordered());
+    let list = List::new(rows).highlight_style(highlight(true)).block(Block::bordered());
     frame.render_widget(Clear, area);
     frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
 }
@@ -456,6 +456,7 @@ fn field(editor: &Editor) -> Line<'static> {
 
 /// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.
 fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
+    let focused = matches!(app.focus, Focus::Panel);
     let filters = app.filters();
     let active = app.filter_row(&filters);
     let (mut lines, mut row) = (Vec::new(), None);
@@ -472,12 +473,12 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         }
         let marker = if Some(i) == active {
             row = Some(lines.len());
-            "▸ "
+            arrow(focused)
         } else {
-            "  "
+            "  ".into()
         };
         let name = Span::styled(format!("{term:<13.13}"), style);
-        lines.push(Line::from_iter([marker.into(), name, " ".into(), format!("{count:>3}").fg(TERTIARY)]));
+        lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(TERTIARY)]));
     }
     (lines, row)
 }
@@ -560,6 +561,16 @@ fn header(group: Group, count: usize, folded: bool, width: usize) -> Line<'stati
         rule.fg(STRUCTURE),
         end.into(),
     ])
+}
+
+/// The cursor's mark, in the accent when its zone gets the keys.
+fn arrow(focused: bool) -> Span<'static> {
+    "→ ".fg(if focused { ACCENT } else { TERTIARY })
+}
+
+/// Style of the row under the cursor: highlighted only when its zone gets the keys.
+fn highlight(focused: bool) -> Style {
+    if focused { Style::new().bg(SELECTED) } else { Style::new() }
 }
 
 /// Colour of a priority, `A` to `E`.

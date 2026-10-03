@@ -123,6 +123,7 @@ d/c + move   delete, change up to
 dd/cc        delete, change the line
 iw/aw/iW/aW  after d/c: a word
 i/a/I/A      insert
+u/Ctrl-r     undo, redo
 p a…e        priority
 p Space      no priority
 Esc          cancel

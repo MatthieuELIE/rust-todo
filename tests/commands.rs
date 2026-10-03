@@ -14,11 +14,11 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
     let file = std::env::temp_dir().join(format!("todo-{}-commands.txt", std::process::id()));
     std::fs::write(&file, "2026-09-01 Call the bank\nPay rent\n").unwrap();
 
-    assert!(todo(&file, &["add", "2026-09-02 Buy milk", "--priority", "B"]).status.success());
+    assert!(todo(&file, &["add", "(B) 2026-09-02 Buy milk"]).status.success());
     assert!(todo(&file, &["do", "1"]).status.success());
     assert!(todo(&file, &["rm", "2"]).status.success());
     let refused = [
-        (todo(&file, &["add", "(A) Buy bread", "--priority", "B"]), "priority given twice\n"),
+        (todo(&file, &["add", "x Buy bread"]), "cannot add a task that is already done\n"),
         (todo(&file, &["do", "9"]), "no task numbered 9\n"),
         (todo(&file, &["rm", "9"]), "no task numbered 9\n"),
     ];

@@ -67,7 +67,7 @@ fn main() -> ExitCode {
             return ExitCode::SUCCESS;
         }
 
-        Commands::Add { text, priority } => match build_task(&text, priority) {
+        Commands::Add { text } => match Todo::new_from_input(&text, today()) {
             Ok(todo) => store.add(todo),
             Err(e) => {
                 eprintln!("{e}");
@@ -96,17 +96,6 @@ fn main() -> ExitCode {
     }
 
     ExitCode::SUCCESS
-}
-
-/// Builds the task to add, refusing a priority given both inline and by `--priority`, which only the CLI can do.
-fn build_task(text: &str, flag_priority: Option<char>) -> Result<Todo, String> {
-    let mut todo = Todo::new_from_input(text, today())?;
-    match (todo.priority, flag_priority) {
-        (Some(_), Some(_)) => return Err("priority given twice".to_string()),
-        (None, Some(priority)) => todo.priority = Some(priority),
-        _ => {}
-    }
-    Ok(todo)
 }
 
 /// Returns the current date in the local timezone, or UTC if local time is unavailable.

@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
 use crate::todo::{DUE, Todo, WAIT};
@@ -36,6 +38,8 @@ pub struct Editor {
     pub mode: Mode,
     /// Key (`d`, `c`, `p`) waiting for its motion or priority; after `d` or `c`, a key completing no command only drops it.
     pending: Option<char>,
+    /// `i` or `a` typed after `d` or `c`, waiting for the `w` or `W` of its word.
+    scope: Option<char>,
 }
 
 impl Editor {
@@ -55,7 +59,7 @@ impl Editor {
             return Outcome::NotPriority;
         }
         match (self.mode, key.code) {
-            (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => self.pending = None,
+            (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => (self.pending, self.scope) = (None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
             (Mode::Insert, _) => self.insert(key),
@@ -140,10 +144,16 @@ impl Editor {
     fn normal(&mut self, code: KeyCode) {
         let chars: Vec<char> = self.text.chars().collect();
         let (len, at) = (chars.len(), self.cursor);
-        let pending = self.pending.take();
+        let (pending, scope) = (self.pending.take(), self.scope.take());
         match code {
+            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c')) && scope.is_none() => {
+                self.pending = pending;
+                self.scope = Some(key);
+            }
             _ if matches!(pending, Some('d' | 'c')) => {
                 let range = match code {
+                    KeyCode::Char(w @ ('w' | 'W')) if scope.is_some() => Some(object(&chars, at, w == 'W', scope == Some('a'))),
+                    _ if scope.is_some() => None,
                     KeyCode::Char(c) if pending == Some(c) => Some(0..len),
                     KeyCode::Char(w @ ('w' | 'W')) if pending == Some('c') && chars.get(at).is_some_and(|c| !c.is_whitespace()) => {
                         Some(at..run_end(&chars, at, w == 'W') + 1)
@@ -231,6 +241,26 @@ fn motion(chars: &[char], at: usize, code: KeyCode) -> Option<usize> {
         KeyCode::Char(e @ ('e' | 'E')) => next_end(chars, at, e == 'E'),
         _ => return None,
     })
+}
+
+/// The word under `at`, a run of one class, blanks being one; `around` adds the blanks after it, those before it when none follow.
+fn object(chars: &[char], at: usize, big: bool, around: bool) -> Range<usize> {
+    if at >= chars.len() {
+        return at..at;
+    }
+    let mut start = at;
+    while start > 0 && class(chars[start - 1], big) == class(chars[at], big) {
+        start -= 1;
+    }
+    let mut end = run_end(chars, at, big) + 1;
+    if around && end < chars.len() && (chars[end].is_whitespace() || chars[at].is_whitespace()) {
+        end = run_end(chars, end, big) + 1;
+    } else if around {
+        while start > 0 && chars[start - 1].is_whitespace() {
+            start -= 1;
+        }
+    }
+    start..end
 }
 
 /// Class of a character for word motions: blank, word (letter, digit, `_`) or punctuation; `big` makes every non-blank a word.

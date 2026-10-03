@@ -121,6 +121,7 @@ W/B/E        blank-separated word
 x/D/C        delete, to end, change
 d/c + move   delete, change up to
 dd/cc        delete, change the line
+iw/aw/iW/aW  after d/c: a word
 i/a/I/A      insert
 p a…e        priority
 p Space      no priority

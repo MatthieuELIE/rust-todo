@@ -390,6 +390,10 @@ impl App {
                 self.refuse(NOT_PRIORITY);
                 false
             }
+            Outcome::Message(message) => {
+                self.message = Some(message.to_string());
+                false
+            }
             outcome => self.close_popup(outcome, today),
         }
     }

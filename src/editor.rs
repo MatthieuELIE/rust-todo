@@ -15,6 +15,8 @@ pub enum Outcome {
     Cancel,
     /// The key after `p` was not a priority, and did nothing.
     NotPriority,
+    /// What an undo or a redo did, to be said in the status bar.
+    Message(&'static str),
 }
 
 /// How keys act on the text, as in vim.
@@ -40,12 +42,19 @@ pub struct Editor {
     pending: Option<char>,
     /// `i` or `a` typed after `d` or `c`, waiting for the `w` or `W` of its word.
     scope: Option<char>,
+    /// Text and cursor when normal mode last had no command under way: what `u` goes back to after the next change.
+    rest: (String, usize),
+    /// Texts and cursors before each change, the latest last.
+    undo: Vec<(String, usize)>,
+    /// Texts and cursors before each `u`, the latest last.
+    redo: Vec<(String, usize)>,
 }
 
 impl Editor {
     /// Opens on `text` in `mode`, the cursor at the start.
     pub fn new(text: String, mode: Mode) -> Self {
         Editor {
+            rest: (text.clone(), 0),
             text,
             mode,
             ..Editor::default()
@@ -62,10 +71,41 @@ impl Editor {
             (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => (self.pending, self.scope) = (None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
+            (Mode::Normal, KeyCode::Char('u')) if self.pending.is_none() => return self.step(true),
+            (Mode::Normal, KeyCode::Char('r')) if self.pending.is_none() && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
             (Mode::Insert, _) => self.insert(key),
             (Mode::Normal, code) => self.normal(code),
         }
+        self.settle();
         Outcome::Continue
+    }
+
+    /// Keeps the text before a change for `u`, once normal mode has no command under way: typing up to `Esc` is one change.
+    fn settle(&mut self) {
+        if self.mode == Mode::Insert || self.pending.is_some() {
+            return;
+        }
+        if self.text == self.rest.0 {
+            self.rest.1 = self.cursor;
+        } else {
+            self.undo.push(std::mem::replace(&mut self.rest, (self.text.clone(), self.cursor)));
+            self.redo.clear();
+        }
+    }
+
+    /// Undoes (`back`) or redoes the last change, keeping the current text for the way back, and tells what it did.
+    fn step(&mut self, back: bool) -> Outcome {
+        let (from, to, done, none) = if back {
+            (&mut self.undo, &mut self.redo, "undone", "nothing to undo")
+        } else {
+            (&mut self.redo, &mut self.undo, "redone", "nothing to redo")
+        };
+        let Some(rest) = from.pop() else {
+            return Outcome::Message(none);
+        };
+        to.push(std::mem::replace(&mut self.rest, rest));
+        (self.text, self.cursor) = self.rest.clone();
+        Outcome::Message(done)
     }
 
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.
@@ -75,6 +115,7 @@ impl Editor {
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
+        self.settle();
     }
 
     /// The `+project`, `@context` or `wait:` value being typed before the cursor, in insert mode only.

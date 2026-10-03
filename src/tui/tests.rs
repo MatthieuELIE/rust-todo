@@ -910,6 +910,21 @@ fn an_x_typed_in_front_of_a_pending_task_completes_it_today() {
 }
 
 #[test]
+fn u_in_the_popup_undoes_the_typed_text_and_says_so_without_touching_the_list() {
+    let mut app = app();
+    press(&mut app, "ofour");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+
+    assert!(!press(&mut app, "u"));
+    assert_eq!(popup(&app).editor.text, "");
+    assert_eq!((app.message.as_deref(), app.refused), (Some("undone"), false));
+
+    press(&mut app, "u");
+    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!(shown(&app), ["one", "two", "three"]);
+}
+
+#[test]
 fn a_control_key_in_the_search_types_nothing() {
     let mut app = app();
 

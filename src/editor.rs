@@ -34,7 +34,7 @@ pub struct Editor {
     pub cursor: usize,
     /// Whether keys are typed or are commands.
     pub mode: Mode,
-    /// Key (`d`, `c`, `p`) waiting for its motion or priority.
+    /// Key (`d`, `c`, `p`) waiting for its motion or priority; after `d` or `c`, a key completing no command only drops it.
     pending: Option<char>,
 }
 
@@ -55,6 +55,7 @@ impl Editor {
             return Outcome::NotPriority;
         }
         match (self.mode, key.code) {
+            (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => self.pending = None,
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
             (Mode::Insert, _) => self.insert(key),
@@ -141,15 +142,21 @@ impl Editor {
         let (len, at) = (chars.len(), self.cursor);
         let pending = self.pending.take();
         match code {
-            KeyCode::Char(w @ ('w' | 'W')) if pending == Some('d') => self.remove(at, next_start(&chars, at, w == 'W')),
-            KeyCode::Char(w @ ('w' | 'W')) if pending == Some('c') => {
-                let big = w == 'W';
-                let end = match chars.get(at) {
-                    Some(c) if !c.is_whitespace() => run_end(&chars, at, big) + 1,
-                    _ => next_start(&chars, at, big),
+            _ if matches!(pending, Some('d' | 'c')) => {
+                let range = match code {
+                    KeyCode::Char(c) if pending == Some(c) => Some(0..len),
+                    KeyCode::Char(w @ ('w' | 'W')) if pending == Some('c') && chars.get(at).is_some_and(|c| !c.is_whitespace()) => {
+                        Some(at..run_end(&chars, at, w == 'W') + 1)
+                    }
+                    KeyCode::Char('e' | 'E') => motion(&chars, at, code).map(|end| at..(end + 1).min(len)),
+                    code => motion(&chars, at, code).map(|to| at.min(to)..at.max(to)),
                 };
-                self.remove(at, end);
-                self.mode = Mode::Insert;
+                if let Some(range) = range {
+                    self.remove(range.start, range.end);
+                    if pending == Some('c') {
+                        self.mode = Mode::Insert;
+                    }
+                }
             }
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
             KeyCode::Char(op @ ('d' | 'c' | 'p')) => self.pending = Some(op),

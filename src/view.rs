@@ -119,7 +119,8 @@ h/l/0/$      move
 w/b/e        word
 W/B/E        blank-separated word
 x/D/C        delete, to end, change
-dw/cw/dW/cW  delete, change a word
+d/c + move   delete, change up to
+dd/cc        delete, change the line
 i/a/I/A      insert
 p a…e        priority
 p Space      no priority

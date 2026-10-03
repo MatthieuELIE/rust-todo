@@ -65,7 +65,7 @@ impl Store {
 /// Whether the line contains every term, or lacks it when the term starts with a dash.
 fn matches(line: &str, terms: &[String]) -> bool {
     terms.iter().all(|term| match term.strip_prefix('-') {
-        Some(term) => !line.contains(term),
+        Some(term) => term.is_empty() || !line.contains(term),
         None => line.contains(term.as_str()),
     })
 }
@@ -146,6 +146,7 @@ mod tests {
         let store = store_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
 
         assert_eq!(listed(&store, false, &["+finance", "-@home"]), [(1, "Call the bank +finance".into())]);
+        assert_eq!(listed(&store, false, &["-"]).len(), 3);
     }
 
     #[test]

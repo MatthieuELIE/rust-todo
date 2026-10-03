@@ -28,6 +28,18 @@ fn an_empty_filtered_list_says_nothing_matched() {
 }
 
 #[test]
+fn a_missing_home_variable_is_not_a_panic() {
+    let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .arg("list")
+        .env_remove("TODO_FILE")
+        .env_remove("HOME")
+        .output()
+        .unwrap();
+
+    assert!(output.status.success());
+}
+
+#[test]
 fn a_piped_listing_carries_no_colour_codes() {
     let file = std::env::temp_dir().join(format!("todo-{}-colour.txt", std::process::id()));
     std::fs::write(&file, "(A) Call the bank\nx 2026-09-03 Buy milk\n").unwrap();

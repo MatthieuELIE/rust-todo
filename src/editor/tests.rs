@@ -233,13 +233,71 @@ fn cw_changes_up_to_the_end_of_the_word_keeping_the_spaces_after_it() {
 }
 
 #[test]
-fn a_d_followed_by_another_key_is_dropped_and_that_key_acts() {
-    let mut ed = normal("abc", 0);
+fn d_deletes_up_to_where_a_motion_goes_the_end_of_a_word_included() {
+    let after = |from: usize, typed: &str| {
+        let mut ed = normal("Call the bank", from);
+        keys(&mut ed, typed);
+        (ed.text, ed.cursor)
+    };
 
-    keys(&mut ed, "dl");
+    assert_eq!(after(6, "db"), ("Call he bank".to_string(), 5));
+    assert_eq!(after(5, "de"), ("Call  bank".to_string(), 5));
+    assert_eq!(after(7, "d0"), ("e bank".to_string(), 0));
+    assert_eq!(after(5, "d$"), ("Call ".to_string(), 4));
+    assert_eq!(after(5, "dh"), ("Callthe bank".to_string(), 4));
+    assert_eq!(after(5, "dl"), ("Call he bank".to_string(), 5));
+    assert_eq!(after(0, "dh"), ("Call the bank".to_string(), 0));
+    assert_eq!(after(9, "dB"), ("Call bank".to_string(), 5));
+    assert_eq!(after(5, "dE"), ("Call  bank".to_string(), 5));
+}
+
+#[test]
+fn c_deletes_as_d_does_then_inserts() {
+    let mut ed = normal("Call the bank", 7);
+    keys(&mut ed, "cba");
+    assert_eq!(state(&ed), ("Call ae bank", 6));
+    assert_eq!(ed.mode, Mode::Insert);
+
+    let mut ed = normal("Call the bank", 5);
+    keys(&mut ed, "c$x");
+    assert_eq!(state(&ed), ("Call x", 6));
+
+    let mut ed = normal("Call the bank", 0);
+    keys(&mut ed, "ch");
+    assert_eq!(state(&ed), ("Call the bank", 0));
+    assert_eq!(ed.mode, Mode::Insert);
+}
+
+#[test]
+fn a_key_completing_no_command_after_d_or_c_cancels_it_and_does_nothing_esc_and_enter_included() {
+    let mut ed = normal("abc", 1);
+
+    keys(&mut ed, "dxcA");
     assert_eq!(state(&ed), ("abc", 1));
+    assert_eq!(ed.mode, Mode::Normal);
     keys(&mut ed, "x");
     assert_eq!(state(&ed), ("ac", 1));
+
+    keys(&mut ed, "d");
+    assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
+    keys(&mut ed, "c");
+    assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Enter)), Outcome::Continue);
+    keys(&mut ed, "l");
+    assert_eq!(state(&ed), ("ac", 1));
+    assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Cancel);
+}
+
+#[test]
+fn dd_empties_the_text_and_cc_then_inserts() {
+    let mut ed = normal("Call the bank", 6);
+    keys(&mut ed, "dd");
+    assert_eq!(state(&ed), ("", 0));
+    assert_eq!(ed.mode, Mode::Normal);
+
+    let mut ed = normal("Call the bank", 6);
+    keys(&mut ed, "ccPay");
+    assert_eq!(state(&ed), ("Pay", 3));
+    assert_eq!(ed.mode, Mode::Insert);
 }
 
 #[test]

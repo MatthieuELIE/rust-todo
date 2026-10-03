@@ -100,6 +100,7 @@ Any other key and a paste are ignored while it is open.
 
 An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word; under `Waiting` it gets nothing and the panel goes back to `All tasks`.
 An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
+A pending task whose `x` marker is typed is completed on the day, as with `x` in the list.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task; an add stays open.
 
 ### Undo

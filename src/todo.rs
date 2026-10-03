@@ -59,15 +59,21 @@ impl Todo {
         }
     }
 
-    /// Build a pending task from user input, stamped with `today` unless it carries a creation date.
-    pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
+    /// Parse a line typed by the user, its trailing spaces dropped, refusing an empty description.
+    pub fn from_input(text: &str) -> Result<Todo, String> {
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
+        if todo.description.is_empty() {
+            return Err("a task needs a description".to_string());
+        }
+        Ok(todo)
+    }
+
+    /// Build a pending task from user input, stamped with `today` unless it carries a creation date.
+    pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
+        let mut todo = Todo::from_input(text)?;
         if todo.done {
             return Err("cannot add a task that is already done".to_string());
-        }
-        if todo.description.trim().is_empty() {
-            return Err("a task needs a description".to_string());
         }
         todo.created.get_or_insert(today);
         Ok(todo)

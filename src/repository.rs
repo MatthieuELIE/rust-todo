@@ -25,14 +25,19 @@ pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     tmp.push(".tmp");
     let tmp = PathBuf::from(tmp);
 
-    let mut file = fs::File::create(&tmp)?;
-    file.write_all(body.as_bytes())?;
-    if let Ok(metadata) = fs::metadata(&path) {
-        file.set_permissions(metadata.permissions())?;
+    let written = (|| {
+        let mut file = fs::File::create(&tmp)?;
+        if let Ok(metadata) = fs::metadata(&path) {
+            file.set_permissions(metadata.permissions())?;
+        }
+        file.write_all(body.as_bytes())?;
+        file.sync_all()?;
+        fs::rename(&tmp, &path)
+    })();
+    if written.is_err() {
+        let _ = fs::remove_file(&tmp);
     }
-    file.sync_all()?;
-    fs::rename(&tmp, &path)?;
-    Ok(body)
+    written.map(|()| body)
 }
 
 #[cfg(test)]
@@ -71,6 +76,18 @@ mod tests {
         assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "Consectetur adipiscing\n");
         assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn a_failed_save_leaves_no_temporary_file_behind() {
+        let path = temp_path("directory");
+        std::fs::create_dir_all(path.join("kept")).unwrap();
+
+        assert!(save(&path, &[Todo::from_line("Lorem ipsum")]).is_err());
+
+        let mut tmp = std::fs::canonicalize(&path).unwrap().into_os_string();
+        tmp.push(".tmp");
+        assert!(!PathBuf::from(tmp).exists());
     }
 
     #[test]

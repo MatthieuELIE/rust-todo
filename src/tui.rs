@@ -289,12 +289,13 @@ impl App {
 
     /// Types pasted `text` as one line into the popup or the search, and drops it elsewhere so it never acts as keys.
     pub fn paste(&mut self, text: &str) {
-        let text = text.lines().collect::<Vec<_>>().join(" ");
+        let text = text.split(['\r', '\n']).filter(|line| !line.is_empty()).collect::<Vec<_>>().join(" ");
         match &mut self.focus {
             Focus::Popup(popup) if popup.picker.is_none() => popup.editor.paste(&text),
             Focus::Search => self.search.push_str(&text),
             _ => {}
         }
+        self.forget_gone_folds();
     }
 
     /// Unfolds the groups no longer on screen, so they come back unfolded.
@@ -389,7 +390,7 @@ impl App {
         };
         match (outcome, popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
-            (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text),
+            (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text, today),
             _ => false,
         }
     }
@@ -581,13 +582,17 @@ impl App {
         }
     }
 
-    /// Replaces task `number` with the line `text`, cursor on it; an empty description is refused, an unchanged line ignored.
-    fn edit(&mut self, number: usize, text: &str) -> bool {
-        let mut todo = Todo::from_line(text);
-        todo.description.truncate(todo.description.trim_end().len());
-        if todo.description.trim().is_empty() {
-            self.refuse("a task needs a description");
-            return false;
+    /// Replaces task `number` with `text`, done on `today` when its `x` was typed; an empty description is refused, an unchanged line ignored.
+    fn edit(&mut self, number: usize, text: &str, today: Date) -> bool {
+        let mut todo = match Todo::from_input(text) {
+            Ok(todo) => todo,
+            Err(e) => {
+                self.refuse(&e);
+                return false;
+            }
+        };
+        if todo.done && !self.store.todos[number - 1].done {
+            todo.complete(today);
         }
         if todo.to_line() == self.store.todos[number - 1].to_line() {
             return false;

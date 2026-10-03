@@ -852,12 +852,35 @@ fn a_paste_types_its_lines_as_one_into_the_popup_or_the_search_and_does_nothing_
     app.paste("the\r\nbank\n");
     assert_eq!(popup(&app).editor.text, "Call the bank");
     assert_eq!(popup(&app).editor.cursor, 13);
+    app.paste(" on\rMonday");
+    assert_eq!(popup(&app).editor.text, "Call the bank on Monday");
 
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
     press(&mut app, "/");
     app.paste("tw\no");
     assert_eq!(app.search, "tw o");
+}
+
+#[test]
+fn a_paste_in_the_search_drops_the_folds_of_the_groups_it_takes_off_the_screen() {
+    let mut app = app_of(&["(A) one", "two", "three"]);
+    press(&mut app, "jza/");
+
+    app.paste("t");
+
+    assert_eq!(app.rows(), [Row::Task(2), Row::Task(3)]);
+}
+
+#[test]
+fn an_x_typed_in_front_of_a_pending_task_completes_it_today() {
+    let mut app = app_of(&["(A) 2026-08-01 one"]);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "ix ");
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.store.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
 }
 
 #[test]

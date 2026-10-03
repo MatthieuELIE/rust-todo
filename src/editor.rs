@@ -108,6 +108,11 @@ impl Editor {
         Outcome::Message(done)
     }
 
+    /// Keys typed so far of a command still waiting for its end, as `d` or `ci`.
+    pub fn pending(&self) -> String {
+        self.pending.iter().chain(&self.scope).collect()
+    }
+
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.
     pub fn paste(&mut self, text: &str) {
         self.text.insert_str(self.byte(self.cursor), text);

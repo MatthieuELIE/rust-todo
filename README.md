@@ -90,6 +90,7 @@ Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `
 `d` and `c` take any of these motions, as in `db`, `ce` or `d$`, `c` then going to insert mode; `dd` empties the line and `cc` empties it to type it again.
 `d` and `c` also take the word under the cursor, wherever the cursor is in it: `iw` is the run of letters or of punctuation, `iW` the whole blank-separated word, so `ciW` on `due:2026-10-15` replaces the tag; `aw` and `aW` take its space too, the one after it or, on the last word, the one before.
 After `d` or `c`, a key that completes no command cancels it and does nothing: `Esc` then leaves the popup open, and `Enter` does not save.
+`u` and `Ctrl-R` undo and redo the changes made in the popup, what was typed between entering insert mode and `Esc` being one change; this history is the popup's own and is lost when it closes.
 `p` then `a` to `e` writes or replaces the priority at the start of the line, and `p` then `Space` drops it, as in the list; a done line is left alone.
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
 A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.

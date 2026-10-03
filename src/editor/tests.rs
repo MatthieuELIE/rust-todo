@@ -6,6 +6,7 @@ fn editor(text: &str, cursor: usize) -> Editor {
     Editor {
         text: text.to_string(),
         cursor,
+        rest: (text.to_string(), cursor),
         ..Editor::default()
     }
 }
@@ -326,6 +327,47 @@ fn a_key_that_is_not_w_after_di_or_da_cancels_the_command_and_does_nothing() {
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
     keys(&mut ed, "x");
     assert_eq!(state(&ed), ("Appeler +baque due:2026-10-15", 11));
+}
+
+#[test]
+fn u_undoes_the_normal_commands_one_by_one_and_ctrl_r_redoes_them_until_a_new_change() {
+    let u = KeyEvent::from(KeyCode::Char('u'));
+    let mut ed = normal("Call the bank", 5);
+    keys(&mut ed, "dwlx");
+    assert_eq!(state(&ed), ("Call bnk", 6));
+
+    assert_eq!(ed.handle_key(u), Outcome::Message("undone"));
+    assert_eq!(state(&ed), ("Call bank", 6));
+    ed.handle_key(u);
+    assert_eq!(state(&ed), ("Call the bank", 5));
+    assert_eq!(ed.handle_key(u), Outcome::Message("nothing to undo"));
+
+    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Message("redone"));
+    assert_eq!(state(&ed), ("Call bank", 6));
+    keys(&mut ed, "x");
+    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Message("nothing to redo"));
+    assert_eq!(state(&ed), ("Call bnk", 6));
+}
+
+#[test]
+fn the_text_typed_from_entering_insert_mode_to_esc_is_undone_at_once() {
+    let esc = KeyEvent::from(KeyCode::Esc);
+    let mut ed = normal("Call the bank", 5);
+    keys(&mut ed, "cwmy");
+    ed.handle_key(esc);
+    assert_eq!(state(&ed), ("Call my bank", 6));
+    keys(&mut ed, "u");
+    assert_eq!(state(&ed), ("Call the bank", 5));
+
+    let mut added = Editor::default();
+    keys(&mut added, "Pay rent");
+    added.handle_key(esc);
+    keys(&mut added, "u");
+    assert_eq!(state(&added), ("", 0));
+
+    let mut opened = Editor::new("Pay rent".to_string(), Mode::Normal);
+    keys(&mut opened, "u");
+    assert_eq!(state(&opened), ("Pay rent", 0));
 }
 
 #[test]

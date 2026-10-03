@@ -135,11 +135,10 @@ impl Editor {
         }
     }
 
-    /// Applies a key typed in normal mode, then keeps the cursor on a character if it stays there.
+    /// Applies a key typed in normal mode, a motion moving the cursor, then keeps the cursor on a character if it stays there.
     fn normal(&mut self, code: KeyCode) {
         let chars: Vec<char> = self.text.chars().collect();
         let (len, at) = (chars.len(), self.cursor);
-        let last = len.saturating_sub(1);
         let pending = self.pending.take();
         match code {
             KeyCode::Char(w @ ('w' | 'W')) if pending == Some('d') => self.remove(at, next_start(&chars, at, w == 'W')),
@@ -154,13 +153,6 @@ impl Editor {
             }
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
             KeyCode::Char(op @ ('d' | 'c' | 'p')) => self.pending = Some(op),
-            KeyCode::Char('h') => self.cursor = at.saturating_sub(1),
-            KeyCode::Char('l') => self.cursor = (at + 1).min(last),
-            KeyCode::Char('0') => self.cursor = 0,
-            KeyCode::Char('$') => self.cursor = last,
-            KeyCode::Char(w @ ('w' | 'W')) => self.cursor = next_start(&chars, at, w == 'W').min(last),
-            KeyCode::Char(b @ ('b' | 'B')) => self.cursor = previous_start(&chars, at, b == 'B'),
-            KeyCode::Char(e @ ('e' | 'E')) => self.cursor = next_end(&chars, at, e == 'E'),
             KeyCode::Char('x') => self.remove(at, (at + 1).min(len)),
             KeyCode::Char('D') => self.remove(at, len),
             KeyCode::Char('C') => {
@@ -180,7 +172,7 @@ impl Editor {
                 self.cursor = len;
                 self.mode = Mode::Insert;
             }
-            _ => {}
+            code => self.cursor = motion(&chars, at, code).unwrap_or(at),
         }
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
@@ -218,6 +210,20 @@ impl Editor {
     fn byte(&self, position: usize) -> usize {
         self.text.char_indices().nth(position).map_or(self.text.len(), |(i, _)| i)
     }
+}
+
+/// Where the motion key `code` takes a cursor at `at`, the length of `chars` when it runs past the text; `None` for any other key.
+fn motion(chars: &[char], at: usize, code: KeyCode) -> Option<usize> {
+    Some(match code {
+        KeyCode::Char('h') => at.saturating_sub(1),
+        KeyCode::Char('l') => at + 1,
+        KeyCode::Char('0') => 0,
+        KeyCode::Char('$') => chars.len(),
+        KeyCode::Char(w @ ('w' | 'W')) => next_start(chars, at, w == 'W'),
+        KeyCode::Char(b @ ('b' | 'B')) => previous_start(chars, at, b == 'B'),
+        KeyCode::Char(e @ ('e' | 'E')) => next_end(chars, at, e == 'E'),
+        _ => return None,
+    })
 }
 
 /// Class of a character for word motions: blank, word (letter, digit, `_`) or punctuation; `big` makes every non-blank a word.

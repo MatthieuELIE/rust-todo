@@ -6,5 +6,5 @@ src = "docs"
 [output.html]
 default-theme = "latte"
 preferred-dark-theme = "mocha"
-additional-css = ["theme/catppuccin.css"]
+additional-css = ["theme/catppuccin.css", "theme/custom.css"]
 site-url = "/rust-todo/"

@@ -287,6 +287,47 @@ fn a_key_completing_no_command_after_d_or_c_cancels_it_and_does_nothing_esc_and_
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Cancel);
 }
 
+const TAGGED: &str = "Appeler +banque due:2026-10-15";
+
+fn after(text: &str, from: usize, typed: &str) -> (String, usize) {
+    let mut ed = normal(text, from);
+    keys(&mut ed, typed);
+    (ed.text, ed.cursor)
+}
+
+#[test]
+fn iw_is_the_run_of_letters_punctuation_or_blanks_under_the_cursor_and_i_capital_w_the_blank_separated_word() {
+    assert_eq!(after(TAGGED, 11, "ciwx"), ("Appeler +x due:2026-10-15".to_string(), 10));
+    assert_eq!(after(TAGGED, 11, "ciWx"), ("Appeler x due:2026-10-15".to_string(), 9));
+    assert_eq!(after(TAGGED, 26, "diw"), ("Appeler +banque due:2026--15".to_string(), 25));
+    assert_eq!(after(TAGGED, 8, "diw"), ("Appeler banque due:2026-10-15".to_string(), 8));
+    assert_eq!(after("Appeler  +banque", 7, "diw"), ("Appeler+banque".to_string(), 7));
+    assert_eq!(after("", 0, "diw"), (String::new(), 0));
+}
+
+#[test]
+fn aw_takes_the_blanks_after_the_word_too_or_those_before_it_when_none_follow() {
+    assert_eq!(after(TAGGED, 11, "daw"), ("Appeler +due:2026-10-15".to_string(), 9));
+    assert_eq!(after(TAGGED, 11, "daW"), ("Appeler due:2026-10-15".to_string(), 8));
+    assert_eq!(after(TAGGED, 26, "daw"), ("Appeler +banque due:2026--15".to_string(), 25));
+    assert_eq!(after(TAGGED, 26, "daW"), ("Appeler +banque".to_string(), 14));
+    assert_eq!(after("Appeler  +banque", 7, "daw"), ("Appelerbanque".to_string(), 7));
+    assert_eq!(after("Appeler  +banque", 8, "caWx"), ("Appelerx".to_string(), 8));
+    assert_eq!(after("Appeler  ", 8, "daw"), ("Appeler".to_string(), 6));
+}
+
+#[test]
+fn a_key_that_is_not_w_after_di_or_da_cancels_the_command_and_does_nothing() {
+    let mut ed = normal(TAGGED, 11);
+
+    keys(&mut ed, "dixcaida");
+    assert_eq!(state(&ed), (TAGGED, 11));
+    assert_eq!(ed.mode, Mode::Normal);
+    assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
+    keys(&mut ed, "x");
+    assert_eq!(state(&ed), ("Appeler +baque due:2026-10-15", 11));
+}
+
 #[test]
 fn dd_empties_the_text_and_cc_then_inserts() {
     let mut ed = normal("Call the bank", 6);

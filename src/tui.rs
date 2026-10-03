@@ -1,20 +1,14 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::io;
-use std::path::Path;
-use std::time::Duration;
 
 use ratatui::crossterm::cursor::SetCursorStyle;
-use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use ratatui::crossterm::execute;
-use ratatui::widgets::ListState;
+use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use time::{Date, Month};
 
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
-use crate::store::Store;
-use crate::todo::{DUE, Todo, WAIT};
-use crate::view;
+use crate::todo::{DUE, Todo, WAIT, list};
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
 pub const WAITING: &str = "Waiting";
@@ -87,10 +81,18 @@ pub enum Row {
     Group(Group),
 }
 
+/// A line of the list as drawn.
+pub enum Shown<'a> {
+    /// A group's header, with its count and whether it is folded.
+    Header(Group, usize, bool),
+    /// A task with its number.
+    Task(usize, &'a Todo),
+}
+
 /// State of the interactive list: the tasks and where the user stands in them.
 pub struct App {
-    /// The tasks being browsed.
-    store: Store,
+    /// Tasks in file order; a task's number is its index plus one.
+    pub todos: Vec<Todo>,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
     /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
@@ -119,9 +121,9 @@ pub struct App {
 
 impl App {
     /// Opens the list on its first row.
-    pub fn new(store: Store) -> Self {
+    pub fn new(todos: Vec<Todo>) -> Self {
         App {
-            store,
+            todos,
             cursor: 0,
             pending: None,
             show_done: false,
@@ -140,7 +142,7 @@ impl App {
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-        let mut tasks = self.store.list(self.show_done, &terms);
+        let mut tasks = list(&self.todos, self.show_done, &terms);
         if let Some(filter) = &self.filter {
             tasks.retain(|(_, todo)| shows(todo, filter));
         }
@@ -148,7 +150,7 @@ impl App {
     }
 
     /// Groups of the tasks on screen with their counts, in display order; none when no task on screen has a priority.
-    pub fn groups(&self) -> Vec<(Group, usize)> {
+    fn groups(&self) -> Vec<(Group, usize)> {
         let mut groups: Vec<(Group, usize)> = Vec::new();
         for (_, todo) in self.tasks() {
             let group = Group::of(todo);
@@ -163,18 +165,27 @@ impl App {
         groups
     }
 
+    /// Lines of the list in display order: each group's header, then its tasks unless it is folded.
+    pub fn shown(&self) -> Vec<Shown<'_>> {
+        let mut tasks = self.tasks().into_iter().map(|(number, todo)| Shown::Task(number, todo));
+        let mut shown = Vec::new();
+        for (group, count) in self.groups() {
+            let folded = self.folded.contains(&group);
+            shown.push(Shown::Header(group, count, folded));
+            shown.extend(tasks.by_ref().take(count).filter(|_| !folded));
+        }
+        shown.extend(tasks);
+        shown
+    }
+
     /// Rows the cursor can stand on, in display order: the tasks, except those of a folded group, which is one row.
     fn rows(&self) -> Vec<Row> {
-        let mut rows: Vec<Row> = Vec::new();
-        for (number, todo) in self.tasks() {
-            let group = Group::of(todo);
-            if !self.folded.contains(&group) {
-                rows.push(Row::Task(number));
-            } else if rows.last() != Some(&Row::Group(group)) {
-                rows.push(Row::Group(group));
-            }
-        }
-        rows
+        let row = |shown| match shown {
+            Shown::Task(number, _) => Some(Row::Task(number)),
+            Shown::Header(group, _, true) => Some(Row::Group(group)),
+            Shown::Header(..) => None,
+        };
+        self.shown().into_iter().filter_map(row).collect()
     }
 
     /// The terminal cursor's shape: a bar while typing in the popup, a block otherwise, as in Neovim.
@@ -188,7 +199,7 @@ impl App {
     /// The task under the cursor, none when the cursor stands on a folded group or the list is empty.
     pub fn selected_task(&self) -> Option<&Todo> {
         match self.rows().get(self.cursor) {
-            Some(Row::Task(number)) => Some(&self.store.todos[number - 1]),
+            Some(Row::Task(number)) => Some(&self.todos[number - 1]),
             _ => None,
         }
     }
@@ -204,7 +215,7 @@ impl App {
     /// Puts the cursor on `row`, or on its group when that is folded, and tells whether either is on screen.
     fn select(&mut self, row: Row) -> bool {
         let group = match row {
-            Row::Task(number) => Row::Group(Group::of(&self.store.todos[number - 1])),
+            Row::Task(number) => Row::Group(Group::of(&self.todos[number - 1])),
             Row::Group(_) => row,
         };
         let rows = self.rows();
@@ -219,7 +230,7 @@ impl App {
 
     /// Panel entries with their counts, search left out: `All tasks`, `Waiting` if any task waits, then `+projects` and `@contexts`.
     pub fn filters(&self) -> Vec<(String, usize)> {
-        let shown = self.store.list(self.show_done, &[]);
+        let shown = list(&self.todos, self.show_done, &[]);
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
             let mut terms: Vec<String> = shown
                 .iter()
@@ -256,7 +267,7 @@ impl App {
             _ => (WAIT, Todo::waits),
         };
         let mut counts = HashMap::new();
-        for name in self.store.todos.iter().flat_map(names) {
+        for name in self.todos.iter().flat_map(names) {
             *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
         }
         let tag = tag.to_lowercase();
@@ -276,7 +287,7 @@ impl App {
 
     /// Applies one key dated `today`, keeping the tasks before a change for `u`; tells whether the file must be rewritten.
     pub fn handle_key(&mut self, key: KeyEvent, today: Date) -> bool {
-        let before = self.store.todos.clone();
+        let before = self.todos.clone();
         let history = (self.undo.len(), self.redo.len());
         let write = self.apply(key, today);
         self.forget_gone_folds();
@@ -443,7 +454,7 @@ impl App {
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
                 let priority = (c != ' ').then(|| c.to_ascii_uppercase());
                 if let Some(number) = selected
-                    && let todo = &mut self.store.todos[number - 1]
+                    && let todo = &mut self.todos[number - 1]
                     && !todo.done
                     && todo.priority != priority
                 {
@@ -468,7 +479,7 @@ impl App {
             KeyCode::Char('G') => self.cursor = last,
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
-                    let todo = &mut self.store.todos[number - 1];
+                    let todo = &mut self.todos[number - 1];
                     if todo.done {
                         todo.reopen()
                     } else {
@@ -477,7 +488,12 @@ impl App {
                     write = true;
                 }
             }
-            KeyCode::Char('d') if pending == Some('d') => write = selected.is_some_and(|number| self.store.remove(number)),
+            KeyCode::Char('d') if pending == Some('d') => {
+                if let Some(number) = selected {
+                    self.todos.remove(number - 1);
+                    write = true;
+                }
+            }
             KeyCode::Char('d') => self.pending = Some('d'),
             KeyCode::Char('o') => {
                 self.focus = Focus::Popup(Popup {
@@ -500,7 +516,7 @@ impl App {
             KeyCode::Enter => {
                 if let Some(number) = selected {
                     self.focus = Focus::Popup(Popup {
-                        editor: Editor::new(self.store.todos[number - 1].to_line(), Mode::Normal),
+                        editor: Editor::new(self.todos[number - 1].to_line(), Mode::Normal),
                         target: Target::Edit(number),
                         selected: 0,
                         picker: None,
@@ -542,7 +558,7 @@ impl App {
     fn toggle_fold(&mut self, row: Option<Row>) {
         match row {
             Some(Row::Task(number)) if !self.groups().is_empty() => {
-                self.folded.push(Group::of(&self.store.todos[number - 1]));
+                self.folded.push(Group::of(&self.todos[number - 1]));
                 self.select(Row::Task(number));
             }
             Some(Row::Group(group)) => {
@@ -571,8 +587,8 @@ impl App {
                 {
                     todo.description = format!("{} {term}", todo.description);
                 }
-                self.store.add(todo);
-                self.follow(self.store.todos.len(), "added, hidden by the filter");
+                self.todos.push(todo);
+                self.follow(self.todos.len(), "added, hidden by the filter");
                 true
             }
             Err(e) => {
@@ -591,19 +607,19 @@ impl App {
                 return false;
             }
         };
-        if todo.done && !self.store.todos[number - 1].done {
+        if todo.done && !self.todos[number - 1].done {
             todo.complete(today);
         }
-        if todo.to_line() == self.store.todos[number - 1].to_line() {
+        if todo.to_line() == self.todos[number - 1].to_line() {
             return false;
         }
-        self.store.todos[number - 1] = todo;
+        self.todos[number - 1] = todo;
         self.follow(number, "edited, hidden by the filter");
         true
     }
 
     /// Leaves `message` in the status bar as a refusal.
-    fn refuse(&mut self, message: &str) {
+    pub fn refuse(&mut self, message: &str) {
         self.message = Some(message.to_string());
         self.refused = true;
     }
@@ -624,7 +640,7 @@ impl App {
         };
         match from.pop() {
             Some(todos) => {
-                to.push(std::mem::replace(&mut self.store.todos, todos));
+                to.push(std::mem::replace(&mut self.todos, todos));
                 self.message = Some(done.to_string());
                 true
             }
@@ -635,9 +651,26 @@ impl App {
         }
     }
 
+    /// One turn of the loop: reloads when the file, `read` just now, no longer matches `text`, else applies `event`; tells whether to save.
+    pub fn turn(&mut self, read: io::Result<String>, text: &mut String, event: Option<Event>, today: Date) -> bool {
+        match (read, event) {
+            (Ok(current), _) if current != *text => {
+                self.reload(repository::parse(&current));
+                *text = current;
+            }
+            (read, Some(Event::Key(key))) if key.kind == KeyEventKind::Press && self.handle_key(key, today) => match read {
+                Ok(_) => return true,
+                Err(e) => self.refuse(&format!("could not read the file: {e} (file left unchanged)")),
+            },
+            (_, Some(Event::Paste(pasted))) => self.paste(&pasted),
+            _ => {}
+        }
+        false
+    }
+
     /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit is cancelled as its number may shift.
-    pub fn reload(&mut self, store: Store) {
-        self.store = store;
+    pub fn reload(&mut self, todos: Vec<Todo>) {
+        self.todos = todos;
         self.undo.clear();
         self.redo.clear();
         self.forget_gone_folds();
@@ -679,60 +712,6 @@ fn shows(todo: &Todo, term: &str) -> bool {
 /// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.
 fn has_word(todo: &Todo, term: &str) -> bool {
     todo.description.split_whitespace().any(|word| word == term)
-}
-
-/// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
-pub fn run(store: Store, mut text: String, path: &Path) -> io::Result<()> {
-    let mut app = App::new(store);
-    let mut scroll = ListState::default();
-    ratatui::run(|terminal| {
-        execute!(io::stdout(), EnableBracketedPaste)?;
-        while !app.quit {
-            terminal.draw(|frame| view::draw(frame, &app, &mut scroll, crate::today()))?;
-            execute!(io::stdout(), app.cursor_shape())?;
-            let event = if event::poll(Duration::from_millis(250))? {
-                Some(event::read()?)
-            } else {
-                None
-            };
-            if let Ok((current, todos)) = repository::load(path)
-                && current != text
-            {
-                text = current;
-                app.reload(Store::new(todos));
-            } else if let Some(Event::Key(key)) = event
-                && key.kind == KeyEventKind::Press
-                && app.handle_key(key, crate::today())
-            {
-                match repository::save(path, &app.store.todos) {
-                    Ok(written) => text = written,
-                    Err(e) => {
-                        if let Ok((_, todos)) = repository::load(path) {
-                            app.reload(Store::new(todos));
-                        }
-                        app.refuse(&format!("could not save: {e} (file left unchanged)"));
-                    }
-                }
-            } else if let Some(Event::Paste(pasted)) = event {
-                app.paste(&pasted);
-            }
-        }
-        execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)
-    })
-}
-
-/// Shows `message` full screen until a key is pressed, so a popup that closes when the program exits does not swallow it.
-pub fn show_error(message: &str) -> io::Result<()> {
-    ratatui::run(|terminal| {
-        terminal.draw(|frame| view::draw_error(frame, message))?;
-        loop {
-            if let Event::Key(key) = event::read()?
-                && key.kind == KeyEventKind::Press
-            {
-                return Ok(());
-            }
-        }
-    })
 }
 
 #[cfg(test)]

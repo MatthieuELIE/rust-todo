@@ -11,6 +11,7 @@ cargo install --locked --git https://github.com/MatthieuELIE/rust-todo --tag v0.
 ```
 
 This puts `todo` in `~/.cargo/bin`; drop `--tag` for the latest `main`, or run `cargo install --locked --path .` in a clone.
+It is developed on macOS and its tests run on Linux; it has not been tried on Windows.
 
 ## Usage
 

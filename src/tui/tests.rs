@@ -4,7 +4,7 @@ use time::macros::date;
 const TODAY: Date = date!(2026 - 09 - 26);
 
 fn app_of(lines: &[&str]) -> App {
-    App::new(Store::new(lines.iter().map(|l| Todo::from_line(l)).collect()))
+    App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
 }
 
 fn app() -> App {
@@ -35,7 +35,7 @@ fn x_completes_the_selected_task_and_the_next_one_takes_its_row() {
 
     assert_eq!(shown(&app), ["one", "three"]);
     assert_eq!(app.cursor, 1);
-    assert_eq!(app.store.todos[1].to_line(), "x 2026-09-26 two");
+    assert_eq!(app.todos[1].to_line(), "x 2026-09-26 two");
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn enter_in_normal_mode_adds_the_task_too() {
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-    assert_eq!(app.store.todos[3].to_line(), "2026-09-26 Call the bank");
+    assert_eq!(app.todos[3].to_line(), "2026-09-26 Call the bank");
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn list_keys_typed_in_the_popup_are_text() {
     assert_eq!(shown(&app), ["one", "two", "three"]);
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.store.todos[3].to_line(), "2026-09-26 qxdd");
+    assert_eq!(app.todos[3].to_line(), "2026-09-26 qxdd");
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn an_edited_line_is_saved_as_typed_and_one_leaving_the_list_is_said_hidden() {
     press(&mut app, "ix 2026-09-20 ");
     assert!(app.handle_key(enter, TODAY));
 
-    assert_eq!(app.store.todos[1].to_line(), "x 2026-09-20 two");
+    assert_eq!(app.todos[1].to_line(), "x 2026-09-20 two");
     assert_eq!(app.cursor, 0);
     assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
 }
@@ -140,7 +140,7 @@ fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
 
     assert_eq!(shown(&app), ["two"]);
     assert_eq!(app.cursor, 0);
-    assert_eq!(app.store.todos[2].to_line(), "free");
+    assert_eq!(app.todos[2].to_line(), "free");
     assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
 }
 
@@ -216,7 +216,7 @@ fn enter_on_an_empty_list_opens_nothing() {
 #[test]
 fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
     let mut app = app();
-    let reread = || Store::new(vec![Todo::from_line("one"), Todo::from_line("two")]);
+    let reread = || vec![Todo::from_line("one"), Todo::from_line("two")];
 
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
     app.reload(reread());
@@ -349,7 +349,7 @@ fn a_task_added_under_a_panel_filter_gets_its_term_unless_it_has_that_exact_word
     press(&mut app, "o");
     app.handle_key(enter, TODAY);
 
-    let lines: Vec<String> = app.store.todos.iter().map(Todo::to_line).collect();
+    let lines: Vec<String> = app.todos.iter().map(Todo::to_line).collect();
     let added = [
         "(A) 2026-09-26 Call landlord +rent",
         "2026-09-26 Fix +rental form +rent",
@@ -378,7 +378,7 @@ fn a_task_added_under_waiting_gets_nothing_and_brings_back_all_tasks_with_the_cu
     press(&mut app, "oCall landlord");
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.store.todos[2].to_line(), "2026-09-26 Call landlord");
+    assert_eq!(app.todos[2].to_line(), "2026-09-26 Call landlord");
     assert_eq!(app.filter, None);
     assert_eq!(app.cursor, 2);
     assert_eq!(app.message, None);
@@ -429,7 +429,7 @@ fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
     let mut app = app();
     press(&mut app, "G");
 
-    app.reload(Store::new(vec![Todo::from_line("one"), Todo::from_line("four")]));
+    app.reload(vec![Todo::from_line("one"), Todo::from_line("four")]);
 
     assert_eq!(shown(&app), ["one", "four"]);
     assert_eq!(app.cursor, 1);
@@ -609,7 +609,7 @@ fn redo(app: &mut App) -> bool {
 }
 
 fn lines(app: &App) -> Vec<String> {
-    app.store.todos.iter().map(Todo::to_line).collect()
+    app.todos.iter().map(Todo::to_line).collect()
 }
 
 #[test]
@@ -658,11 +658,37 @@ fn u_and_ctrl_r_with_no_history_write_nothing_and_say_so() {
 }
 
 #[test]
+fn a_turn_reloads_a_file_that_changed_and_ignores_the_key_of_that_turn() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    let x = Some(Event::Key(KeyEvent::from(KeyCode::Char('x'))));
+
+    assert!(!app.turn(Ok("one\nfour\n".to_string()), &mut text, x.clone(), TODAY));
+    assert_eq!(shown(&app), ["one", "four"]);
+    assert_eq!(text, "one\nfour\n");
+
+    assert!(app.turn(Ok("one\nfour\n".to_string()), &mut text, x, TODAY));
+    assert_eq!(shown(&app), ["four"]);
+}
+
+#[test]
+fn a_turn_does_not_ask_to_save_over_a_file_it_could_not_read() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    let x = Some(Event::Key(KeyEvent::from(KeyCode::Char('x'))));
+
+    assert!(!app.turn(Err(io::ErrorKind::InvalidData.into()), &mut text, x, TODAY));
+
+    assert!(app.refused);
+    assert_eq!(text, "one\ntwo\nthree\n");
+}
+
+#[test]
 fn a_reload_forgets_the_history() {
     let mut app = app();
 
     press(&mut app, "xxu");
-    app.reload(Store::new(vec![Todo::from_line("one")]));
+    app.reload(vec![Todo::from_line("one")]);
 
     assert!(!press(&mut app, "u"));
     assert!(!redo(&mut app));
@@ -880,7 +906,7 @@ fn an_x_typed_in_front_of_a_pending_task_completes_it_today() {
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.store.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
+    assert_eq!(app.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
 }
 
 #[test]

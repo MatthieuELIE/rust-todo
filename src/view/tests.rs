@@ -1,5 +1,4 @@
 use super::*;
-use crate::store::Store;
 use crate::tui::Popup;
 use ratatui::Terminal;
 use ratatui::backend::TestBackend;
@@ -10,7 +9,7 @@ use time::macros::date;
 const TODAY: Date = date!(2026 - 09 - 26);
 
 fn app_of(lines: &[&str]) -> App {
-    App::new(Store::new(lines.iter().map(|l| Todo::from_line(l)).collect()))
+    App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
 }
 
 fn render(app: &App) -> Buffer {

@@ -9,7 +9,7 @@ use time::Date;
 
 use crate::editor::{Editor, Mode};
 use crate::todo::{DUE, Todo, parse_date};
-use crate::tui::{App, Focus, Group, Popup, Target, WAITING};
+use crate::tui::{App, Focus, Group, Popup, Shown, Target, WAITING};
 
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
@@ -174,8 +174,8 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let area = inner;
-    let tasks = app.tasks();
-    if tasks.is_empty() {
+    let shown = app.shown();
+    if shown.is_empty() {
         frame.render_widget(
             Paragraph::new(if app.search.is_empty() && app.filter.is_none() {
                 "nothing to do"
@@ -186,25 +186,18 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
             area,
         );
     } else {
-        let mut tasks = tasks.into_iter().map(|(number, todo)| line(number, todo, today));
         let (mut lines, mut rows) = (Vec::new(), Vec::new());
-        for (group, count) in app.groups() {
-            let folded = app.folded.contains(&group);
-            if !lines.is_empty() {
+        for shown in shown {
+            if matches!(shown, Shown::Header(..)) && !lines.is_empty() {
                 lines.push(Line::default());
             }
-            if folded {
+            if !matches!(shown, Shown::Header(_, _, false)) {
                 rows.push(lines.len());
             }
-            lines.push(header(group, count, folded, area.width.saturating_sub(2) as usize));
-            for task in tasks.by_ref().take(count).filter(|_| !folded) {
-                rows.push(lines.len());
-                lines.push(task);
-            }
-        }
-        for task in tasks {
-            rows.push(lines.len());
-            lines.push(task);
+            lines.push(match shown {
+                Shown::Header(group, count, folded) => header(group, count, folded, area.width.saturating_sub(2) as usize),
+                Shown::Task(number, todo) => line(number, todo, today),
+            });
         }
         let list = List::new(lines)
             .highlight_symbol(arrow(focused))
@@ -340,7 +333,7 @@ fn draw_help(frame: &mut Frame, area: Rect) {
 fn help_lines(text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {
-            if matches!(line, "LIST" | "INSERT" | "NORMAL" | "PANEL" | "DATE") {
+            if !line.contains(' ') {
                 return Line::from(line.fg(SECONDARY).bold());
             }
             let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));

@@ -3,16 +3,24 @@ use std::fs;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
+/// Read the raw text of the todo file, empty if the file is missing.
+pub fn read(path: &Path) -> io::Result<String> {
+    match fs::read_to_string(path) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(String::new()),
+        read => read,
+    }
+}
+
+/// Parse the tasks of a todo file's text, its blank lines dropped.
+pub fn parse(text: &str) -> Vec<Todo> {
+    text.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect()
+}
+
 /// Load the todo list from a file along with its raw text, both empty if the file is missing.
 pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
-    let content = match fs::read_to_string(path) {
-        Ok(content) => content,
-        Err(e) if e.kind() == io::ErrorKind::NotFound => String::new(),
-        Err(e) => return Err(e),
-    };
-
-    let todos = content.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect();
-    Ok((content, todos))
+    let text = read(path)?;
+    let todos = parse(&text);
+    Ok((text, todos))
 }
 
 /// Save the todo list to a file, overwriting any existing content, and return the text written.

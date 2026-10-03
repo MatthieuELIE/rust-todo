@@ -94,18 +94,18 @@ impl Todo {
 
     /// `+project` names in the description, without the `+`, once each in order of appearance.
     pub fn projects(&self) -> Vec<&str> {
-        self.words_after('+')
+        self.words_after("+")
     }
 
     /// `@context` names in the description, without the `@`, once each in order of appearance.
     pub fn contexts(&self) -> Vec<&str> {
-        self.words_after('@')
+        self.words_after("@")
     }
 
-    /// Words of the description starting with `sigil`, without it, once each in order of appearance.
-    fn words_after(&self, sigil: char) -> Vec<&str> {
+    /// Words of the description starting with `prefix`, without it, once each in order of appearance.
+    fn words_after(&self, prefix: &str) -> Vec<&str> {
         let mut names = Vec::new();
-        for name in self.description.split_whitespace().filter_map(|word| word.strip_prefix(sigil)) {
+        for name in self.description.split_whitespace().filter_map(|word| word.strip_prefix(prefix)) {
             if !name.is_empty() && !names.contains(&name) {
                 names.push(name);
             }
@@ -139,15 +139,7 @@ impl Todo {
 
     /// Values of the `wait:` key:values in the description, once each in order of appearance.
     pub fn waits(&self) -> Vec<&str> {
-        let mut values = Vec::new();
-        for word in self.description.split_whitespace().filter(|word| Todo::is_key_value(word)) {
-            if let Some(value) = word.strip_prefix(WAIT)
-                && !values.contains(&value)
-            {
-                values.push(value);
-            }
-        }
-        values
+        self.words_after(WAIT)
     }
 
     /// Whether `word` is a `key:value`: a key of letters, digits, `-` and `_` starting with a letter, a value neither empty nor `//`.
@@ -160,6 +152,28 @@ impl Todo {
             && !value.is_empty()
             && !value.starts_with("//")
     }
+}
+
+/// List tasks numbered by file position, filtered by status and terms, sorted by priority with done ones last.
+pub fn list<'a>(todos: &'a [Todo], all: bool, terms: &[String]) -> Vec<(usize, &'a Todo)> {
+    let terms: Vec<String> = terms.iter().map(|t| t.to_lowercase()).collect();
+    let mut tasks: Vec<(usize, &Todo)> = todos
+        .iter()
+        .enumerate()
+        .map(|(i, todo)| (i + 1, todo))
+        .filter(|(_, todo)| all || !todo.done)
+        .filter(|(_, todo)| matches(&todo.to_line().to_lowercase(), &terms))
+        .collect();
+    tasks.sort_by_key(|(_, todo)| (todo.done, todo.priority.is_none(), todo.priority));
+    tasks
+}
+
+/// Whether the line contains every term, or lacks it when the term starts with a dash.
+fn matches(line: &str, terms: &[String]) -> bool {
+    terms.iter().all(|term| match term.strip_prefix('-') {
+        Some(term) => term.is_empty() || !line.contains(term),
+        None => line.contains(term.as_str()),
+    })
 }
 
 /// Take a leading `(A) ` off `rest` and return its letter.
@@ -284,6 +298,17 @@ mod tests {
     }
 
     #[test]
+    fn completing_a_task_records_the_day_before_its_creation_date_and_drops_the_priority() {
+        let mut dated = Todo::from_line("(A) 2026-08-01 Lorem ipsum");
+        dated.complete(date!(2026 - 09 - 01));
+        assert_eq!(dated.to_line(), "x 2026-09-01 2026-08-01 Lorem ipsum");
+
+        let mut undated = Todo::from_line("Lorem ipsum");
+        undated.complete(date!(2026 - 09 - 01));
+        assert_eq!(undated.to_line(), "x 2026-09-01 Lorem ipsum");
+    }
+
+    #[test]
     fn reopening_a_task_clears_its_completion_but_not_the_dropped_priority() {
         let mut task = Todo::from_line("(A) 2026-08-01 Lorem ipsum");
         task.complete(date!(2026 - 09 - 01));
@@ -313,5 +338,57 @@ mod tests {
     fn a_new_task_cannot_have_an_empty_description() {
         assert!(Todo::new_from_input("   ", date!(2026 - 09 - 01)).is_err());
         assert!(Todo::new_from_input("(A) ", date!(2026 - 09 - 01)).is_err());
+    }
+
+    fn todos_of(lines: &[&str]) -> Vec<Todo> {
+        lines.iter().map(|l| Todo::from_line(l)).collect()
+    }
+
+    fn listed(todos: &[Todo], all: bool, terms: &[&str]) -> Vec<(usize, String)> {
+        let terms: Vec<String> = terms.iter().map(|t| t.to_string()).collect();
+        list(todos, all, &terms).into_iter().map(|(n, t)| (n, t.to_line())).collect()
+    }
+
+    #[test]
+    fn list_hides_done_tasks_unless_all_but_keeps_their_numbers() {
+        let todos = todos_of(&["x Lorem ipsum", "Consectetur adipiscing", "Tempor incididunt"]);
+
+        assert_eq!(
+            listed(&todos, false, &[]),
+            [(2, "Consectetur adipiscing".into()), (3, "Tempor incididunt".into())]
+        );
+        assert_eq!(listed(&todos, true, &[]).len(), 3);
+    }
+
+    #[test]
+    fn every_term_must_appear_in_the_line() {
+        let todos = todos_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
+
+        assert_eq!(listed(&todos, false, &["+finance", "Call"]), [(1, "Call the bank +finance".into())]);
+    }
+
+    #[test]
+    fn a_leading_dash_excludes_lines_containing_the_term() {
+        let todos = todos_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
+
+        assert_eq!(listed(&todos, false, &["+finance", "-@home"]), [(1, "Call the bank +finance".into())]);
+        assert_eq!(listed(&todos, false, &["-"]).len(), 3);
+    }
+
+    #[test]
+    fn terms_ignore_case() {
+        let todos = todos_of(&["Call the BANK", "Pay rent @Home"]);
+
+        assert_eq!(listed(&todos, false, &["bank"]), [(1, "Call the BANK".into())]);
+        assert_eq!(listed(&todos, false, &["-@HOME"]), [(1, "Call the BANK".into())]);
+    }
+
+    #[test]
+    fn list_puts_priorities_first_then_unprioritised_then_done_each_in_file_order() {
+        let todos = todos_of(&["Lorem", "x Ipsum", "(B) Dolor", "Sit", "(A) Amet", "(B) Elit"]);
+
+        let numbers: Vec<usize> = listed(&todos, true, &[]).into_iter().map(|(n, _)| n).collect();
+
+        assert_eq!(numbers, [5, 3, 6, 1, 4, 2]);
     }
 }

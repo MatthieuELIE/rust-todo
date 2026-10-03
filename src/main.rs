@@ -114,12 +114,11 @@ fn today() -> Date {
     OffsetDateTime::now_local().unwrap_or_else(|_| OffsetDateTime::now_utc()).date()
 }
 
-/// Returns the path to the todo.txt file, either from the TODO_FILE environment variable or defaulting to $HOME/todo.txt.
+/// Returns the path to the todo.txt file, either from the TODO_FILE environment variable or defaulting to the home directory's.
 fn todo_path() -> PathBuf {
     if let Some(path) = std::env::var_os("TODO_FILE") {
         return PathBuf::from(path);
     }
 
-    let home = std::env::var_os("HOME").expect("HOME is not set");
-    PathBuf::from(home).join("todo.txt")
+    std::env::home_dir().unwrap_or_default().join("todo.txt")
 }

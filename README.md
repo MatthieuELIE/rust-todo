@@ -19,7 +19,7 @@ Tasks are numbered by their position in the file, so a filtered `list` shows gap
 
 ```sh
 todo add "Buy milk"           # append a task, stamped with today's date
-todo add "(A) Call the bank"  # priority inline, or as --priority A
+todo add "(A) Call the bank"  # with a priority
 todo list                     # pending tasks
 todo list --all               # including the done ones
 todo list +finance -@phone    # tasks with +finance and without @phone

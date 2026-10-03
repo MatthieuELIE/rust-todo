@@ -1,3 +1,9 @@
 :root {
     --sidebar-target-width: 220px;
 }
+
+.mocha {
+    --links: #fab387;
+    --sidebar-active: #fab387;
+    --sidebar-header-border-color: #fab387;
+}

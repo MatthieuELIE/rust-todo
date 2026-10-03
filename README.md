@@ -2,6 +2,8 @@
 
 A small editor for a [todo.txt](https://github.com/todotxt/todo.txt) file: a command line to add, list and complete tasks, and a full-screen list meant for a [herdr](https://herdr.dev) popup.
 
+![The interactive list: a filter panel, tasks grouped by priority with a due date in red and one in yellow, and the details of the task under the cursor](docs/images/list.png)
+
 ## Install
 
 It needs Rust 1.88 or later, and a terminal showing 24-bit colour: the colours are Catppuccin Mocha's, set as RGB rather than taken from the terminal's theme.

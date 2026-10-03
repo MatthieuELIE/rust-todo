@@ -4,6 +4,8 @@
 `o` opens it empty in insert mode; `Enter` opens it on the task's line in normal mode, with the cursor at the start.
 The line is coloured as you type, as in the list, and the terminal's cursor is a bar in insert mode and a block in normal mode, as in Neovim.
 
+![The popup adding a task, with a drop-down of the file's projects under the + being typed](images/popup.png)
+
 ## Keys
 
 | Mode | Key | Action |

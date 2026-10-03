@@ -273,7 +273,7 @@ fn draw_cut(frame: &mut Frame, line: Line, area: Rect) {
     }
 }
 
-/// Draws the status bar: mode block, active filters, then the mode's keys when they fit, or the message on the right.
+/// Draws the status bar: mode block, active filters, then the mode's keys when they fit; on the right the message, or the keys of a command under way.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let (mode, keys) = match &app.focus {
         Focus::Search => ("SEARCH", "⏎ keep · esc clear"),
@@ -307,13 +307,15 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             format!(" {action}").fg(TERTIARY),
         ]);
     }
-    if app.message.is_none() && status.width() + hints.width() <= area.width as usize {
+    let pending = app.pending();
+    let reserved = if pending.is_empty() { 0 } else { pending.len() + 2 };
+    if app.message.is_none() && status.width() + hints.width() + reserved <= area.width as usize {
         status.extend(hints);
     }
     frame.render_widget(Paragraph::new(status), area);
-    if let Some(message) = &app.message {
+    if let Some(right) = app.message.as_deref().or((!pending.is_empty()).then_some(&pending)) {
         let colour = if app.refused { ALERT } else { SECONDARY };
-        frame.render_widget(Paragraph::new(format!("{message} ").fg(colour)).right_aligned(), area);
+        frame.render_widget(Paragraph::new(format!("{right} ").fg(colour)).right_aligned(), area);
     }
 }
 

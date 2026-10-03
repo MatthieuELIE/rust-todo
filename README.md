@@ -77,6 +77,7 @@ After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` i
 A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.
 `p` leaves a done task alone, since todo.txt drops the priority of a completed task.
 The status bar shows the mode in a peach block, the active filters coloured as in the list, then the mode's main keys, bold before their greyed action, when they fit and no message is shown; a message goes on the right, red when something was refused.
+While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show on the right in place of a message.
 `?` shows every key, grouped by mode, and any key closes it.
 
 ### The popup

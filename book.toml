@@ -1,0 +1,10 @@
+[book]
+title = "todo"
+language = "en"
+src = "docs"
+
+[output.html]
+default-theme = "latte"
+preferred-dark-theme = "mocha"
+additional-css = ["theme/catppuccin.css"]
+site-url = "/rust-todo/"

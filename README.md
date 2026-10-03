@@ -55,7 +55,7 @@ height = "75%"
 
 ## Documentation
 
-The keys of the list, the popup, how `list` filters and colours, and the line format are described in [docs/](docs/README.md).
+The keys of the list, the popup, how `list` filters and colours, and the line format are described in [the documentation](https://matthieuelie.github.io/rust-todo/).
 
 ## License
 

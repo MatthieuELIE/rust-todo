@@ -621,3 +621,28 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
     assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
     assert_eq!(buffer[(1, 19)].bg, ACCENT);
 }
+
+#[test]
+fn the_keys_of_a_command_waiting_for_its_end_show_on_the_right_of_the_status_bar() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let key = |app: &mut App, code: KeyCode| app.handle_key(KeyEvent::from(code), TODAY);
+    let status = |app: &App| rows(&render_in(app, 70, 5))[4].clone();
+    let mut app = app_of(&["Pay +rent"]);
+
+    key(&mut app, KeyCode::Char('d'));
+    assert!(status(&app).contains("? help") && status(&app).ends_with(" d"), "{}", status(&app));
+    assert_eq!(render_in(&app, 70, 5)[(68, 4)].fg, SECONDARY);
+    key(&mut app, KeyCode::Char('j'));
+    assert!(status(&app).ends_with("? help"));
+
+    key(&mut app, KeyCode::Enter);
+    key(&mut app, KeyCode::Char('c'));
+    key(&mut app, KeyCode::Char('i'));
+    assert!(status(&app).ends_with(" ci"), "{}", status(&app));
+    key(&mut app, KeyCode::Char('w'));
+    assert!(
+        status(&app).ends_with("tab complete") || status(&app).ends_with("save"),
+        "{}",
+        status(&app)
+    );
+}

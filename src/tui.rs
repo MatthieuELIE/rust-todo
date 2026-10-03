@@ -188,6 +188,14 @@ impl App {
         self.shown().into_iter().filter_map(row).collect()
     }
 
+    /// Keys typed so far of a command still waiting for its end, in the popup or the list.
+    pub fn pending(&self) -> String {
+        match &self.focus {
+            Focus::Popup(popup) => popup.editor.pending(),
+            _ => self.pending.iter().collect(),
+        }
+    }
+
     /// The terminal cursor's shape: a bar while typing in the popup, a block otherwise, as in Neovim.
     pub fn cursor_shape(&self) -> SetCursorStyle {
         match &self.focus {

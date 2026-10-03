@@ -7,7 +7,7 @@ A small editor for a [todo.txt](https://github.com/todotxt/todo.txt) file: a com
 It needs Rust 1.88 or later, and a terminal showing 24-bit colour: the colours are Catppuccin Mocha's, set as RGB rather than taken from the terminal's theme.
 
 ```sh
-cargo install --locked --git https://github.com/MatthieuELIE/rust-todo --tag v0.1.0
+cargo install --locked --git https://github.com/MatthieuELIE/rust-todo --tag v0.2.0
 ```
 
 This puts `todo` in `~/.cargo/bin`; drop `--tag` for the latest `main`, or run `cargo install --locked --path .` in a clone.

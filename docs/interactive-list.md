@@ -29,6 +29,7 @@ After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` i
 A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.
 `p` leaves a done task alone, since todo.txt drops the priority of a completed task.
 `?` shows every key, grouped by mode, and any key closes it.
+A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 
 ## Screen
 

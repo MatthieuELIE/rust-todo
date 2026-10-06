@@ -948,6 +948,29 @@ fn u_in_the_popup_undoes_the_typed_text_and_says_so_without_touching_the_list() 
 }
 
 #[test]
+fn a_control_key_in_the_list_is_not_its_letter() {
+    let mut app = app();
+    let control = |c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL);
+    press(&mut app, "x");
+
+    assert!(!app.handle_key(control('d'), TODAY));
+    assert!(!app.handle_key(control('d'), TODAY));
+    assert!(!app.handle_key(control('u'), TODAY));
+    assert!(!app.handle_key(control('x'), TODAY));
+
+    assert_eq!(shown(&app), ["two", "three"]);
+    assert_eq!(app.todos.len(), 3);
+
+    press(&mut app, "p");
+    assert!(!app.handle_key(control('a'), TODAY));
+    assert_eq!(app.message.as_deref(), Some(NOT_PRIORITY));
+
+    press(&mut app, "odue:");
+    app.handle_key(control('h'), TODAY);
+    assert_eq!(popup(&app).picker, Some(TODAY));
+}
+
+#[test]
 fn a_control_key_in_the_search_types_nothing() {
     let mut app = app();
 

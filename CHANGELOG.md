@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A letter pressed with `Ctrl` or `Alt` no longer acts as the letter in the list, the filter panel, the popup's normal mode and its calendar: `Ctrl-D Ctrl-D` used to delete the task and `Ctrl-U` to undo.
 - `add` refuses a text holding a line break or any other control character; a line break used to write several tasks at once, a done one among them.
 - `list` prints a control character found in the file as `�` instead of sending it to the terminal.
 - A paste in the popup or the search turns every control character into a space, not line breaks only, and so does opening a task of the file in the popup.

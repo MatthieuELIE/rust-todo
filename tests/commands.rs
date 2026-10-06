@@ -35,3 +35,17 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
     assert_eq!(&completed[10..], " 2026-09-01 Call the bank");
     assert_eq!(lines[1], "(B) 2026-09-02 Buy milk");
 }
+
+#[test]
+fn a_file_that_cannot_be_read_is_left_as_it_is() {
+    let file = std::env::temp_dir().join(format!("todo-{}-unreadable.txt", std::process::id()));
+    std::fs::write(&file, b"Pay rent\n\xff\n").unwrap();
+
+    let output = todo(&file, &["add", "Buy milk"]);
+
+    let bytes = std::fs::read(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not read "));
+    assert_eq!(bytes, b"Pay rent\n\xff\n");
+}

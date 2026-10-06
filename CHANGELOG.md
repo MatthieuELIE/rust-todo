@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A save writes its temporary file under a name of its own, `<file>.<pid>.tmp`, and never over an existing one: a symbolic link left at `<file>.tmp` used to be written through and to replace the task file, and two saves at once shared the same temporary file.
 - `do` on a task that is already done is refused with `task 2 is already done`; it used to give today's date to a done task that had no completion date.
 - `todo` run with no command and without a terminal says `could not set up the terminal` and exits 1; it used to panic.
 - A letter pressed with `Ctrl` or `Alt` no longer acts as the letter in the list, the filter panel, the popup's normal mode and its calendar: `Ctrl-D Ctrl-D` used to delete the task and `Ctrl-U` to undo.

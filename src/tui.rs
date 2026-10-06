@@ -332,6 +332,15 @@ impl App {
             self.quit = true;
             return false;
         }
+        if matches!(self.focus, Focus::List | Focus::Panel)
+            && key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+            && key.code != KeyCode::Char('r')
+        {
+            if pending == Some('p') {
+                self.refuse(NOT_PRIORITY);
+            }
+            return false;
+        }
         let write = match self.focus {
             Focus::Help => {
                 self.focus = Focus::List;
@@ -360,6 +369,7 @@ impl App {
         };
         if let Some(date) = popup.picker {
             popup.picker = match key.code {
+                _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => Some(date),
                 KeyCode::Enter => {
                     popup.editor.complete(&format!("{DUE}{date}"));
                     None

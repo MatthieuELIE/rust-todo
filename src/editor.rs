@@ -63,7 +63,8 @@ impl Editor {
 
     /// Applies one key press to the text and tells whether editing goes on.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
-        if self.pending == Some('p') && !matches!(key.code, KeyCode::Char('a'..='e' | ' ')) {
+        let modified = key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
+        if self.pending == Some('p') && (modified || !matches!(key.code, KeyCode::Char('a'..='e' | ' '))) {
             self.pending = None;
             return Outcome::NotPriority;
         }
@@ -71,8 +72,9 @@ impl Editor {
             (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => (self.pending, self.scope) = (None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
-            (Mode::Normal, KeyCode::Char('u')) if self.pending.is_none() => return self.step(true),
             (Mode::Normal, KeyCode::Char('r')) if self.pending.is_none() && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
+            (Mode::Normal, _) if modified => (self.pending, self.scope) = (None, None),
+            (Mode::Normal, KeyCode::Char('u')) if self.pending.is_none() => return self.step(true),
             (Mode::Insert, _) => self.insert(key),
             (Mode::Normal, code) => self.normal(code),
         }

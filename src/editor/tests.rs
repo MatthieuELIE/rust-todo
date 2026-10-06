@@ -472,3 +472,21 @@ fn completing_writes_the_name_over_the_whole_word_then_one_space_the_cursor_afte
     ed.complete("+Bank");
     assert_eq!(state(&ed), ("Call +Bank now", 11));
 }
+
+#[test]
+fn a_control_key_in_normal_mode_is_not_its_letter() {
+    let mut ed = normal("Call the bank", 0);
+    keys(&mut ed, "x");
+
+    press(&mut ed, &[ctrl('w'), ctrl('x'), ctrl('u')]);
+    assert_eq!(state(&ed), ("all the bank", 0));
+
+    keys(&mut ed, "d");
+    press(&mut ed, &[ctrl('w')]);
+    keys(&mut ed, "d");
+    assert_eq!(state(&ed), ("all the bank", 0));
+
+    ed.handle_key(KeyEvent::from(KeyCode::Esc));
+    keys(&mut ed, "p");
+    assert_eq!(ed.handle_key(ctrl('a')), Outcome::NotPriority);
+}

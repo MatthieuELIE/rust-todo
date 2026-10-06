@@ -12,6 +12,11 @@ Everything after that is the description — `+project`, `@context` and `key:val
 `add` records the creation date, `do` records the completion date and drops the priority, as `todo.sh` does.
 Anything the parser does not recognise stays in the description rather than being dropped.
 
+A description that starts with a marker is only safe behind a creation date.
+In `(A) (B) Call the bank`, written by hand without a date, `(B)` is text for as long as `(A)` stands before it: once the task is done or its priority dropped, `(B)` is read as the priority, and a done task loses it.
+The same goes for a description starting with `x `, read as the done marker once the priority is gone.
+`add` and the popup's `o` write the creation date, which keeps such a description as typed.
+
 ## Recognised keys
 
 Two `key:value` words mean something to `todo`; any other is kept as written and only greyed.

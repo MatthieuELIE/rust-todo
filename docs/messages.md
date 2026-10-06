@@ -14,6 +14,7 @@ Messages go to stderr; stdout carries task lines only.
 | `cannot add a task that is already done` | `add` was given a line starting with `x` | 1 |
 | `a task is one line, without control characters` | `add` was given a text holding a line break, a tab or an escape character | 1 |
 | `no task numbered 9` | `do` or `remove` was given a number that is not in the file | 1 |
+| `task 2 is already done` | `do` was given the number of a done task | 1 |
 | `could not read <path>: <reason>` | the task file exists and cannot be read, or is not UTF-8 text | 1 |
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |

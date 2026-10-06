@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `do` on a task that is already done is refused with `task 2 is already done`; it used to give today's date to a done task that had no completion date.
 - `todo` run with no command and without a terminal says `could not set up the terminal` and exits 1; it used to panic.
 - A letter pressed with `Ctrl` or `Alt` no longer acts as the letter in the list, the filter panel, the popup's normal mode and its calendar: `Ctrl-D Ctrl-D` used to delete the task and `Ctrl-U` to undo.
 - `add` refuses a text holding a line break or any other control character; a line break used to write several tasks at once, a done one among them.

@@ -30,11 +30,11 @@ pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
 
     // Write to a sibling file and rename over the target so a crash can't leave a half-written todo file.
     let mut tmp = path.clone().into_os_string();
-    tmp.push(".tmp");
+    tmp.push(format!(".{}.tmp", std::process::id()));
     let tmp = PathBuf::from(tmp);
 
     let written = (|| {
-        let mut file = fs::File::create(&tmp)?;
+        let mut file = fs::File::create_new(&tmp)?;
         if let Ok(metadata) = fs::metadata(&path) {
             file.set_permissions(metadata.permissions())?;
         }
@@ -87,6 +87,22 @@ mod tests {
     }
 
     #[test]
+    fn save_does_not_write_through_a_symlink_left_at_the_temporary_name() {
+        let (path, victim) = (temp_path("planted"), temp_path("victim"));
+        std::fs::write(&path, "Lorem ipsum\n").unwrap();
+        std::fs::write(&victim, "kept\n").unwrap();
+        let mut planted = std::fs::canonicalize(&path).unwrap().into_os_string();
+        planted.push(".tmp");
+        let _ = std::fs::remove_file(&planted);
+        std::os::unix::fs::symlink(&victim, &planted).unwrap();
+
+        save(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert_eq!(std::fs::read_to_string(&victim).unwrap(), "kept\n");
+        assert!(!std::fs::symlink_metadata(&path).unwrap().is_symlink());
+    }
+
+    #[test]
     fn a_failed_save_leaves_no_temporary_file_behind() {
         let path = temp_path("directory");
         std::fs::create_dir_all(path.join("kept")).unwrap();
@@ -94,7 +110,7 @@ mod tests {
         assert!(save(&path, &[Todo::from_line("Lorem ipsum")]).is_err());
 
         let mut tmp = std::fs::canonicalize(&path).unwrap().into_os_string();
-        tmp.push(".tmp");
+        tmp.push(format!(".{}.tmp", std::process::id()));
         assert!(!PathBuf::from(tmp).exists());
     }
 

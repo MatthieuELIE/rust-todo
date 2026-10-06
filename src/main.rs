@@ -11,6 +11,7 @@ use std::process::ExitCode;
 use std::time::Duration;
 
 use clap::Parser;
+use ratatui::DefaultTerminal;
 use ratatui::backend::IntoCrossterm;
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyEventKind};
@@ -126,7 +127,7 @@ fn todo_path() -> PathBuf {
 fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
     let mut app = App::new(todos);
     let mut scroll = ListState::default();
-    ratatui::run(|terminal| {
+    on_terminal(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;
         while !app.quit {
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
@@ -152,9 +153,17 @@ fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
     })
 }
 
+/// Runs `f` on the terminal set up for the full screen and puts it back, with an error when it cannot be set up.
+fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Result<()> {
+    let mut terminal = ratatui::try_init().map_err(|e| io::Error::other(format!("could not set up the terminal: {e}")))?;
+    let result = f(&mut terminal);
+    ratatui::restore();
+    result
+}
+
 /// Shows `message` full screen until a key is pressed, so a popup that closes when the program exits does not swallow it.
 fn show_error(message: &str) -> io::Result<()> {
-    ratatui::run(|terminal| {
+    on_terminal(|terminal| {
         terminal.draw(|frame| view::draw_error(frame, message))?;
         loop {
             if let Event::Key(key) = event::read()?

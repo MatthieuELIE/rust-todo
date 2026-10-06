@@ -16,6 +16,7 @@ Messages go to stderr; stdout carries task lines only.
 | `no task numbered 9` | `do` or `remove` was given a number that is not in the file | 1 |
 | `could not read <path>: <reason>` | the task file exists and cannot be read, or is not UTF-8 text | 1 |
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written | 1 |
+| `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `error: unrecognized subcommand`, `error: unexpected argument` | the command line itself is wrong | 2 |
 
 A command that is refused leaves the file as it was.

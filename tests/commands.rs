@@ -19,6 +19,10 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
     assert!(todo(&file, &["rm", "2"]).status.success());
     let refused = [
         (todo(&file, &["add", "x Buy bread"]), "cannot add a task that is already done\n"),
+        (
+            todo(&file, &["add", "Buy bread\nx 2026-01-01 Sell it"]),
+            "a task is one line, without control characters\n",
+        ),
         (todo(&file, &["do", "9"]), "no task numbered 9\n"),
         (todo(&file, &["rm", "9"]), "no task numbered 9\n"),
     ];

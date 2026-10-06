@@ -15,6 +15,7 @@ use ratatui::backend::IntoCrossterm;
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyEventKind};
 use ratatui::crossterm::execute;
+use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use time::{Date, OffsetDateTime};
 
@@ -59,13 +60,9 @@ fn main() -> ExitCode {
             let today = today();
             for (number, todo) in tasks {
                 if colour {
-                    let spans: String = view::line(number, todo, today)
-                        .iter()
-                        .map(|span| span.style.into_crossterm().apply(&span.content).to_string())
-                        .collect();
-                    println!("{spans}");
+                    println!("{}", styled(&view::line(number, todo, today)));
                 } else {
-                    println!("{number:>3}  {}", todo.to_line());
+                    println!("{number:>3}  {}", clean(&todo.to_line()));
                 }
             }
             return ExitCode::SUCCESS;
@@ -97,6 +94,18 @@ fn main() -> ExitCode {
     }
 
     ExitCode::SUCCESS
+}
+
+/// `text` with each control character replaced, so that a line of the file cannot drive the terminal.
+fn clean(text: &str) -> String {
+    text.replace(char::is_control, "\u{fffd}")
+}
+
+/// A listed line as text carrying its styles for a terminal.
+fn styled(line: &Line) -> String {
+    line.iter()
+        .map(|span| span.style.into_crossterm().apply(clean(&span.content)).to_string())
+        .collect()
 }
 
 /// Returns the current date in the local timezone, or UTC if local time is unavailable.
@@ -155,4 +164,20 @@ fn show_error(message: &str) -> io::Result<()> {
             }
         }
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use time::macros::date;
+
+    #[test]
+    fn a_styled_line_replaces_the_control_characters_of_the_task() {
+        let todo = Todo::from_line("Pay \u{1b}[2Jrent");
+
+        let styled = styled(&view::line(1, &todo, date!(2026 - 09 - 26)));
+
+        assert!(styled.contains("\u{fffd}[2Jrent"));
+        assert!(!styled.contains("\u{1b}[2J"));
+    }
 }

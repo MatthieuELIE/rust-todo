@@ -40,7 +40,7 @@ After `d` or `c`, a key that completes no command cancels it and does nothing: `
 `u` and `Ctrl-R` undo and redo the changes made in the popup, what was typed between entering insert mode and `Esc` being one change; this history is the popup's own and is lost when it closes.
 `p` then `a` to `e` writes or replaces the priority at the start of the line, and `p` then `Space` drops it, as in the list; a done line is left alone.
 `Esc` goes from insert to normal mode and cancels from normal mode, so dropping a task being added takes `Esc Esc`; `Enter` saves from either mode.
-A paste goes in at the cursor as one line, its line breaks turned into spaces; outside the popup and the search it is ignored.
+A paste goes in at the cursor as one line, its line breaks and other control characters turned into spaces; outside the popup and the search it is ignored.
 
 ## Completion
 

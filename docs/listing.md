@@ -10,6 +10,7 @@ Each element of a line has its own style: the priority as a badge, ` A ` in its 
 `key:value` words such as `wait:figma` are greyed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
 A `due:` date is red once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is greyed like any `key:value`.
 A done task is greyed and struck through as a whole, whatever its due date.
+A control character found in a line of the file, such as a terminal escape sequence, is printed as `�`, so that a line cannot drive the terminal.
 An empty listing says so on stderr and still exits 0.
 
 ## Differences from `todo.sh`

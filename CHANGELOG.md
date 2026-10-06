@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `add` refuses a text holding a line break or any other control character; a line break used to write several tasks at once, a done one among them.
+- `list` prints a control character found in the file as `�` instead of sending it to the terminal.
+- A paste in the popup or the search turns every control character into a space, not line breaks only, and so does opening a task of the file in the popup.
 - A dated task whose `x` marker is typed in the popup is completed on the day and keeps its creation date; the creation date used to be taken for the completion date.
 
 ## [0.2.0] - 2026-10-03

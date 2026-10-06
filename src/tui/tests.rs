@@ -127,6 +127,16 @@ fn an_edited_line_is_saved_as_typed_and_one_leaving_the_list_is_said_hidden() {
 }
 
 #[test]
+fn a_line_holding_a_control_character_opens_for_edit_with_a_space_in_its_place() {
+    let mut app = app_of(&["Call\tthe bank"]);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.todos[0].to_line(), "Call the bank");
+}
+
+#[test]
 fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
     let mut app = app_of(&["one", "two", "three"]);
     let enter = KeyEvent::from(KeyCode::Enter);
@@ -880,6 +890,8 @@ fn a_paste_types_its_lines_as_one_into_the_popup_or_the_search_and_does_nothing_
     assert_eq!(popup(&app).editor.cursor, 13);
     app.paste(" on\rMonday");
     assert_eq!(popup(&app).editor.text, "Call the bank on Monday");
+    app.paste(" at\tnoon\u{1b}");
+    assert_eq!(popup(&app).editor.text, "Call the bank on Monday at noon");
 
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);

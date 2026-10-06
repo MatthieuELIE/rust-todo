@@ -59,8 +59,11 @@ impl Todo {
         }
     }
 
-    /// Parse a line typed by the user, its trailing spaces dropped, refusing an empty description.
+    /// Parse a line typed by the user, its trailing spaces dropped, refusing a control character or an empty description.
     pub fn from_input(text: &str) -> Result<Todo, String> {
+        if text.contains(char::is_control) {
+            return Err("a task is one line, without control characters".to_string());
+        }
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
         if todo.description.is_empty() {
@@ -338,6 +341,13 @@ mod tests {
     fn a_new_task_cannot_have_an_empty_description() {
         assert!(Todo::new_from_input("   ", date!(2026 - 09 - 01)).is_err());
         assert!(Todo::new_from_input("(A) ", date!(2026 - 09 - 01)).is_err());
+    }
+
+    #[test]
+    fn a_typed_line_holding_a_control_character_is_refused() {
+        assert!(Todo::from_input("Lorem\nx 2026-01-01 ipsum").is_err());
+        assert!(Todo::from_input("Lorem\ripsum").is_err());
+        assert!(Todo::from_input("Lorem \u{1b}[2J").is_err());
     }
 
     fn todos_of(lines: &[&str]) -> Vec<Todo> {

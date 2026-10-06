@@ -308,7 +308,7 @@ impl App {
 
     /// Types pasted `text` as one line into the popup or the search, and drops it elsewhere so it never acts as keys.
     pub fn paste(&mut self, text: &str) {
-        let text = text.split(['\r', '\n']).filter(|line| !line.is_empty()).collect::<Vec<_>>().join(" ");
+        let text = text.split(char::is_control).filter(|line| !line.is_empty()).collect::<Vec<_>>().join(" ");
         match &mut self.focus {
             Focus::Popup(popup) if popup.picker.is_none() => popup.editor.paste(&text),
             Focus::Search => self.search.push_str(&text),
@@ -528,7 +528,7 @@ impl App {
             KeyCode::Enter => {
                 if let Some(number) = selected {
                     self.focus = Focus::Popup(Popup {
-                        editor: Editor::new(self.todos[number - 1].to_line(), Mode::Normal),
+                        editor: Editor::new(self.todos[number - 1].to_line().replace(char::is_control, " "), Mode::Normal),
                         target: Target::Edit(number),
                         selected: 0,
                         picker: None,

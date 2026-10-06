@@ -910,6 +910,17 @@ fn an_x_typed_in_front_of_a_pending_task_completes_it_today() {
 }
 
 #[test]
+fn an_x_typed_in_front_of_a_dated_task_keeps_its_creation_date() {
+    let mut app = app_of(&["2026-08-01 one"]);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "ix ");
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
+}
+
+#[test]
 fn u_in_the_popup_undoes_the_typed_text_and_says_so_without_touching_the_list() {
     let mut app = app();
     press(&mut app, "ofour");

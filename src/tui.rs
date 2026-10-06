@@ -620,6 +620,9 @@ impl App {
             }
         };
         if todo.done && !self.todos[number - 1].done {
+            if todo.created.is_none() && todo.completed == self.todos[number - 1].created {
+                todo.created = todo.completed.take();
+            }
             todo.complete(today);
         }
         if todo.to_line() == self.todos[number - 1].to_line() {

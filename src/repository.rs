@@ -117,4 +117,12 @@ mod tests {
         assert_eq!(text, "");
         assert_eq!(todos.len(), 0);
     }
+
+    #[test]
+    fn load_fails_on_a_file_it_cannot_decode() {
+        let path = temp_path("invalid");
+        std::fs::write(&path, b"Lorem ipsum\n\xff\n").unwrap();
+
+        assert!(load(&path).is_err());
+    }
 }

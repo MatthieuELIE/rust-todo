@@ -86,6 +86,11 @@ fn main() -> ExitCode {
             todos.remove(number - 1);
         }
 
+        Commands::Do { number } if todos[number - 1].done => {
+            eprintln!("task {number} is already done");
+            return ExitCode::FAILURE;
+        }
+
         Commands::Do { number } => todos[number - 1].complete(today()),
     }
 

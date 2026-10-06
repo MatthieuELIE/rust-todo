@@ -24,6 +24,7 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
             "a task is one line, without control characters\n",
         ),
         (todo(&file, &["do", "9"]), "no task numbered 9\n"),
+        (todo(&file, &["do", "1"]), "task 1 is already done\n"),
         (todo(&file, &["rm", "9"]), "no task numbered 9\n"),
     ];
 

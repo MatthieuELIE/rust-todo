@@ -28,6 +28,7 @@ pub enum Commands {
     #[command(alias = "a")]
     Add {
         /// Task text, optionally with priority and projects
+        #[arg(allow_hyphen_values = true)]
         text: String,
     },
 
@@ -51,6 +52,7 @@ pub enum Commands {
         number: usize,
 
         /// The task's new line, optionally with priority and projects
+        #[arg(allow_hyphen_values = true)]
         text: String,
     },
 
@@ -73,6 +75,17 @@ mod tests {
         assert!(matches!(command(&["todo", "a", "Lorem"]), Commands::Add { .. }));
         assert!(matches!(command(&["todo", "rm", "1"]), Commands::Remove { number: 1 }));
         assert!(matches!(command(&["todo", "done", "1"]), Commands::Do { number: 1 }));
+    }
+
+    #[test]
+    fn a_task_text_may_start_with_a_dash() {
+        let command = |args: &[&str]| Cli::try_parse_from(args).unwrap().command.unwrap();
+
+        assert!(matches!(command(&["todo", "add", "-5 degrees"]), Commands::Add { text } if text == "-5 degrees"));
+        assert!(matches!(
+            command(&["todo", "edit", "2", "-5 degrees"]),
+            Commands::Edit { number: 2, text } if text == "-5 degrees"
+        ));
     }
 
     #[test]

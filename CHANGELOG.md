@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `add` and `edit` take a text starting with `-`, such as `todo add "-5 degrees"`; it used to be read as an option and refused.
 - The popup's cursor no longer vanishes when the line fills the field or the cursor is on a space where the line wraps; the completions and the `due:` calendar, which hang from it, used not to be drawn there, the calendar still taking the keys.
 - A word such as `wait://figma`, which is not a `key:value`, no longer puts its task under `Waiting` nor shows among the `wait:` completions.
 - A task file you may not write is no longer saved over: the save is refused with `permission denied`.

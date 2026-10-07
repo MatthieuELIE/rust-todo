@@ -170,6 +170,7 @@ fn todo_path() -> PathBuf {
 /// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
 fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
     let mut app = App::new(todos);
+    app.today = Some(today());
     let mut scroll = ListState::default();
     on_terminal(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;

@@ -9,7 +9,9 @@ use time::macros::date;
 const TODAY: Date = date!(2026 - 09 - 26);
 
 fn app_of(lines: &[&str]) -> App {
-    App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
+    let mut app = App::new(lines.iter().map(|l| Todo::from_line(l)).collect());
+    app.today = Some(TODAY);
+    app
 }
 
 fn fold_all(app: &mut App) {
@@ -753,6 +755,33 @@ fn the_completions_show_five_names_at_most_and_start_under_a_tag_with_an_accent(
     let y = rows.iter().position(|row| row.contains("Buy +é")).expect("popup line");
     let column = |row: &str, word: &str| row.split(word).next().expect("row").chars().count();
     assert_eq!(column(&rows[y + 1], "╭"), column(&rows[y], "+é") - 1);
+}
+
+#[test]
+fn the_due_entry_is_red_with_an_overdue_task_and_yellow_with_tasks_of_the_day_only() {
+    let late = render_in(&app_of(&["Pay rent due:2026-09-26", "Call due:2026-09-01"]), 50, 11);
+    let today = render_in(&app_of(&["Pay rent due:2026-09-26"]), 50, 11);
+
+    assert_eq!(panel_rows(&late)[1..3], ["→ All tasks       2", "  Due             2"]);
+    assert_eq!((late[(3, 2)].fg, today[(3, 2)].fg), (ALERT, DUE_TODAY));
+
+    let mut picked = app_of(&["Pay rent due:2026-09-26", "Call due:2026-09-01"]);
+    picked.filter = Some(DUE_NOW.to_string());
+    let picked = render_in(&picked, 50, 11);
+    assert_eq!(panel_rows(&picked)[2], "→ Due             2");
+    assert_eq!(picked[(3, 2)].fg, ALERT);
+}
+
+#[test]
+fn the_popup_of_an_add_under_due_names_the_entry() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = app_of(&["Pay rent due:2026-09-26"]);
+    app.filter = Some(DUE_NOW.to_string());
+    app.handle_key(KeyEvent::from(KeyCode::Char('o')), TODAY);
+
+    let rows = rows(&render(&app));
+
+    assert!(rows.iter().any(|row| row.contains("╭ ADD (Due) ───")), "{rows:?}");
 }
 
 #[test]

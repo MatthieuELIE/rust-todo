@@ -13,6 +13,9 @@ use crate::todo::{DUE, Todo, WAIT, list};
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
 pub const WAITING: &str = "Waiting";
 
+/// Name of the panel entry listing the tasks due today or before.
+pub const DUE_NOW: &str = "Due";
+
 /// Said when the key after `p` is not a priority.
 const NOT_PRIORITY: &str = "priority is a to e, or space";
 
@@ -96,6 +99,8 @@ pub enum Shown<'a> {
 pub struct App {
     /// Tasks in file order; a task's number is its index plus one.
     pub todos: Vec<Todo>,
+    /// The day the due dates are read against, brought by each turn of the loop; no task is due without it.
+    pub today: Option<Date>,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
     /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
@@ -133,7 +138,7 @@ impl App {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
         let mut tasks = list(&self.todos, self.show_done, &terms);
         if let Some(filter) = &self.filter {
-            tasks.retain(|(_, todo)| shows(todo, filter));
+            tasks.retain(|(_, todo)| shows(todo, filter, self.today));
         }
         tasks
     }
@@ -239,6 +244,10 @@ impl App {
             terms
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
+        let due = shown.iter().filter(|(_, todo)| shows(todo, DUE_NOW, self.today)).count();
+        if due > 0 {
+            filters.push((DUE_NOW.to_string(), due));
+        }
         let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
         if waiting > 0 {
             filters.push((WAITING.to_string(), waiting));
@@ -595,6 +604,11 @@ impl App {
             Ok(mut todo) => {
                 if self.filter.as_deref() == Some(WAITING) {
                     self.filter = None;
+                } else if self.filter.as_deref() == Some(DUE_NOW) {
+                    let dated = |word: &str| word.strip_prefix(DUE).is_some_and(|value| !value.is_empty());
+                    if !todo.description.split_whitespace().any(dated) {
+                        todo.description = format!("{} {DUE}{today}", todo.description);
+                    }
                 } else if let Some(term) = &self.filter
                     && !has_word(&todo, term)
                 {
@@ -669,6 +683,7 @@ impl App {
 
     /// One turn of the loop: reloads when the file, `read` just now, no longer matches `text`, else applies `event`; tells whether to save.
     pub fn turn(&mut self, read: io::Result<String>, text: &mut String, event: Option<Event>, today: Date) -> bool {
+        self.today = Some(today);
         match (read, event) {
             (Ok(current), _) if current != *text => {
                 self.reload(repository::parse(&current));
@@ -734,8 +749,12 @@ fn add_months(date: Date, months: i32) -> Date {
 }
 
 /// Whether the panel entry `term` keeps `todo` on screen.
-fn shows(todo: &Todo, term: &str) -> bool {
-    if term == WAITING { todo.is_waiting() } else { has_word(todo, term) }
+fn shows(todo: &Todo, term: &str, today: Option<Date>) -> bool {
+    match term {
+        WAITING => todo.is_waiting(),
+        DUE_NOW => today.is_some_and(|today| todo.is_due(today)),
+        _ => has_word(todo, term),
+    }
 }
 
 /// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.

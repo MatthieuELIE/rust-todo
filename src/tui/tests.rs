@@ -4,7 +4,10 @@ use time::macros::date;
 const TODAY: Date = date!(2026 - 09 - 26);
 
 fn app_of(lines: &[&str]) -> App {
-    App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
+    App {
+        today: Some(TODAY),
+        ..App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
+    }
 }
 
 fn app() -> App {
@@ -409,6 +412,57 @@ fn waiting_follows_all_tasks_and_shows_the_tasks_with_a_wait_key_value() {
 
     app.filter = Some(WAITING.to_string());
     assert_eq!(shown(&app), ["Design wait:figma +app", "Mail wait:designer"]);
+}
+
+#[test]
+fn due_follows_all_tasks_and_shows_the_pending_tasks_due_today_or_before() {
+    let mut app = app_of(&[
+        "Pay rent due:2026-09-26",
+        "Call due:2026-09-01 wait:bank",
+        "Buy milk due:2026-10-01",
+        "x 2026-09-20 Mail due:2026-09-01",
+        "Note",
+    ]);
+
+    let counts = [("All tasks", 4), (DUE_NOW, 2), (WAITING, 1)];
+    assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
+
+    app.filter = Some(DUE_NOW.to_string());
+    assert_eq!(shown(&app), ["Pay rent due:2026-09-26", "Call due:2026-09-01 wait:bank"]);
+}
+
+#[test]
+fn a_turn_brings_the_day_the_due_entry_is_counted_against() {
+    let mut app = App::new(vec![Todo::from_line("Pay rent due:2026-09-27")]);
+    let mut text = String::new();
+    let due = |app: &App| app.filters().iter().any(|(term, _)| term == DUE_NOW);
+
+    app.turn(Ok(String::new()), &mut text, None, TODAY);
+    assert!(!due(&app));
+    app.turn(Ok(String::new()), &mut text, None, date!(2026 - 09 - 27));
+    assert!(due(&app));
+}
+
+#[test]
+fn a_task_added_under_due_is_due_today_unless_it_carries_a_due_date() {
+    let mut app = app_of(&["Pay rent due:2026-09-26"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    app.filter = Some(DUE_NOW.to_string());
+
+    press(&mut app, "oCall landlord");
+    app.handle_key(enter, TODAY);
+    press(&mut app, "oMail due:");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    app.handle_key(enter, TODAY);
+    press(&mut app, "oFile taxes due:LLL");
+    app.handle_key(enter, TODAY);
+    app.handle_key(enter, TODAY);
+
+    assert_eq!(app.todos[1].to_line(), "2026-09-26 Call landlord due:2026-09-26");
+    assert_eq!(app.todos[2].to_line(), "2026-09-26 Mail due: due:2026-09-26");
+    assert_eq!(app.todos[3].to_line(), "2026-09-26 File taxes due:2026-12-26");
+    assert_eq!(app.filter.as_deref(), Some(DUE_NOW));
+    assert_eq!(app.message.as_deref(), Some("added, hidden by the filter"));
 }
 
 #[test]

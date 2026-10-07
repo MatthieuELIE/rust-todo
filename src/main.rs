@@ -123,7 +123,12 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
 
-        Commands::Reopen { number } => todos[number - 1].reopen(),
+        Commands::Reopen { number } => {
+            if !todos[number - 1].reopen() {
+                eprintln!("task {number} cannot be reopened: its text starts with x");
+                return ExitCode::FAILURE;
+            }
+        }
     }
 
     if let Err(e) = repository::save(&path, &todos) {

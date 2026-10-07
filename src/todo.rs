@@ -90,9 +90,18 @@ impl Todo {
     }
 
     /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
-    pub fn reopen(&mut self) {
-        self.done = false;
-        self.completed = None;
+    /// Returns `false`, the task untouched, when its line would still read as done.
+    pub fn reopen(&mut self) -> bool {
+        let pending = Todo {
+            done: false,
+            completed: None,
+            ..self.clone()
+        };
+        if Todo::from_line(&pending.to_line()).done {
+            return false;
+        }
+        *self = pending;
+        true
     }
 
     /// `+project` names in the description, without the `+`, once each in order of appearance.
@@ -319,6 +328,15 @@ mod tests {
         task.reopen();
 
         assert_eq!(task.to_line(), "2026-08-01 Lorem ipsum");
+    }
+
+    #[test]
+    fn a_task_whose_line_would_still_read_as_done_is_not_reopened() {
+        let mut task = Todo::from_line("x 2026-09-03 x Lorem");
+
+        assert!(!task.reopen());
+
+        assert_eq!(task.to_line(), "x 2026-09-03 x Lorem");
     }
 
     #[test]

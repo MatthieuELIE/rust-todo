@@ -491,12 +491,14 @@ impl App {
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
                     let todo = &mut self.todos[number - 1];
-                    if todo.done {
-                        todo.reopen()
+                    if !todo.done {
+                        todo.complete(today);
+                        write = true;
+                    } else if todo.reopen() {
+                        write = true;
                     } else {
-                        todo.complete(today)
+                        self.refuse("cannot reopen a task whose text starts with x");
                     }
-                    write = true;
                 }
             }
             KeyCode::Char('d') if pending == Some('d') => {

@@ -131,11 +131,12 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
 #[test]
 fn reopen_makes_a_done_task_pending_again_without_its_completion_date() {
     let file = std::env::temp_dir().join(format!("todo-{}-reopen.txt", std::process::id()));
-    std::fs::write(&file, "x 2026-09-03 2026-09-02 Pay rent\nBuy milk\n").unwrap();
+    std::fs::write(&file, "x 2026-09-03 2026-09-02 Pay rent\nBuy milk\nx x Sell it\n").unwrap();
 
     assert!(todo(&file, &["reopen", "1"]).status.success());
     let refused = [
         (todo(&file, &["reopen", "2"]), "task 2 is not done\n"),
+        (todo(&file, &["reopen", "3"]), "task 3 cannot be reopened: its text starts with x\n"),
         (todo(&file, &["reopen", "9"]), "no task numbered 9\n"),
     ];
 
@@ -145,5 +146,5 @@ fn reopen_makes_a_done_task_pending_again_without_its_completion_date() {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
-    assert_eq!(text, "2026-09-02 Pay rent\nBuy milk\n");
+    assert_eq!(text, "2026-09-02 Pay rent\nBuy milk\nx x Sell it\n");
 }

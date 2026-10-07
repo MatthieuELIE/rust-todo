@@ -25,6 +25,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `list` prints a control character found in the file as `�` instead of sending it to the terminal.
 - A paste in the popup or the search turns every control character into a space, not line breaks only, and so does opening a task of the file in the popup.
 - A dated task whose `x` marker is typed in the popup is completed on the day and keeps its creation date; the creation date used to be taken for the completion date.
+- Reopening a done task with no creation date whose text starts with `x ` is refused, by `reopen` and by `x` in the list; its line was written back still starting with `x`, so the task stayed done and lost its completion date.
 
 ## [0.2.0] - 2026-10-03
 

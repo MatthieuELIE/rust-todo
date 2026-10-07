@@ -28,15 +28,20 @@ fn an_empty_filtered_list_says_nothing_matched() {
 }
 
 #[test]
-fn a_missing_home_variable_is_not_a_panic() {
+fn without_todo_file_the_list_is_todo_txt_in_the_home_folder() {
+    let home = std::env::temp_dir().join(format!("todo-{}-home", std::process::id()));
+    std::fs::create_dir_all(&home).unwrap();
+    std::fs::write(home.join("todo.txt"), "Call the bank\n").unwrap();
+
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
         .arg("list")
         .env_remove("TODO_FILE")
-        .env_remove("HOME")
+        .env("HOME", &home)
         .output()
         .unwrap();
+    std::fs::remove_dir_all(&home).unwrap();
 
-    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  1  Call the bank\n");
 }
 
 #[test]

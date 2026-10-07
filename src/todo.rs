@@ -230,6 +230,9 @@ mod tests {
         let task = Todo::from_line("(Z) Lorem ipsum dolor sit amet");
         assert_eq!(task.description, "(Z) Lorem ipsum dolor sit amet");
         assert_eq!(task.priority, None);
+
+        let lowercase = Todo::from_line("(a) Lorem ipsum");
+        assert_eq!((lowercase.description.as_str(), lowercase.priority), ("(a) Lorem ipsum", None));
     }
 
     #[test]
@@ -292,6 +295,8 @@ mod tests {
         assert_eq!(text("Meet at 10:30"), "Meet at 10:30");
         assert_eq!(text("Read http://example.com"), "Read http://example.com");
         assert_eq!(text("Call a+b + Note:"), "Call a+b + Note:");
+        assert_eq!(text("Call +"), "Call +");
+        assert_eq!(text("Mail @"), "Mail @");
         assert_eq!(text("+rent @home due:2026-10-01"), "");
     }
 
@@ -392,6 +397,14 @@ mod tests {
     fn a_wait_word_whose_value_starts_like_a_url_is_not_waited_for() {
         assert_eq!(Todo::from_line("Open wait://figma wait:designer").waits(), ["designer"]);
         assert!(!Todo::from_line("Open wait://figma").is_waiting());
+    }
+
+    #[test]
+    fn list_matches_its_terms_on_the_whole_line_priority_and_dates_included() {
+        let todos = todos_of(&["(A) 2026-09-01 Lorem", "Ipsum"]);
+
+        assert_eq!(listed(&todos, false, &["(a)"]), [(1, "(A) 2026-09-01 Lorem".into())]);
+        assert_eq!(listed(&todos, false, &["2026-09"]), [(1, "(A) 2026-09-01 Lorem".into())]);
     }
 
     #[test]

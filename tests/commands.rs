@@ -24,6 +24,8 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
             "a task is one line, without control characters\n",
         ),
         (todo(&file, &["do", "9"]), "no task numbered 9\n"),
+        (todo(&file, &["do", "0"]), "no task numbered 0\n"),
+        (todo(&file, &["rm", "0"]), "no task numbered 0\n"),
         (todo(&file, &["do", "1"]), "task 1 is already done\n"),
         (todo(&file, &["rm", "9"]), "no task numbered 9\n"),
     ];
@@ -53,4 +55,43 @@ fn a_file_that_cannot_be_read_is_left_as_it_is() {
     assert!(!output.status.success());
     assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not read "));
     assert_eq!(bytes, b"Pay rent\n\xff\n");
+}
+
+#[test]
+fn add_stamps_an_undated_task_with_the_day() {
+    let file = std::env::temp_dir().join(format!("todo-{}-stamp.txt", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+
+    assert!(todo(&file, &["add", "Buy bread"]).status.success());
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    let (date, rest) = text.split_at(10);
+    assert_eq!(rest, " Buy bread\n");
+    let dated = date
+        .bytes()
+        .enumerate()
+        .all(|(i, byte)| if i == 4 || i == 7 { byte == b'-' } else { byte.is_ascii_digit() });
+    assert!(dated, "{date}");
+}
+
+#[test]
+fn a_file_that_cannot_be_saved_is_left_as_it_is() {
+    use std::os::unix::fs::PermissionsExt;
+    let file = std::env::temp_dir().join(format!("todo-{}-unsaved.txt", std::process::id()));
+    let _ = std::fs::remove_file(&file);
+    std::fs::write(&file, "Pay rent\n").unwrap();
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let output = todo(&file, &["add", "Buy milk"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    let error = String::from_utf8_lossy(&output.stderr);
+    assert!(!output.status.success());
+    assert!(
+        error.starts_with("could not save ") && error.ends_with(" (file left unchanged)\n"),
+        "{error}"
+    );
+    assert_eq!(text, "Pay rent\n");
 }

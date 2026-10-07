@@ -95,3 +95,35 @@ fn a_file_that_cannot_be_saved_is_left_as_it_is() {
     );
     assert_eq!(text, "Pay rent\n");
 }
+
+#[test]
+fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
+    let file = std::env::temp_dir().join(format!("todo-{}-edit.txt", std::process::id()));
+    let before = "(C) 2026-09-01 Call the bank\nx 2026-09-03 2026-09-02 Pay rent\n\nBuy milk\n(B) 2026-09-05 Water plants\n";
+    std::fs::write(&file, before).unwrap();
+
+    let unchanged = todo(&file, &["edit", "3", "Buy milk"]);
+    let refused = [
+        (todo(&file, &["edit", "9", "Buy bread"]), "no task numbered 9\n"),
+        (todo(&file, &["edit", "2", "Pay the rent"]), "task 2 is done\n"),
+        (todo(&file, &["edit", "1", "x Call the bank"]), "cannot edit a task into a done one\n"),
+        (todo(&file, &["edit", "1", "(A) "]), "a task needs a description\n"),
+    ];
+    let untouched = std::fs::read_to_string(&file).unwrap();
+    assert!(todo(&file, &["edit", "1", "(A) Call the @bank due:2026-10-09"]).status.success());
+    assert!(todo(&file, &["edit", "4", "2026-10-01 Water the plants"]).status.success());
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    for (output, error) in refused {
+        assert!(!output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), error);
+    }
+    assert!(unchanged.status.success());
+    assert!(unchanged.stderr.is_empty());
+    assert_eq!(untouched, before);
+    assert_eq!(
+        text,
+        "(A) 2026-09-01 Call the @bank due:2026-10-09\nx 2026-09-03 2026-09-02 Pay rent\nBuy milk\n2026-10-01 Water the plants\n"
+    );
+}

@@ -44,6 +44,15 @@ pub enum Commands {
         /// Task number to mark as done
         number: usize,
     },
+
+    /// Replace a pending task by its number with a todo.txt line, keeping its creation date unless the line carries one
+    Edit {
+        /// Task number to edit
+        number: usize,
+
+        /// The task's new line, optionally with priority and projects
+        text: String,
+    },
 }
 
 #[cfg(test)]

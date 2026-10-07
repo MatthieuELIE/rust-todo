@@ -1,6 +1,7 @@
 use crate::todo::Todo;
 use std::fs;
 use std::io::{self, Write};
+use std::os::unix::fs::OpenOptionsExt;
 use std::path::{Path, PathBuf};
 
 /// Read the raw text of the todo file, empty if the file is missing.
@@ -26,17 +27,25 @@ pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
 /// Save the todo list to a file, overwriting any existing content, and return the text written.
 pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     let body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
-    let path = fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    let path = fs::canonicalize(path).unwrap_or_else(|_| match fs::read_link(path) {
+        Ok(target) => path.with_file_name(target),
+        Err(_) => path.to_path_buf(),
+    });
 
     // Write to a sibling file and rename over the target so a crash can't leave a half-written todo file.
     let mut tmp = path.clone().into_os_string();
     tmp.push(format!(".{}.tmp", std::process::id()));
     let tmp = PathBuf::from(tmp);
 
+    let permissions = match fs::OpenOptions::new().write(true).open(&path) {
+        Ok(file) => Some(file.metadata()?.permissions()),
+        Err(e) if e.kind() == io::ErrorKind::NotFound => None,
+        Err(e) => return Err(e),
+    };
     let written = (|| {
-        let mut file = fs::File::create_new(&tmp)?;
-        if let Ok(metadata) = fs::metadata(&path) {
-            file.set_permissions(metadata.permissions())?;
+        let mut file = fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp)?;
+        if let Some(permissions) = permissions {
+            file.set_permissions(permissions)?;
         }
         file.write_all(body.as_bytes())?;
         file.sync_all()?;
@@ -75,7 +84,7 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let (target, link) = (temp_path("target"), temp_path("link"));
         std::fs::write(&target, "Lorem ipsum\n").unwrap();
-        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o600)).unwrap();
+        std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
         let _ = std::fs::remove_file(&link);
         std::os::unix::fs::symlink(&target, &link).unwrap();
 
@@ -83,7 +92,45 @@ mod tests {
 
         assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "Consectetur adipiscing\n");
-        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o640);
+    }
+
+    #[test]
+    fn save_creates_the_target_of_a_symlink_that_has_none_yet() {
+        let (target, link) = (temp_path("absent"), temp_path("dangling"));
+        let _ = std::fs::remove_file(&target);
+        let _ = std::fs::remove_file(&link);
+        std::os::unix::fs::symlink(target.file_name().unwrap(), &link).unwrap();
+
+        save(&link, &[Todo::from_line("Lorem ipsum")]).unwrap();
+
+        assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
+        assert_eq!(std::fs::read_to_string(&target).unwrap(), "Lorem ipsum\n");
+    }
+
+    #[test]
+    fn save_refuses_a_file_that_is_read_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = temp_path("readonly");
+        let _ = std::fs::remove_file(&path);
+        std::fs::write(&path, "Lorem ipsum\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o464)).unwrap();
+
+        let refused = save(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap_err();
+
+        assert_eq!(refused.kind(), io::ErrorKind::PermissionDenied);
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "Lorem ipsum\n");
+    }
+
+    #[test]
+    fn save_creates_a_new_file_readable_by_its_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let path = temp_path("new");
+        let _ = std::fs::remove_file(&path);
+
+        save(&path, &[Todo::from_line("Lorem ipsum")]).unwrap();
+
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
     }
 
     #[test]

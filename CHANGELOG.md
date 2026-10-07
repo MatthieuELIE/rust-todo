@@ -7,6 +7,9 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A task file you may not write is no longer saved over: the save is refused with `permission denied`.
+- A task file that is a symbolic link to a file not created yet gets that file created; the link used to be replaced by a regular file.
+- A task file created by `todo` is readable and writable by its owner only, and the temporary file of a save is never readable by others first; an existing file keeps its mode.
 - A save writes its temporary file under a name of its own, `<file>.<pid>.tmp`, and never over an existing one: a symbolic link left at `<file>.tmp` used to be written through and to replace the task file, and two saves at once shared the same temporary file.
 - `do` on a task that is already done is refused with `task 2 is already done`; it used to give today's date to a done task that had no completion date.
 - `todo` run with no command and without a terminal says `could not set up the terminal` and exits 1; it used to panic.

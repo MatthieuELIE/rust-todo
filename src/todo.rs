@@ -142,7 +142,7 @@ impl Todo {
 
     /// Values of the `wait:` key:values in the description, once each in order of appearance.
     pub fn waits(&self) -> Vec<&str> {
-        self.words_after(WAIT)
+        self.words_after(WAIT).into_iter().filter(|value| !value.starts_with("//")).collect()
     }
 
     /// Whether `word` is a `key:value`: a key of letters, digits, `-` and `_` starting with a letter, a value neither empty nor `//`.
@@ -386,6 +386,12 @@ mod tests {
 
         assert_eq!(listed(&todos, false, &["bank"]), [(1, "Call the BANK".into())]);
         assert_eq!(listed(&todos, false, &["-@HOME"]), [(1, "Call the BANK".into())]);
+    }
+
+    #[test]
+    fn a_wait_word_whose_value_starts_like_a_url_is_not_waited_for() {
+        assert_eq!(Todo::from_line("Open wait://figma wait:designer").waits(), ["designer"]);
+        assert!(!Todo::from_line("Open wait://figma").is_waiting());
     }
 
     #[test]

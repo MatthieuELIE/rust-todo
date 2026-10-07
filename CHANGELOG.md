@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A word such as `wait://figma`, which is not a `key:value`, no longer puts its task under `Waiting` nor shows among the `wait:` completions.
 - A task file you may not write is no longer saved over: the save is refused with `permission denied`.
 - A task file that is a symbolic link to a file not created yet gets that file created; the link used to be replaced by a regular file.
 - A task file created by `todo` is readable and writable by its owner only, and the temporary file of a save is never readable by others first; an existing file keeps its mode.

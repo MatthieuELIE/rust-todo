@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `todo edit <number> "<line>"` replaces a pending task with the line given. The creation date is kept unless the line carries one, a priority left out is removed, and a line equal to the task writes nothing. It is stricter than the popup: a done task and a line starting with `x` are refused.
+- `todo reopen <number>` makes a done task pending again and clears its completion date. The priority dropped when the task was completed does not come back: `edit` sets one. A pending task is refused.
 
 ### Fixed
 

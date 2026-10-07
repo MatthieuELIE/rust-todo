@@ -28,10 +28,11 @@ todo list --all               # including the done ones
 todo list +finance -@phone    # tasks with +finance and without @phone
 todo do 2                     # mark task 2 as done
 todo edit 2 "(B) Oat milk"    # replace pending task 2, its creation date kept
+todo reopen 2                 # make done task 2 pending again
 todo remove 2                 # delete task 2
 ```
 
-Only `add`, `do`, `edit`, `remove` and the interactive list write the file, and the write is atomic.
+Only `add`, `do`, `edit`, `reopen`, `remove` and the interactive list write the file, and the write is atomic.
 `ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` still works for `do`.
 
 ## Interactive list

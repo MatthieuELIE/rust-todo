@@ -77,7 +77,9 @@ fn main() -> ExitCode {
             }
         },
 
-        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } if !(1..=todos.len()).contains(&number) => {
+        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } | Commands::Reopen { number }
+            if !(1..=todos.len()).contains(&number) =>
+        {
             eprintln!("no task numbered {number}");
             return ExitCode::FAILURE;
         }
@@ -115,6 +117,13 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         },
+
+        Commands::Reopen { number } if !todos[number - 1].done => {
+            eprintln!("task {number} is not done");
+            return ExitCode::FAILURE;
+        }
+
+        Commands::Reopen { number } => todos[number - 1].reopen(),
     }
 
     if let Err(e) = repository::save(&path, &todos) {

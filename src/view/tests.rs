@@ -12,6 +12,13 @@ fn app_of(lines: &[&str]) -> App {
     App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
 }
 
+fn fold_all(app: &mut App) {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    for key in ['z', 'M'] {
+        app.handle_key(KeyEvent::from(KeyCode::Char(key)), TODAY);
+    }
+}
+
 fn render(app: &App) -> Buffer {
     render_in(app, 50, 5)
 }
@@ -178,7 +185,7 @@ fn group_headers_sit_above_their_tasks_with_the_cursor_on_the_same_task() {
 #[test]
 fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand_on_it() {
     let mut app = app_of(&["(A) a", "(A) b", "(B) c", "d"]);
-    app.folded = vec![Group::Priority('A'), Group::Priority('B'), Group::Unprioritised];
+    fold_all(&mut app);
     app.cursor = 1;
 
     let buffer = render_in(&app, 55, 9);
@@ -520,7 +527,7 @@ fn a_value_too_long_for_the_details_ends_with_an_ellipsis() {
 #[test]
 fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
     let mut app = app_of(&["(A) a"]);
-    app.folded = vec![Group::Priority('A')];
+    fold_all(&mut app);
 
     assert_eq!(
         list_rows(&render_in(&app, 75, 16))[8..14],

@@ -531,9 +531,14 @@ pub fn draw_error(frame: &mut Frame, message: &str) {
     frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
 
+/// The number column in front of a listed task.
+pub fn number(number: usize) -> String {
+    format!("{number:>3}  ")
+}
+
 /// A listed task: its number then its todo.txt line, the priority as a badge, due dates against `today`, struck through when done.
 pub fn line(number: usize, todo: &Todo, today: Date) -> Line<'static> {
-    let number = format!("{number:>3}  ");
+    let number = self::number(number);
     if todo.done {
         return Line::from_iter([number.into(), todo.to_line().fg(TERTIARY).crossed_out()]);
     }

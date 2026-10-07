@@ -131,7 +131,7 @@ impl Todo {
     }
 
     /// Whether `c` is a priority letter, `A` to `E`.
-    pub fn is_valid_priority(c: char) -> bool {
+    fn is_valid_priority(c: char) -> bool {
         ('A'..='E').contains(&c)
     }
 

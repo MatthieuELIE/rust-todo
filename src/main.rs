@@ -63,7 +63,7 @@ fn main() -> ExitCode {
                 if colour {
                     println!("{}", styled(&view::line(number, todo, today)));
                 } else {
-                    println!("{number:>3}  {}", clean(&todo.to_line()));
+                    println!("{}{}", view::number(number), clean(&todo.to_line()));
                 }
             }
             return ExitCode::SUCCESS;

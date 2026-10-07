@@ -143,15 +143,8 @@ fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
                 None
             };
             if app.turn(repository::read(path), &mut text, event, today()) {
-                match repository::save(path, &app.todos) {
-                    Ok(written) => text = written,
-                    Err(e) => {
-                        if let Ok((_, todos)) = repository::load(path) {
-                            app.reload(todos);
-                        }
-                        app.refuse(&format!("could not save: {e} (file left unchanged)"));
-                    }
-                }
+                let written = repository::save(path, &app.todos);
+                app.saved(written, &mut text, repository::read(path));
             }
         }
         execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)

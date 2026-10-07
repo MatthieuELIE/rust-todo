@@ -257,6 +257,10 @@ fn slash_filters_at_each_letter_from_the_top_and_enter_keeps_the_search() {
     press(&mut app, "jj/call");
     assert_eq!(shown(&app), ["Call the bank", "Call mom"]);
     assert_eq!(app.cursor, 0);
+    app.cursor = 1;
+    app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
+    assert_eq!((app.search.as_str(), app.cursor), ("cal", 0));
+    press(&mut app, "l");
 
     press(&mut app, " -mom");
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
@@ -277,6 +281,15 @@ fn esc_drops_the_search_being_typed_or_the_one_kept_in_the_list() {
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
     app.handle_key(esc, TODAY);
     assert_eq!(shown(&app), ["one", "two", "three"]);
+
+    press(&mut app, "jj");
+    app.handle_key(esc, TODAY);
+    assert_eq!(app.cursor, 0);
+
+    press(&mut app, "/one");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "/");
+    assert_eq!(app.search, "");
 }
 
 #[test]
@@ -307,7 +320,7 @@ fn the_panel_lists_all_then_projects_then_contexts_alphabetically_with_their_sho
 
 #[test]
 fn in_the_panel_j_and_k_filter_the_list_from_the_top_and_tab_goes_back_keeping_the_filter() {
-    let mut app = app_of(&["Pay +rent", "Call +bank", "Buy milk +rent"]);
+    let mut app = app_of(&["Pay +rent", "Call +bank", "Buy milk +rent", "Mail +bank"]);
     let tab = KeyEvent::from(KeyCode::Tab);
 
     press(&mut app, "j");
@@ -323,6 +336,24 @@ fn in_the_panel_j_and_k_filter_the_list_from_the_top_and_tab_goes_back_keeping_t
     app.handle_key(tab, TODAY);
     press(&mut app, "k");
     assert_eq!(app.filter.as_deref(), Some("+bank"));
+    assert_eq!(app.cursor, 0);
+}
+
+#[test]
+fn the_panel_takes_the_arrows_stops_at_its_last_entry_and_enter_and_q_act_as_in_the_list() {
+    let mut app = app_of(&["Pay +rent", "Call +bank"]);
+
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    assert_eq!(app.filter.as_deref(), Some("+bank"));
+    press(&mut app, "jj");
+    assert_eq!(app.filter.as_deref(), Some("+rent"));
+    key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+    assert!(matches!(app.focus, Focus::List));
+
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    press(&mut app, "q");
+    assert!(app.quit);
 }
 
 #[test]
@@ -431,6 +462,10 @@ fn question_mark_opens_the_help_and_the_next_key_only_closes_it() {
     assert_eq!(shown(&app), ["one", "two", "three"]);
 
     press(&mut app, "?q");
+    assert!(!app.quit);
+
+    press(&mut app, "?");
+    key(&mut app, KeyCode::Char('c'), KeyModifiers::CONTROL);
     assert!(!app.quit);
 }
 
@@ -614,6 +649,41 @@ fn arrows_and_ctrl_n_p_pick_a_name_that_tab_writes_in_place_of_the_tag() {
     assert_eq!(shown(&app).last().unwrap(), "2026-09-26 Call +books +bank +now");
 }
 
+#[test]
+fn the_pick_goes_back_to_the_first_name_after_a_typed_key_and_after_tab() {
+    let mut app = app_of(&["Pay +bank", "Call +bank", "Wash +bath"]);
+
+    press(&mut app, "o+b");
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    assert_eq!(app.completions().1, 1);
+    press(&mut app, "a");
+    assert_eq!(
+        (names(&app), app.completions().1),
+        (vec!["+bank 2".to_string(), "+bath 1".to_string()], 0)
+    );
+
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    app.paste("+b");
+    assert_eq!((popup(&app).editor.text.as_str(), app.completions().1), ("+bath +b", 0));
+}
+
+#[test]
+fn names_used_as_often_are_listed_alphabetically_whatever_their_case() {
+    let mut app = app_of(&["Pay +Bank", "Eat +apple"]);
+
+    press(&mut app, "o+");
+
+    assert_eq!(names(&app), ["+apple 1", "+Bank 1"]);
+}
+
+#[test]
+fn a_month_step_in_the_date_picker_crosses_the_year_and_keeps_to_the_month_length() {
+    assert_eq!(shift(date!(2026 - 12 - 15), KeyCode::Char('L')), date!(2027 - 01 - 15));
+    assert_eq!(shift(date!(2027 - 01 - 15), KeyCode::Char('H')), date!(2026 - 12 - 15));
+    assert_eq!(shift(date!(2028 - 01 - 31), KeyCode::Char('L')), date!(2028 - 02 - 29));
+}
+
 fn redo(app: &mut App) -> bool {
     app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY)
 }
@@ -663,6 +733,11 @@ fn u_and_ctrl_r_with_no_history_write_nothing_and_say_so() {
 
     assert!(!press(&mut app, "u"));
     assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert!(press(&mut app, "x"));
+    assert!(press(&mut app, "u"));
+    assert!(!press(&mut app, "r"));
+    assert_eq!(lines(&app), ["one", "two", "three"]);
+    press(&mut app, "x");
     assert!(!redo(&mut app));
     assert_eq!(app.message.as_deref(), Some("nothing to redo"));
 }
@@ -677,8 +752,73 @@ fn a_turn_reloads_a_file_that_changed_and_ignores_the_key_of_that_turn() {
     assert_eq!(shown(&app), ["one", "four"]);
     assert_eq!(text, "one\nfour\n");
 
+    let released = KeyEvent::new_with_kind(KeyCode::Char('x'), KeyModifiers::NONE, KeyEventKind::Release);
+    assert!(!app.turn(Ok("one\nfour\n".to_string()), &mut text, Some(Event::Key(released)), TODAY));
+    assert_eq!(shown(&app), ["one", "four"]);
+
     assert!(app.turn(Ok("one\nfour\n".to_string()), &mut text, x, TODAY));
     assert_eq!(shown(&app), ["four"]);
+}
+
+#[test]
+fn a_failed_save_goes_back_to_what_the_file_holds_and_says_so() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    press(&mut app, "x");
+
+    app.saved(
+        Err(io::ErrorKind::PermissionDenied.into()),
+        &mut text,
+        Ok("one\ntwo\nthree\n".to_string()),
+    );
+
+    assert_eq!(lines(&app), ["one", "two", "three"]);
+    assert_eq!(app.message.as_deref(), Some("could not save: permission denied (file left unchanged)"));
+    assert!(app.refused);
+    assert_eq!(text, "one\ntwo\nthree\n");
+
+    app.saved(Err(io::ErrorKind::PermissionDenied.into()), &mut text, Ok("one\nfour\n".to_string()));
+    assert_eq!(lines(&app), ["one", "four"]);
+    assert_eq!(text, "one\ntwo\nthree\n");
+
+    press(&mut app, "x");
+    app.saved(
+        Err(io::ErrorKind::PermissionDenied.into()),
+        &mut text,
+        Err(io::ErrorKind::InvalidData.into()),
+    );
+    assert_eq!(lines(&app), ["x 2026-09-26 one", "four"]);
+    assert!(app.refused);
+
+    app.saved(Ok("one\n".to_string()), &mut text, Ok(String::new()));
+    assert_eq!(text, "one\n");
+    assert_eq!(lines(&app), ["x 2026-09-26 one", "four"]);
+}
+
+#[test]
+fn a_reload_drops_the_fold_of_a_group_gone_from_the_file() {
+    let mut app = grouped();
+    press(&mut app, "zM");
+
+    app.reload(vec![Todo::from_line("(A) a"), Todo::from_line("d")]);
+    app.reload(grouped().todos);
+
+    assert_eq!(
+        app.rows(),
+        [Row::Group(Group::Priority('A')), Row::Task(3), Row::Group(Group::Unprioritised)]
+    );
+}
+
+#[test]
+fn a_done_task_edited_in_the_popup_gets_no_completion_date() {
+    let mut app = app_of(&["x Old"]);
+    press(&mut app, "H");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "A!");
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.todos[0].to_line(), "x Old!");
 }
 
 #[test]
@@ -852,6 +992,8 @@ fn j_and_k_move_the_cursor_without_leaving_the_list() {
     assert_eq!(app.cursor, 2);
     app.handle_key(KeyEvent::from(KeyCode::Up), TODAY);
     assert_eq!(app.cursor, 1);
+    app.handle_key(KeyEvent::from(KeyCode::Down), TODAY);
+    assert_eq!(app.cursor, 2);
 }
 
 #[test]
@@ -875,6 +1017,10 @@ fn q_and_ctrl_c_quit() {
     let mut by_ctrl_c = app();
     by_ctrl_c.handle_key(KeyEvent::new(KeyCode::Char('c'), KeyModifiers::CONTROL), TODAY);
     assert!(by_ctrl_c.quit);
+
+    let mut by_ctrl_alt_c = app();
+    key(&mut by_ctrl_alt_c, KeyCode::Char('c'), KeyModifiers::CONTROL | KeyModifiers::ALT);
+    assert!(!by_ctrl_alt_c.quit);
 }
 
 #[test]

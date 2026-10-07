@@ -498,6 +498,17 @@ fn h_shows_done_tasks_from_the_top_where_x_reopens_them() {
 }
 
 #[test]
+fn x_refuses_to_reopen_a_task_whose_line_would_still_read_as_done() {
+    let mut app = app_of(&["x x one", "two"]);
+
+    assert!(!press(&mut app, "Hjx"));
+
+    assert_eq!(shown(&app), ["two", "x x one"]);
+    assert_eq!(app.message.as_deref(), Some("cannot reopen a task whose text starts with x"));
+    assert!(app.refused);
+}
+
+#[test]
 fn dd_removes_the_selected_task_and_a_d_followed_by_another_key_does_nothing() {
     let mut app = app();
 

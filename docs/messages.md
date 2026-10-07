@@ -18,6 +18,7 @@ Messages go to stderr; stdout carries task lines only.
 | `task 2 is done` | `edit` was given the number of a done task | 1 |
 | `cannot edit a task into a done one` | `edit` was given a line starting with `x` | 1 |
 | `task 2 is not done` | `reopen` was given the number of a pending task | 1 |
+| `task 2 cannot be reopened: its text starts with x` | `reopen` was given a done task with no creation date whose text starts with `x `: its line would still read as done | 1 |
 | `could not read <path>: <reason>` | the task file exists and cannot be read, or is not UTF-8 text | 1 |
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
@@ -36,6 +37,7 @@ A red one says that something was refused or failed; a grey one only says what h
 | Message | Colour | When |
 | --- | --- | --- |
 | `priority is a to e, or space` | red | the key after `p` was not a priority |
+| `cannot reopen a task whose text starts with x` | red | `x` was pressed on a done task with no creation date whose text starts with `x `: its line would still read as done |
 | `a task needs a description` | red | the popup was saved with nothing but a priority or dates |
 | `cannot add a task that is already done` | red | a task added in the popup starts with `x` |
 | `could not save: <reason> (file left unchanged)` | red | the file could not be written; the list goes back to what the file holds |

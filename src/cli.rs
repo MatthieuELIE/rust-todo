@@ -53,6 +53,12 @@ pub enum Commands {
         /// The task's new line, optionally with priority and projects
         text: String,
     },
+
+    /// Make a done task pending again by its number
+    Reopen {
+        /// Task number to reopen
+        number: usize,
+    },
 }
 
 #[cfg(test)]

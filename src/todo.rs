@@ -144,6 +144,11 @@ impl Todo {
         ('A'..='E').contains(&c)
     }
 
+    /// Whether the task is pending with a `due:` date on `today` or before.
+    pub fn is_due(&self, today: Date) -> bool {
+        !self.done && self.words_after(DUE).into_iter().filter_map(parse_date).any(|due| due <= today)
+    }
+
     /// Whether the description holds a `wait:` key:value, what the task waits for.
     pub fn is_waiting(&self) -> bool {
         !self.waits().is_empty()
@@ -337,6 +342,19 @@ mod tests {
         assert!(!task.reopen());
 
         assert_eq!(task.to_line(), "x 2026-09-03 x Lorem");
+    }
+
+    #[test]
+    fn a_pending_task_is_due_from_the_day_of_one_of_its_due_dates() {
+        let due = |line: &str| Todo::from_line(line).is_due(date!(2026 - 10 - 08));
+
+        assert!(due("Pay rent due:2026-10-08"));
+        assert!(due("Pay rent due:2026-10-01"));
+        assert!(due("Pay rent due:2026-12-01 due:2026-10-01"));
+        assert!(!due("Pay rent due:2026-10-09"));
+        assert!(!due("Pay rent due:friday"));
+        assert!(!due("Pay rent"));
+        assert!(!due("x 2026-10-08 Pay rent due:2026-10-01"));
     }
 
     #[test]

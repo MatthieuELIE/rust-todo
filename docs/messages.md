@@ -9,6 +9,7 @@ Messages go to stderr; stdout carries task lines only.
 | Message | When | Exit code |
 | --- | --- | --- |
 | `nothing to do` | `list` has no pending task to show | 0 |
+| `nothing due` | `list --due` has no pending task due today or before | 0 |
 | `no matching task` | `list` was given terms and no task has them | 0 |
 | `a task needs a description` | `add` or `edit` was given an empty text, or only a priority or a date | 1 |
 | `cannot add a task that is already done` | `add` was given a line starting with `x` | 1 |

@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `todo list --due` lists the pending tasks whose `due:` date is today or past, and combines with terms.
+
 ## [0.3.0] - 2026-10-07
 
 ### Added

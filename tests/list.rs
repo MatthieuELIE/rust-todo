@@ -79,3 +79,36 @@ fn a_listing_replaces_the_control_characters_of_the_file() {
         "  1  Call \u{fffd}]0;title\u{fffd}\u{fffd}[2Jthe bank\n"
     );
 }
+
+#[test]
+fn due_keeps_the_pending_tasks_due_today_or_before() {
+    let file = std::env::temp_dir().join(format!("todo-{}-due.txt", std::process::id()));
+    let lines =
+        "Pay rent due:2020-01-01\nBuy milk due:2999-01-01\nx 2020-01-02 Call the bank due:2020-01-01\n(A) Fix the roof +house due:2020-06-01\n";
+    std::fs::write(&file, lines).unwrap();
+    let list = |args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_todo"))
+            .arg("list")
+            .args(args)
+            .env("TODO_FILE", &file)
+            .output()
+            .unwrap()
+    };
+
+    let due = list(&["--all", "--due"]);
+    let narrowed = list(&["--due", "+house"]);
+    let none = list(&["--due", "+garden"]);
+    std::fs::write(&file, "Buy milk due:2999-01-01\n").unwrap();
+    let later = list(&["--due"]);
+
+    std::fs::remove_file(&file).unwrap();
+    assert!(later.status.success());
+    assert!(later.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&later.stderr), "nothing due\n");
+    assert_eq!(
+        String::from_utf8_lossy(&due.stdout),
+        "  4  (A) Fix the roof +house due:2020-06-01\n  1  Pay rent due:2020-01-01\n"
+    );
+    assert_eq!(String::from_utf8_lossy(&narrowed.stdout), "  4  (A) Fix the roof +house due:2020-06-01\n");
+    assert_eq!(String::from_utf8_lossy(&none.stderr), "no matching task\n");
+}

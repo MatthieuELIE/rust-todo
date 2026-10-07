@@ -682,6 +682,19 @@ impl App {
         false
     }
 
+    /// What follows the save `turn` asked for: `text` takes what was `written`, or the tasks go back to the file, `reread` just now, and the failure is told.
+    pub fn saved(&mut self, written: io::Result<String>, text: &mut String, reread: io::Result<String>) {
+        match written {
+            Ok(written) => *text = written,
+            Err(e) => {
+                if let Ok(current) = reread {
+                    self.reload(repository::parse(&current));
+                }
+                self.refuse(&format!("could not save: {e} (file left unchanged)"));
+            }
+        }
+    }
+
     /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit is cancelled as its number may shift.
     pub fn reload(&mut self, todos: Vec<Todo>) {
         self.todos = todos;

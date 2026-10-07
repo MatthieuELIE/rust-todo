@@ -371,6 +371,9 @@ fn the_text_typed_from_entering_insert_mode_to_esc_is_undone_at_once() {
     keys(&mut added, "u");
     assert_eq!(state(&added), ("", 0));
 
+    keys(&mut added, "r");
+    assert_eq!(state(&added), ("", 0));
+
     let mut opened = Editor::new("Pay rent".to_string());
     keys(&mut opened, "l");
     assert_eq!(opened.handle_key(KeyEvent::from(KeyCode::Char('u'))), Outcome::Message("nothing to undo"));

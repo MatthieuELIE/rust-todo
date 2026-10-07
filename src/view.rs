@@ -9,7 +9,7 @@ use time::Date;
 
 use crate::editor::{Editor, Mode};
 use crate::todo::{DUE, Todo, parse_date};
-use crate::tui::{App, Focus, Group, Popup, Shown, Target, WAITING};
+use crate::tui::{App, DUE_NOW, Focus, Group, Popup, Shown, Target, WAITING};
 
 /// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
 const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
@@ -515,7 +515,17 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
             Some('@') => " CONTEXTS",
             _ => "",
         };
-        let style = if header.is_empty() { Style::new().bold() } else { tag_style(term) };
+        let style = if term == DUE_NOW {
+            let late = app
+                .today
+                .and_then(Date::previous_day)
+                .is_some_and(|eve| app.todos.iter().any(|todo| todo.is_due(eve)));
+            Style::new().bold().fg(if late { ALERT } else { DUE_TODAY })
+        } else if header.is_empty() {
+            Style::new().bold()
+        } else {
+            tag_style(term)
+        };
         if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
             lines.extend([Line::default(), Line::from(header.fg(SECONDARY).bold())]);
         }

@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `todo list --due` lists the pending tasks whose `due:` date is today or past, and combines with terms.
+- The filter panel has a `Due` entry under `All tasks` for those same tasks, shown only when there are some: red when one is overdue, yellow when they are all for today. A task added under it is due today unless its line holds a `due:` with a value.
 
 ## [0.3.0] - 2026-10-07
 

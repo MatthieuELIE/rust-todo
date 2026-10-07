@@ -37,8 +37,10 @@ pub struct Popup {
 }
 
 /// Where the keys go.
+#[derive(Default)]
 pub enum Focus {
     /// The task list.
+    #[default]
     List,
     /// The filter panel.
     Panel,
@@ -90,6 +92,7 @@ pub enum Shown<'a> {
 }
 
 /// State of the interactive list: the tasks and where the user stands in them.
+#[derive(Default)]
 pub struct App {
     /// Tasks in file order; a task's number is its index plus one.
     pub todos: Vec<Todo>,
@@ -122,21 +125,7 @@ pub struct App {
 impl App {
     /// Opens the list on its first row.
     pub fn new(todos: Vec<Todo>) -> Self {
-        App {
-            todos,
-            cursor: 0,
-            pending: None,
-            show_done: false,
-            quit: false,
-            message: None,
-            refused: false,
-            focus: Focus::List,
-            search: String::new(),
-            filter: None,
-            folded: Vec::new(),
-            undo: Vec::new(),
-            redo: Vec::new(),
-        }
+        App { todos, ..App::default() }
     }
 
     /// Tasks on screen, numbered and in display order.
@@ -538,7 +527,7 @@ impl App {
             KeyCode::Enter => {
                 if let Some(number) = selected {
                     self.focus = Focus::Popup(Popup {
-                        editor: Editor::new(self.todos[number - 1].to_line().replace(char::is_control, " "), Mode::Normal),
+                        editor: Editor::new(self.todos[number - 1].to_line().replace(char::is_control, " ")),
                         target: Target::Edit(number),
                         selected: 0,
                         picker: None,

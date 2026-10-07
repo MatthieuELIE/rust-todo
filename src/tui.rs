@@ -115,7 +115,7 @@ pub struct App {
     /// Term picked in the panel, `None` for `All tasks`.
     pub filter: Option<String>,
     /// Groups shown folded, as their header alone.
-    pub folded: Vec<Group>,
+    folded: Vec<Group>,
     /// Tasks as they were before each change, the latest last.
     undo: Vec<Vec<Todo>>,
     /// Tasks as they were before each `u`, the latest last.

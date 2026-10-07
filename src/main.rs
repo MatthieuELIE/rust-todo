@@ -77,7 +77,7 @@ fn main() -> ExitCode {
             }
         },
 
-        Commands::Remove { number } | Commands::Do { number } if !(1..=todos.len()).contains(&number) => {
+        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } if !(1..=todos.len()).contains(&number) => {
             eprintln!("no task numbered {number}");
             return ExitCode::FAILURE;
         }
@@ -92,6 +92,29 @@ fn main() -> ExitCode {
         }
 
         Commands::Do { number } => todos[number - 1].complete(today()),
+
+        Commands::Edit { number, .. } if todos[number - 1].done => {
+            eprintln!("task {number} is done");
+            return ExitCode::FAILURE;
+        }
+
+        Commands::Edit { number, text } => match Todo::from_input(&text) {
+            Ok(todo) if todo.done => {
+                eprintln!("cannot edit a task into a done one");
+                return ExitCode::FAILURE;
+            }
+            Ok(mut todo) => {
+                todo.created = todo.created.or(todos[number - 1].created);
+                if todo.to_line() == todos[number - 1].to_line() {
+                    return ExitCode::SUCCESS;
+                }
+                todos[number - 1] = todo;
+            }
+            Err(e) => {
+                eprintln!("{e}");
+                return ExitCode::FAILURE;
+            }
+        },
     }
 
     if let Err(e) = repository::save(&path, &todos) {

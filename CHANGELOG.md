@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- `todo edit <number> "<line>"` replaces a pending task with the line given. The creation date is kept unless the line carries one, a priority left out is removed, and a line equal to the task writes nothing. It is stricter than the popup: a done task and a line starting with `x` are refused.
+
 ### Fixed
 
 - The popup's cursor no longer vanishes when the line fills the field or the cursor is on a space where the line wraps; the completions and the `due:` calendar, which hang from it, used not to be drawn there, the calendar still taking the keys.

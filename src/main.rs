@@ -52,13 +52,15 @@ fn main() -> ExitCode {
     };
 
     match command {
-        Commands::List { all, terms } => {
-            let tasks = todo::list(&todos, all, &terms);
+        Commands::List { all, due, terms } => {
+            let today = today();
+            let mut tasks = todo::list(&todos, all, &terms);
+            tasks.retain(|(_, todo)| !due || todo.is_due(today));
             if tasks.is_empty() {
-                eprintln!("{}", if terms.is_empty() { "nothing to do" } else { "no matching task" });
+                let nothing = if due { "nothing due" } else { "nothing to do" };
+                eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
             let colour = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty());
-            let today = today();
             for (number, todo) in tasks {
                 if colour {
                     println!("{}", styled(&view::line(number, todo, today)));

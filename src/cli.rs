@@ -19,6 +19,10 @@ pub enum Commands {
         #[arg(short, long)]
         all: bool,
 
+        /// Keep the pending tasks whose due date is today or past
+        #[arg(long)]
+        due: bool,
+
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
         #[arg(allow_hyphen_values = true)]
         terms: Vec<String>,
@@ -91,7 +95,7 @@ mod tests {
     #[test]
     fn list_flags_come_before_terms_which_may_start_with_a_dash() {
         let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
-            Some(Commands::List { all, terms }) => (all, terms),
+            Some(Commands::List { all, terms, .. }) => (all, terms),
             _ => panic!("not a list command"),
         };
 
@@ -103,5 +107,9 @@ mod tests {
             terms_of(&["todo", "list", "+work", "--all"]),
             (false, vec!["+work".into(), "--all".into()])
         );
+        assert!(matches!(
+            Cli::try_parse_from(["todo", "list", "+work", "--due"]).unwrap().command,
+            Some(Commands::List { due: false, .. })
+        ));
     }
 }

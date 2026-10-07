@@ -365,6 +365,49 @@ fn add_popup(app: &mut App, text: &str, selected: usize) {
     });
 }
 
+#[test]
+fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
+    let mut app = app_of(&["Pay rent"]);
+    let cursor_at = |app: &mut App, text: &str, cursor: usize| {
+        add_popup(app, text, 0);
+        if let Focus::Popup(popup) = &mut app.focus {
+            popup.editor.cursor = cursor;
+        }
+        render_with_cursor(app, 40, 12)
+    };
+
+    for length in 1..=64 {
+        assert!(cursor_at(&mut app, &"a".repeat(length), length).1.is_some(), "{length} letters");
+    }
+    let words = "abcd ".repeat(13);
+    for cursor in 0..=words.len() {
+        assert!(cursor_at(&mut app, &words, cursor).1.is_some(), "words at {cursor}");
+    }
+    let (buffer, cursor) = cursor_at(&mut app, &"a".repeat(29), 29);
+    let cursor = cursor.expect("cursor");
+    assert_eq!(
+        (buffer[(cursor.x - 1, cursor.y)].symbol(), buffer[(cursor.x + 1, cursor.y)].symbol()),
+        ("a", "│")
+    );
+    assert!(
+        buffer
+            .content
+            .iter()
+            .all(|cell| !cell.modifier.intersects(Modifier::REVERSED | Modifier::HIDDEN))
+    );
+
+    let wide = format!("{} bbb", "日".repeat(14));
+    let (buffer, cursor) = cursor_at(&mut app, &wide, 14);
+    let cursor = cursor.expect("cursor");
+    assert_eq!(buffer[(cursor.x - 2, cursor.y)].symbol(), "日");
+
+    add_popup(&mut app, "abcdefghijklmnopqrstuvwx due:", 0);
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.picker = Some(TODAY);
+    }
+    assert!(rows(&render_in(&app, 40, 30)).iter().any(|row| row.contains("Mo Tu We")));
+}
+
 fn cells(row: &str, x: usize, width: usize) -> String {
     row.chars().skip(x).take(width).collect()
 }

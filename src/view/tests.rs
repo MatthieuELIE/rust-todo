@@ -110,6 +110,10 @@ fn the_accent_and_the_highlight_follow_the_focus_between_the_panel_and_the_list(
         (buffer[(34, 1)].bg, buffer[(24, 1)].fg, buffer[(23, 0)].fg),
         (BACKGROUND, TERTIARY, STRUCTURE)
     );
+
+    app.focus = Focus::Search;
+    let buffer = render_in(&app, 50, 8);
+    assert_eq!((buffer[(34, 1)].bg, buffer[(24, 1)].fg, buffer[(23, 0)].fg), (SELECTED, ACCENT, ACCENT));
 }
 
 #[test]
@@ -623,7 +627,7 @@ fn a_due_date_is_red_once_past_yellow_on_the_day_and_greyed_later_or_when_not_a_
 
 #[test]
 fn the_due_date_in_the_details_is_red_once_past() {
-    let buffer = render_in(&app_of(&["Ship it due:2026-09-20"]), 75, 18);
+    let buffer = render_in(&app_of(&["Ship it due:2026-09-20 due:2026-10-30"]), 75, 18);
 
     assert_eq!(list_rows(&buffer)[13], format!("{:<25} Due       2026-09-20", " Created"));
     assert_eq!(buffer[(60, 13)].fg, ALERT);
@@ -682,6 +686,9 @@ fn the_keys_of_a_command_waiting_for_its_end_show_on_the_right_of_the_status_bar
     key(&mut app, KeyCode::Char('d'));
     assert!(status(&app).contains("? help") && status(&app).ends_with(" d"), "{}", status(&app));
     assert_eq!(render_in(&app, 70, 5)[(68, 4)].fg, SECONDARY);
+    let fits = |width| rows(&render_in(&app, width, 5))[4].contains("? help");
+    assert!(!fits(54));
+    assert!(fits(55));
     key(&mut app, KeyCode::Char('j'));
     assert!(status(&app).ends_with("? help"));
 
@@ -695,4 +702,88 @@ fn the_keys_of_a_command_waiting_for_its_end_show_on_the_right_of_the_status_bar
         "{}",
         status(&app)
     );
+}
+
+#[test]
+fn an_empty_list_says_nothing_to_do_and_a_search_or_a_filter_that_nothing_matched() {
+    let said = |app: &App| list_rows(&render(app))[1].clone();
+    let mut app = app_of(&["Pay rent"]);
+
+    assert_eq!(said(&app_of(&[])), "nothing to do");
+    app.search = "bank".to_string();
+    assert_eq!(said(&app), "no matching task");
+    app.search.clear();
+    app.filter = Some("+bank".to_string());
+    assert_eq!(said(&app), "no matching task");
+}
+
+#[test]
+fn the_error_screen_shows_the_message_and_how_to_leave() {
+    let mut terminal = Terminal::new(TestBackend::new(40, 4)).unwrap();
+
+    terminal.draw(|frame| draw_error(frame, "could not read todo.txt")).unwrap();
+
+    let rows = rows(terminal.backend().buffer());
+    assert_eq!(rows[..2], [" could not read todo.txt", " press any key to quit"]);
+}
+
+#[test]
+fn the_date_picker_stays_above_the_status_bar_on_a_small_screen() {
+    let mut app = app_of(&["Pay rent"]);
+
+    add_popup(&mut app, "Ship the parcel to the bank due:", 0);
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.picker = Some(TODAY);
+    }
+    let rows = rows(&render_in(&app, 30, 8));
+    assert!(rows.iter().any(|row| row.contains("SEPTEMBER")));
+    assert_eq!(rows[7], " DATE");
+}
+
+#[test]
+fn the_completions_show_five_names_at_most_and_start_under_a_tag_with_an_accent() {
+    let mut app = app_of(&["a +b1 +b2 +b3 +b4 +b5 +b6 +école"]);
+
+    add_popup(&mut app, "Buy +b", 0);
+    let rows = rows(&render_in(&app, 50, 16));
+    assert_eq!(rows.iter().filter(|row| row.contains("│+b")).count(), 5);
+
+    add_popup(&mut app, "Buy +é", 0);
+    let rows = self::rows(&render_in(&app, 50, 14));
+    let y = rows.iter().position(|row| row.contains("Buy +é")).expect("popup line");
+    let column = |row: &str, word: &str| row.split(word).next().expect("row").chars().count();
+    assert_eq!(column(&rows[y + 1], "╭"), column(&rows[y], "+é") - 1);
+}
+
+#[test]
+fn the_panel_cuts_a_long_name_at_its_column() {
+    let buffer = render_in(&app_of(&["Pay +abcdefghijklmnopqrst"]), 50, 8);
+
+    assert!(panel_rows(&buffer).contains(&"  +abcdefghijkl   1".to_string()));
+}
+
+#[test]
+fn the_popup_is_titled_by_the_number_of_the_task_edited_and_leaves_waiting_out_of_an_add() {
+    let mut app = app_of(&["Pay rent wait:bank"]);
+    let titled = |app: &App, title: &str| rows(&render_in(app, 50, 8)).iter().any(|row| row.contains(title));
+
+    app.filter = Some(WAITING.to_string());
+    add_popup(&mut app, "Call", 0);
+    assert!(titled(&app, "╭ ADD ─"));
+
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.target = Target::Edit(1);
+    }
+    assert!(titled(&app, "╭ EDIT 1 ─"));
+}
+
+#[test]
+fn the_list_scrolls_one_row_ahead_of_the_cursor() {
+    let mut app = App::new((1..=12).map(|n| Todo::from_line(&format!("task{n:02}"))).collect());
+    app.cursor = 6;
+
+    let rows = list_rows(&render_in(&app, 50, 8));
+
+    assert!(rows.iter().any(|row| row.contains("task08")), "{rows:?}");
+    assert!(!rows.iter().any(|row| row.contains("task09")), "{rows:?}");
 }

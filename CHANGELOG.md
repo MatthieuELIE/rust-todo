@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The popup's cursor no longer vanishes when the line fills the field or the cursor is on a space where the line wraps; the completions and the `due:` calendar, which hang from it, used not to be drawn there, the calendar still taking the keys.
 - A word such as `wait://figma`, which is not a `key:value`, no longer puts its task under `Waiting` nor shows among the `wait:` completions.
 - A task file you may not write is no longer saved over: the save is refused with `permission denied`.
 - A task file that is a symbolic link to a file not created yet gets that file created; the link used to be replaced by a regular file.

@@ -372,22 +372,28 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
     };
     let field = Paragraph::new(field(&popup.editor, today))
         .wrap(Wrap { trim: false })
-        .block(floating(popup.picker.is_none()).title(title));
+        .block(floating(popup.picker.is_none()).title(title).padding(Padding::right(1)));
     let width = bounds.width * 4 / 5;
-    let height = field.line_count(width.saturating_sub(2)) as u16;
+    let height = field.line_count(width.saturating_sub(3)) as u16;
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
     frame.render_widget(Clear, area);
     frame.render_widget(field, area);
     // The cursor's cell is marked reversed then read back from the buffer, since the paragraph does not tell where it wrapped
-    // the text; the mark is taken off and the terminal's own cursor stands there.
-    let cursor = area
-        .positions()
-        .find(|&cell| frame.buffer_mut()[cell].modifier.contains(Modifier::REVERSED));
-    if let Some(cursor) = cursor {
-        frame.buffer_mut()[cursor].modifier.remove(Modifier::REVERSED);
-        if popup.picker.is_none() {
-            frame.set_cursor_position(cursor);
-        }
+    // the text; the marks are taken off and the terminal's own cursor stands there. A blank at the end of a wrapped row is not
+    // drawn: the cursor then stands after the last cell drawn before it, marked hidden, in the column kept free on the right.
+    let marked = |frame: &mut Frame, mark| area.positions().filter(|&cell| frame.buffer_mut()[cell].modifier.contains(mark)).last();
+    let after = marked(frame, Modifier::HIDDEN).map(|cell| {
+        let width = Span::raw(frame.buffer_mut()[cell].symbol()).width() as u16;
+        Position::new(cell.x + width, cell.y)
+    });
+    let cursor = marked(frame, Modifier::REVERSED).or(after);
+    for cell in area.positions() {
+        frame.buffer_mut()[cell].modifier.remove(Modifier::REVERSED | Modifier::HIDDEN);
+    }
+    if let Some(cursor) = cursor
+        && popup.picker.is_none()
+    {
+        frame.set_cursor_position(cursor);
     }
     if let (Some(tag), Some(cursor)) = (popup.editor.tag(), cursor) {
         let (names, selected) = app.completions();
@@ -462,7 +468,7 @@ fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
     Rect::new(word.x.saturating_sub(1), y, width, height).intersection(bounds)
 }
 
-/// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, reversed.
+/// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, reversed, those before it hidden.
 fn field(editor: &Editor, today: Date) -> Line<'static> {
     let mut chars: Vec<Span<'static>> = typed(&editor.text, today)
         .into_iter()
@@ -472,6 +478,9 @@ fn field(editor: &Editor, today: Date) -> Line<'static> {
         chars.push(" ".into());
     }
     chars[editor.cursor].style = chars[editor.cursor].style.reversed();
+    for before in &mut chars[..editor.cursor] {
+        before.style = before.style.hidden();
+    }
     Line::from(chars)
 }
 

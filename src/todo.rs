@@ -2,7 +2,7 @@ use time::Date;
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
 
-/// A date format for parsing and formatting dates in the todo.txt format (YYYY-MM-DD).
+/// A date format for parsing dates in the todo.txt format (YYYY-MM-DD).
 const DATE_FORMAT: &[BorrowedFormatItem] = format_description!("[year]-[month]-[day]");
 
 /// Key of the `key:value` naming what a task waits for, as in `wait:figma`.
@@ -32,11 +32,11 @@ impl Todo {
         let mut parts = Vec::new();
         if self.done {
             parts.push("x".to_string());
-            parts.extend(self.completed.map(format_date));
+            parts.extend(self.completed.map(|date| date.to_string()));
         } else if let Some(priority) = self.priority {
             parts.push(format!("({priority})"));
         }
-        parts.extend(self.created.map(format_date));
+        parts.extend(self.created.map(|date| date.to_string()));
         parts.push(self.description.clone());
         parts.join(" ")
     }
@@ -201,11 +201,6 @@ fn strip_date(rest: &mut &str) -> Option<Date> {
 /// Parse a `YYYY-MM-DD` date.
 pub fn parse_date(text: &str) -> Option<Date> {
     Date::parse(text, DATE_FORMAT).ok()
-}
-
-/// Format a date as `YYYY-MM-DD`.
-fn format_date(date: Date) -> String {
-    date.format(DATE_FORMAT).expect("YYYY-MM-DD formatting is infallible")
 }
 
 #[cfg(test)]

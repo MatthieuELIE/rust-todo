@@ -365,7 +365,7 @@ fn the_text_typed_from_entering_insert_mode_to_esc_is_undone_at_once() {
     keys(&mut added, "u");
     assert_eq!(state(&added), ("", 0));
 
-    let mut opened = Editor::new("Pay rent".to_string(), Mode::Normal);
+    let mut opened = Editor::new("Pay rent".to_string());
     keys(&mut opened, "u");
     assert_eq!(state(&opened), ("Pay rent", 0));
 }

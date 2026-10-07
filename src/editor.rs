@@ -51,12 +51,12 @@ pub struct Editor {
 }
 
 impl Editor {
-    /// Opens on `text` in `mode`, the cursor at the start.
-    pub fn new(text: String, mode: Mode) -> Self {
+    /// Opens on `text` in normal mode, the cursor at the start.
+    pub fn new(text: String) -> Self {
         Editor {
             rest: (text.clone(), 0),
             text,
-            mode,
+            mode: Mode::Normal,
             ..Editor::default()
         }
     }

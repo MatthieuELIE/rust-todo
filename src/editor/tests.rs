@@ -231,6 +231,10 @@ fn cw_changes_up_to_the_end_of_the_word_keeping_the_spaces_after_it() {
     let mut ed = normal(LINE, 21);
     keys(&mut ed, "cW");
     assert_eq!(ed.text, "(A) 2026-09-26 Call + due:2026-10-01");
+
+    let mut ed = normal("Call  +bank", 4);
+    keys(&mut ed, "cw");
+    assert_eq!(state(&ed), ("Call+bank", 4));
 }
 
 #[test]
@@ -278,6 +282,8 @@ fn a_key_completing_no_command_after_d_or_c_cancels_it_and_does_nothing_esc_and_
     assert_eq!(ed.mode, Mode::Normal);
     keys(&mut ed, "x");
     assert_eq!(state(&ed), ("ac", 1));
+    keys(&mut ed, "du");
+    assert_eq!(state(&ed), ("ac", 1));
 
     keys(&mut ed, "d");
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
@@ -321,7 +327,7 @@ fn aw_takes_the_blanks_after_the_word_too_or_those_before_it_when_none_follow() 
 fn a_key_that_is_not_w_after_di_or_da_cancels_the_command_and_does_nothing() {
     let mut ed = normal(TAGGED, 11);
 
-    keys(&mut ed, "dixcaida");
+    keys(&mut ed, "dixcaidildihdidci$da");
     assert_eq!(state(&ed), (TAGGED, 11));
     assert_eq!(ed.mode, Mode::Normal);
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
@@ -366,8 +372,10 @@ fn the_text_typed_from_entering_insert_mode_to_esc_is_undone_at_once() {
     assert_eq!(state(&added), ("", 0));
 
     let mut opened = Editor::new("Pay rent".to_string());
-    keys(&mut opened, "u");
-    assert_eq!(state(&opened), ("Pay rent", 0));
+    keys(&mut opened, "l");
+    assert_eq!(opened.handle_key(KeyEvent::from(KeyCode::Char('u'))), Outcome::Message("nothing to undo"));
+    keys(&mut opened, "xu");
+    assert_eq!(state(&opened), ("Pay rent", 1));
 }
 
 #[test]
@@ -415,6 +423,8 @@ fn a_paste_in_normal_mode_leaves_the_cursor_on_a_character() {
     ed.paste("Call");
 
     assert_eq!(state(&ed), ("Call", 3));
+    keys(&mut ed, "u");
+    assert_eq!(state(&ed), ("", 0));
 }
 
 #[test]
@@ -460,6 +470,13 @@ fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_an_at_or_wai
     assert_eq!(editor("Design wait:", 12).tag(), Some("wait:"));
     assert_eq!(editor("Design wait:fi", 14).tag(), Some("wait:fi"));
     assert_eq!(editor("Design wai", 10).tag(), None);
+}
+
+#[test]
+fn a_bare_due_before_the_cursor_wants_a_date_in_insert_mode_only() {
+    assert!(editor("Pay due:", 8).wants_date());
+    assert!(!editor("Pay due:2026", 12).wants_date());
+    assert!(!normal("Pay due: rent", 8).wants_date());
 }
 
 #[test]

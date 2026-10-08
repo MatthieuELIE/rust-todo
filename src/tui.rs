@@ -71,17 +71,14 @@ pub enum Group {
     Priority(char),
     /// Pending tasks without a priority.
     Unprioritised,
-    /// Done tasks.
-    Done,
 }
 
 impl Group {
     /// The group `todo` is listed under.
     fn of(todo: &Todo) -> Group {
-        match (todo.done, todo.priority) {
-            (true, _) => Group::Done,
-            (false, Some(letter)) => Group::Priority(letter),
-            (false, None) => Group::Unprioritised,
+        match todo.priority {
+            Some(letter) => Group::Priority(letter),
+            None => Group::Unprioritised,
         }
     }
 }
@@ -114,8 +111,6 @@ pub struct App {
     pub cursor: usize,
     /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
     pending: Option<char>,
-    /// Whether done tasks are listed too.
-    pub show_done: bool,
     /// Set once the user asked to leave.
     pub quit: bool,
     /// Last message for the status bar, cleared by the next key.
@@ -136,6 +131,12 @@ pub struct App {
     redo: Vec<(Vec<Todo>, Option<Todo>)>,
     /// Moves not yet applied to `done.txt`, the oldest first.
     moves: Vec<Move>,
+    /// Tasks of `done.txt` in file order, as last read.
+    history: Vec<Todo>,
+    /// Whether `done.txt` was read since the list opened, the last `H` or the last reload.
+    history_read: bool,
+    /// Whether the list shows `done.txt` in place of the task file.
+    pub in_history: bool,
 }
 
 impl App {
@@ -144,17 +145,33 @@ impl App {
         App { todos, ..App::default() }
     }
 
+    /// The tasks the list shows: those of the task file, or of `done.txt` in the history.
+    fn source(&self) -> &[Todo] {
+        if self.in_history { &self.history } else { &self.todos }
+    }
+
+    /// Tasks having `terms`, numbered: the pending ones of the task file by priority, or the history from its last line.
+    fn listed(&self, terms: &[String]) -> Vec<(usize, &Todo)> {
+        let mut tasks = list(self.source(), terms);
+        if self.in_history {
+            tasks.sort_by_key(|(number, _)| Reverse(*number));
+        } else {
+            tasks.retain(|(_, todo)| !todo.done);
+        }
+        tasks
+    }
+
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-        let mut tasks = list(&self.todos, self.show_done, &terms);
+        let mut tasks = self.listed(&terms);
         if let Some(filter) = &self.filter {
             tasks.retain(|(_, todo)| shows(todo, filter, self.today));
         }
         tasks
     }
 
-    /// Groups of the tasks on screen with their counts, in display order; none when no task on screen has a priority.
+    /// Groups of the tasks on screen with their counts, in display order; none in the history or when no task on screen has a priority.
     fn groups(&self) -> Vec<(Group, usize)> {
         let mut groups: Vec<(Group, usize)> = Vec::new();
         for (_, todo) in self.tasks() {
@@ -164,7 +181,7 @@ impl App {
                 _ => groups.push((group, 1)),
             }
         }
-        if !groups.iter().any(|(group, _)| matches!(group, Group::Priority(_))) {
+        if self.in_history || !groups.iter().any(|(group, _)| matches!(group, Group::Priority(_))) {
             groups.clear();
         }
         groups
@@ -212,7 +229,7 @@ impl App {
     /// The task under the cursor, none when the cursor stands on a folded group or the list is empty.
     pub fn selected_task(&self) -> Option<&Todo> {
         match self.rows().get(self.cursor) {
-            Some(Row::Task(number)) => Some(&self.todos[number - 1]),
+            Some(Row::Task(number)) => Some(&self.source()[number - 1]),
             _ => None,
         }
     }
@@ -228,7 +245,7 @@ impl App {
     /// Puts the cursor on `row`, or on its group when that is folded, and tells whether either is on screen.
     fn select(&mut self, row: Row) -> bool {
         let group = match row {
-            Row::Task(number) => Row::Group(Group::of(&self.todos[number - 1])),
+            Row::Task(number) => Row::Group(Group::of(&self.source()[number - 1])),
             Row::Group(_) => row,
         };
         let rows = self.rows();
@@ -241,9 +258,9 @@ impl App {
         }
     }
 
-    /// Panel entries with their counts, search left out: `All tasks`, `Waiting` if any task waits, then `+projects` and `@contexts`.
+    /// Panel entries with their counts, search left out: `All tasks`, `Due` and `Waiting` if any task is and not in the history, then `+projects` and `@contexts`.
     pub fn filters(&self) -> Vec<(String, usize)> {
-        let shown = list(&self.todos, self.show_done, &[]);
+        let shown = self.listed(&[]);
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
             let mut terms: Vec<String> = shown
                 .iter()
@@ -256,11 +273,11 @@ impl App {
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
         let due = shown.iter().filter(|(_, todo)| shows(todo, DUE_NOW, self.today)).count();
-        if due > 0 {
+        if due > 0 && !self.in_history {
             filters.push((DUE_NOW.to_string(), due));
         }
         let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
-        if waiting > 0 {
+        if waiting > 0 && !self.in_history {
             filters.push((WAITING.to_string(), waiting));
         }
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
@@ -485,13 +502,22 @@ impl App {
             Some(Row::Task(number)) => Some(number),
             _ => None,
         };
+        let writes = match key.code {
+            KeyCode::Char('x' | 'o' | 'p' | 'u') | KeyCode::Enter => true,
+            KeyCode::Char('d') => pending == Some('d'),
+            KeyCode::Char('r') => key.modifiers == KeyModifiers::CONTROL,
+            _ => false,
+        };
+        if self.in_history && writes {
+            self.refuse("history is read-only");
+            return false;
+        }
         let mut write = false;
         match key.code {
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
                 let priority = (c != ' ').then(|| c.to_ascii_uppercase());
                 if let Some(number) = selected
                     && let todo = &mut self.todos[number - 1]
-                    && !todo.done
                     && todo.priority != priority
                 {
                     todo.priority = priority;
@@ -515,14 +541,10 @@ impl App {
             KeyCode::Char('G') => self.cursor = last,
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
-                    if self.todos[number - 1].done {
-                        self.refuse("already done: todo archive moves it to done.txt");
-                    } else {
-                        let mut todo = self.todos.remove(number - 1);
-                        todo.complete(today);
-                        self.moves.push(Move::Append(todo));
-                        write = true;
-                    }
+                    let mut todo = self.todos.remove(number - 1);
+                    todo.complete(today);
+                    self.moves.push(Move::Append(todo));
+                    write = true;
                 }
             }
             KeyCode::Char('d') if pending == Some('d') => {
@@ -563,7 +585,8 @@ impl App {
             KeyCode::Tab => self.focus = Focus::Panel,
             KeyCode::Char('?') => self.focus = Focus::Help,
             KeyCode::Char('H') => {
-                self.show_done = !self.show_done;
+                self.in_history = !self.in_history;
+                self.history_read = false;
                 self.cursor = 0;
             }
             _ => {}
@@ -640,7 +663,7 @@ impl App {
         }
     }
 
-    /// Replaces task `number` with `text`, done on `today` when its `x` was typed; an empty description is refused, an unchanged line ignored.
+    /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; an empty description is refused, an unchanged line ignored.
     fn edit(&mut self, number: usize, text: &str, today: Date) -> bool {
         let mut todo = match Todo::from_input(text) {
             Ok(todo) => todo,
@@ -649,11 +672,14 @@ impl App {
                 return false;
             }
         };
-        if todo.done && !self.todos[number - 1].done {
+        if todo.done {
             if todo.created.is_none() && todo.completed == self.todos[number - 1].created {
                 todo.created = todo.completed.take();
             }
             todo.complete(today);
+            self.todos.remove(number - 1);
+            self.moves.push(Move::Append(todo));
+            return true;
         }
         if todo.to_line() == self.todos[number - 1].to_line() {
             return false;
@@ -767,12 +793,29 @@ impl App {
         }
     }
 
+    /// Reads `done.txt`, next to the task file at `path`, when it was not read since the list opened, the last `H` or the last reload.
+    pub fn refresh_history(&mut self, path: &Path) {
+        if !std::mem::replace(&mut self.history_read, true) {
+            self.set_history(repository::read(&path.with_file_name("done.txt")));
+        }
+    }
+
+    /// Takes the tasks of `done.txt`, `read` just now, as the history; a failed read empties it and is told.
+    pub fn set_history(&mut self, read: io::Result<String>) {
+        self.history = repository::parse(&read.unwrap_or_else(|e| {
+            self.refuse(&format!("could not read done.txt: {e}"));
+            String::new()
+        }));
+    }
+
     /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit is cancelled as its number may shift.
     pub fn reload(&mut self, todos: Vec<Todo>) {
         self.todos = todos;
         self.undo.clear();
         self.redo.clear();
         self.moves.clear();
+        self.history_read = false;
+        self.refused = false;
         self.forget_gone_folds();
         self.clamp_cursor();
         self.message = Some("reloaded".to_string());

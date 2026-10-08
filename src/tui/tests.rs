@@ -219,7 +219,7 @@ fn enter_opens_the_task_line_in_normal_mode_and_the_cursor_follows_the_edited_ta
 }
 
 #[test]
-fn an_edited_line_is_saved_as_typed_and_one_leaving_the_list_is_said_hidden() {
+fn a_completion_date_typed_with_the_x_is_the_one_the_task_moves_to_done_txt_with() {
     let mut app = app_of(&["one", "two"]);
     let enter = KeyEvent::from(KeyCode::Enter);
 
@@ -228,9 +228,9 @@ fn an_edited_line_is_saved_as_typed_and_one_leaving_the_list_is_said_hidden() {
     press(&mut app, "ix 2026-09-20 ");
     assert!(app.handle_key(enter, TODAY));
 
-    assert_eq!(app.todos[1].to_line(), "x 2026-09-20 two");
+    assert_eq!(lines(&app), ["one"]);
+    assert_eq!(moved(&app), ["+x 2026-09-20 two"]);
     assert_eq!(app.cursor, 0);
-    assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
 }
 
 #[test]
@@ -421,8 +421,8 @@ fn the_panel_lists_all_then_projects_then_contexts_alphabetically_with_their_sho
     let expected = [("All tasks", 3), ("+bank", 1), ("+Books", 1), ("+rent", 2), ("@home", 1), ("@phone", 1)];
     assert_eq!(app.filters(), expected.map(|(name, count)| (name.to_string(), count)));
 
-    press(&mut app, "H/call");
-    assert_eq!(app.filters()[..2], [("All tasks".to_string(), 4), ("+archive".to_string(), 1)]);
+    press(&mut app, "/call");
+    assert_eq!(app.filters()[0], ("All tasks".to_string(), 3));
 }
 
 #[test]
@@ -641,21 +641,156 @@ fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
     assert_eq!(app.message, None);
 }
 
+fn history_of(lines: &[&str], done: &[&str]) -> App {
+    App {
+        history: done.iter().map(|l| Todo::from_line(l)).collect(),
+        ..app_of(lines)
+    }
+}
+
 #[test]
-fn h_shows_done_tasks_from_the_top_where_x_is_refused() {
-    let mut app = app_of(&["x 2026-09-20 one", "two"]);
+fn h_swaps_the_list_for_done_txt_from_its_last_line_without_groups_and_h_swaps_back() {
+    let mut app = history_of(&["(A) one", "x 2026-09-20 left"], &["x (A) old", "x 2026-09-25 new", "kept as written"]);
+    assert_eq!(shown(&app), ["(A) one"]);
 
     assert!(!press(&mut app, "H"));
-    assert_eq!(shown(&app), ["two", "x 2026-09-20 one"]);
-    assert!(!press(&mut app, "jx"));
-    assert_eq!(shown(&app), ["two", "x 2026-09-20 one"]);
-    assert_eq!(app.message.as_deref(), Some("already done: todo archive moves it to done.txt"));
-    assert!(app.refused);
-    assert!(moved(&app).is_empty());
+    assert_eq!(shown(&app), ["kept as written", "x 2026-09-25 new", "x old"]);
+    assert_eq!(app.tasks().iter().map(|(number, _)| *number).collect::<Vec<_>>(), [3, 2, 1]);
+    assert!(app.groups().is_empty());
+    assert_eq!(app.selected_task().map(Todo::to_line).as_deref(), Some("kept as written"));
+    assert!(!press(&mut app, "zMzRzaj"));
+    assert_eq!((app.cursor, app.message.as_deref()), (1, None));
 
-    assert_eq!(app.cursor, 1);
-    press(&mut app, "H");
+    assert!(!press(&mut app, "H"));
+    assert_eq!(shown(&app), ["(A) one"]);
     assert_eq!(app.cursor, 0);
+}
+
+#[test]
+fn the_panel_and_the_search_work_on_the_history_and_both_are_kept_across_h() {
+    let mut app = history_of(
+        &["Pay +rent @web", "Call +bank"],
+        &["x Paid +rent", "x Sold +car @web", "x Mailed +rent @web"],
+    );
+    app.filter = Some("+rent".to_string());
+    app.search = "pa".to_string();
+    assert_eq!(shown(&app), ["Pay +rent @web"]);
+
+    press(&mut app, "H");
+    let entries: Vec<String> = app.filters().iter().map(|(term, count)| format!("{term} {count}")).collect();
+    assert_eq!(entries, ["All tasks 3", "+car 1", "+rent 2", "@web 2"]);
+    assert_eq!(shown(&app), ["x Paid +rent"]);
+
+    press(&mut app, "/mail");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert_eq!(shown(&app), ["x Mailed +rent @web"]);
+
+    press(&mut app, "H");
+    assert_eq!((app.filter.as_deref(), app.search.as_str()), (Some("+rent"), "mail"));
+    assert!(shown(&app).is_empty());
+}
+
+#[test]
+fn the_history_panel_has_no_due_and_no_waiting_entry() {
+    let mut app = history_of(&["one"], &["x Asked wait:bob +home", "Left pending due:2026-09-01"]);
+
+    press(&mut app, "H");
+
+    let entries: Vec<String> = app.filters().into_iter().map(|(term, _)| term).collect();
+    assert_eq!(entries, ["All tasks", "+home"]);
+}
+
+#[test]
+fn done_txt_is_read_when_the_list_opens_at_each_h_and_at_a_reload_and_not_in_between() {
+    let folder = folder("history");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    let append = |line: &str| {
+        use std::io::Write;
+        let mut history = std::fs::OpenOptions::new().append(true).create(true).open(&done).unwrap();
+        writeln!(history, "{line}").unwrap();
+    };
+    append("x first");
+    let mut app = app();
+
+    app.refresh_history(&file);
+    let opened = app.history.len();
+    press(&mut app, "H");
+    app.refresh_history(&file);
+    let first = shown(&app);
+    append("x second");
+    press(&mut app, "j");
+    app.refresh_history(&file);
+    let unwatched = shown(&app);
+    press(&mut app, "HH");
+    app.refresh_history(&file);
+    let second = shown(&app);
+    append("x third");
+    app.reload(vec![Todo::from_line("one")]);
+    app.refresh_history(&file);
+    let reloaded = shown(&app);
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(opened, 1);
+    assert_eq!(first, ["x first"]);
+    assert_eq!(unwatched, ["x first"]);
+    assert_eq!(second, ["x second", "x first"]);
+    assert_eq!(reloaded, ["x third", "x second", "x first"]);
+}
+
+#[test]
+fn a_reload_after_a_refusal_is_not_told_as_one() {
+    let mut app = app();
+    app.refuse("history is read-only");
+
+    app.reload(vec![Todo::from_line("one")]);
+
+    assert_eq!((app.message.as_deref(), app.refused), (Some("reloaded"), false));
+}
+
+#[test]
+fn the_history_refuses_every_key_that_writes() {
+    let char = |c| KeyEvent::from(KeyCode::Char(c));
+    let ctrl_r = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    for keys in [
+        vec![char('x')],
+        vec![char('d'), char('d')],
+        vec![char('o')],
+        vec![enter],
+        vec![char('p')],
+        vec![char('u')],
+        vec![ctrl_r],
+    ] {
+        let mut app = history_of(&["one", "two"], &["x old", "x older"]);
+        press(&mut app, "xH");
+
+        let wrote = keys.iter().fold(false, |wrote, key| app.handle_key(*key, TODAY) | wrote);
+
+        assert!(!wrote, "{keys:?}");
+        assert_eq!((app.message.as_deref(), app.refused), (Some("history is read-only"), true), "{keys:?}");
+        assert!(matches!(app.focus, Focus::List), "{keys:?}");
+        assert_eq!(lines(&app), ["two"], "{keys:?}");
+        assert_eq!(moved(&app), ["+x 2026-09-26 one"], "{keys:?}");
+        assert_eq!(
+            app.history.iter().map(Todo::to_line).collect::<Vec<_>>(),
+            ["x old", "x older"],
+            "{keys:?}"
+        );
+    }
+}
+
+#[test]
+fn the_history_is_what_done_txt_holds_and_a_done_txt_that_cannot_be_read_is_told() {
+    let mut app = app();
+
+    app.set_history(Ok("x old\n\nx new\n".to_string()));
+    assert_eq!(app.history.iter().map(Todo::to_line).collect::<Vec<_>>(), ["x old", "x new"]);
+    assert_eq!(app.message, None);
+
+    app.set_history(Err(io::ErrorKind::InvalidData.into()));
+    assert!(app.history.is_empty());
+    assert!(app.refused);
+    assert!(app.message.unwrap().starts_with("could not read done.txt: "));
 }
 
 #[test]
@@ -684,14 +819,13 @@ fn p_then_a_letter_sets_the_priority_and_the_cursor_follows_the_task() {
 }
 
 #[test]
-fn p_does_nothing_with_another_key_the_same_priority_or_a_done_task() {
-    let mut app = app_of(&["(A) one", "x 2026-09-20 two"]);
+fn p_does_nothing_with_another_key_or_the_same_priority() {
+    let mut app = app_of(&["(A) one"]);
 
     assert!(!press(&mut app, "pz"));
     assert!(!press(&mut app, "pa"));
-    assert!(!press(&mut app, "Hjpb"));
 
-    assert_eq!(shown(&app), ["(A) one", "x 2026-09-20 two"]);
+    assert_eq!(shown(&app), ["(A) one"]);
 }
 
 #[test]
@@ -971,18 +1105,6 @@ fn a_reload_drops_the_fold_of_a_group_gone_from_the_file() {
 }
 
 #[test]
-fn a_done_task_edited_in_the_popup_gets_no_completion_date() {
-    let mut app = app_of(&["x Old"]);
-    press(&mut app, "H");
-    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-    press(&mut app, "A!");
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(app.todos[0].to_line(), "x Old!");
-}
-
-#[test]
 fn a_turn_does_not_ask_to_save_over_a_file_it_could_not_read() {
     let mut app = app();
     let mut text = "one\ntwo\nthree\n".to_string();
@@ -1011,9 +1133,6 @@ fn the_groups_follow_the_priorities_on_screen_with_their_counts() {
     use Group::*;
 
     assert_eq!(app.groups(), [(Priority('A'), 2), (Priority('C'), 1), (Unprioritised, 1)]);
-
-    press(&mut app, "H");
-    assert_eq!(app.groups(), [(Priority('A'), 2), (Priority('C'), 1), (Unprioritised, 1), (Done, 1)]);
 
     app.filter = Some("+work".to_string());
     assert_eq!(app.groups(), [(Priority('A'), 1)]);
@@ -1218,14 +1337,19 @@ fn a_paste_in_the_search_drops_the_folds_of_the_groups_it_takes_off_the_screen()
 }
 
 #[test]
-fn an_x_typed_in_front_of_a_pending_task_completes_it_today() {
-    let mut app = app_of(&["(A) 2026-08-01 one"]);
+fn an_x_typed_in_front_of_a_task_moves_it_to_done_txt_completed_today_and_u_brings_it_back() {
+    let mut app = app_of(&["(A) 2026-08-01 one", "two"]);
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
     press(&mut app, "ix ");
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
+    assert_eq!(lines(&app), ["two"]);
+    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
+    assert_eq!(app.message, None);
+    assert!(press(&mut app, "u"));
+    assert_eq!(lines(&app), ["(A) 2026-08-01 one", "two"]);
+    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one", "-x 2026-09-26 2026-08-01 one"]);
 }
 
 #[test]
@@ -1236,7 +1360,7 @@ fn an_x_typed_in_front_of_a_dated_task_keeps_its_creation_date() {
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.todos[0].to_line(), "x 2026-09-26 2026-08-01 one");
+    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
 }
 
 #[test]

@@ -18,7 +18,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `zM`, `zR` | fold, unfold every priority group |
 | `za` | fold or unfold the group under the cursor |
 | `/` | search, filtering at each letter |
-| `H` | show or hide done tasks |
+| `H` | show the history, the tasks of `done.txt`, or go back to the list |
 | `Tab` | move to the filter panel |
 | `Esc` | drop the filter and the search |
 | `?` | show the keys |
@@ -27,8 +27,7 @@ Adding and editing a task happen in [the popup](popup.md).
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 `x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
-On a done task still in the task file, shown by `H`, `x` is refused: `todo archive` moves it.
-`p` leaves a done task alone, since todo.txt drops the priority of a completed task.
+A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
 `?` shows every key, grouped by mode, and any key closes it.
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 
@@ -50,16 +49,26 @@ Undoing `x` also reads `done.txt` again and takes out its last line equal to the
 `done.txt` is not watched: a change made to it elsewhere shows at the next read.
 The history is not saved: it is lost when the list closes or the file is reloaded.
 
+## History
+
+`H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
+The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
+Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
+The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way.
+The history is read-only: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`. `todo reopen` brings a task back.
+`done.txt` is read when the list opens, at each `H` and when the task file is reloaded; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
+A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or an empty one, the list says `nothing done`.
+
 ## Priority groups
 
-When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`, and `DONE` once `H` shows done tasks, each header with how many tasks it holds and a blank row before each group but the first.
+When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`, each header with how many tasks it holds and a blank row before each group but the first.
 `zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing.
 Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
 
 ## Details
 
 Under the list, a `DETAILS` card shows the task under the cursor, its line being cut at the screen's edge: its priority, its text without the tags and `key:value` ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
-A done task shows its completion date in place of the priority, and the whole zone is greyed, not struck through, so it stays readable.
+A task of the history shows its completion date in place of the priority, and its `due:` date is not coloured.
 A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
 

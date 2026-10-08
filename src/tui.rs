@@ -1,6 +1,7 @@
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::io;
+use std::path::Path;
 
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -53,6 +54,14 @@ pub enum Focus {
     Help,
     /// The popup where a task is typed.
     Popup(Popup),
+}
+
+/// What a change asks of `done.txt`, which is never rewritten from a copy held here.
+pub enum Move {
+    /// Add this done task at its end.
+    Append(Todo),
+    /// Take the last line equal to this done task out of it.
+    Remove(Todo),
 }
 
 /// A group of the list, in display order.
@@ -121,10 +130,12 @@ pub struct App {
     pub filter: Option<String>,
     /// Groups shown folded, as their header alone.
     folded: Vec<Group>,
-    /// Tasks as they were before each change, the latest last.
-    undo: Vec<Vec<Todo>>,
-    /// Tasks as they were before each `u`, the latest last.
-    redo: Vec<Vec<Todo>>,
+    /// Tasks as they were before each change, the latest last, with the task the change moved to `done.txt`.
+    undo: Vec<(Vec<Todo>, Option<Todo>)>,
+    /// Tasks as they were before each `u`, the latest last, with the task `u` took back from `done.txt`.
+    redo: Vec<(Vec<Todo>, Option<Todo>)>,
+    /// Moves not yet applied to `done.txt`, the oldest first.
+    moves: Vec<Move>,
 }
 
 impl App {
@@ -295,10 +306,15 @@ impl App {
     pub fn handle_key(&mut self, key: KeyEvent, today: Date) -> bool {
         let before = self.todos.clone();
         let history = (self.undo.len(), self.redo.len());
+        let queued = self.moves.len();
         let write = self.apply(key, today);
         self.forget_gone_folds();
         if write && history == (self.undo.len(), self.redo.len()) {
-            self.undo.push(before);
+            let moved = match self.moves.get(queued) {
+                Some(Move::Append(todo)) => Some(todo.clone()),
+                _ => None,
+            };
+            self.undo.push((before, moved));
             self.redo.clear();
         }
         write
@@ -499,14 +515,13 @@ impl App {
             KeyCode::Char('G') => self.cursor = last,
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
-                    let todo = &mut self.todos[number - 1];
-                    if !todo.done {
-                        todo.complete(today);
-                        write = true;
-                    } else if todo.reopen() {
-                        write = true;
+                    if self.todos[number - 1].done {
+                        self.refuse("already done: todo archive moves it to done.txt");
                     } else {
-                        self.refuse("cannot reopen a task whose text starts with x");
+                        let mut todo = self.todos.remove(number - 1);
+                        todo.complete(today);
+                        self.moves.push(Move::Append(todo));
+                        write = true;
                     }
                 }
             }
@@ -669,8 +684,9 @@ impl App {
             (&mut self.redo, &mut self.undo, "redone", "nothing to redo")
         };
         match from.pop() {
-            Some(todos) => {
-                to.push(std::mem::replace(&mut self.todos, todos));
+            Some((todos, moved)) => {
+                to.push((std::mem::replace(&mut self.todos, todos), moved.clone()));
+                self.moves.extend(moved.map(if back { Move::Remove } else { Move::Append }));
                 self.message = Some(done.to_string());
                 true
             }
@@ -699,6 +715,45 @@ impl App {
         false
     }
 
+    /// The save `turn` asked for, destination first: the tasks completed go to the end of `done.txt`, the list is saved to `path`, then the tasks `u` brought back leave `done.txt`.
+    pub fn save(&mut self, path: &Path, text: &mut String) {
+        let done_path = path.with_file_name("done.txt");
+        let (mut gone, mut back) = (Vec::new(), Vec::new());
+        for moved in std::mem::take(&mut self.moves) {
+            match moved {
+                Move::Append(todo) => gone.push(todo),
+                Move::Remove(todo) => back.push(todo),
+            }
+        }
+        let appended = if gone.is_empty() && back.is_empty() {
+            Ok(())
+        } else if repository::same_file(path, &done_path) {
+            Err(io::Error::other("the task file is done.txt itself"))
+        } else if gone.is_empty() {
+            Ok(())
+        } else {
+            let writable = std::fs::OpenOptions::new().write(true).open(path);
+            writable.and_then(|_| repository::append(&done_path, &gone))
+        };
+        let moved = !gone.is_empty() && appended.is_ok();
+        let written = appended.and_then(|()| repository::save(path, &self.todos));
+        let failed = written.as_ref().err().map(|e| e.to_string());
+        let saved = failed.is_none();
+        self.saved(written, text, repository::read(path));
+        if let Some(e) = failed
+            && moved
+        {
+            self.refuse(&format!("could not save: {e} (done.txt already holds the task)"));
+        }
+        for todo in back.iter().filter(|_| saved) {
+            match repository::remove_last(&done_path, &todo.to_line()) {
+                Ok(true) => {}
+                Ok(false) => self.message = Some("undone, the task was no longer in done.txt".to_string()),
+                Err(e) => self.refuse(&format!("undone, but done.txt still holds the task: {e}")),
+            }
+        }
+    }
+
     /// What follows the save `turn` asked for: `text` takes what was `written`, or the tasks go back to the file, `reread` just now, and the failure is told.
     pub fn saved(&mut self, written: io::Result<String>, text: &mut String, reread: io::Result<String>) {
         match written {
@@ -717,6 +772,7 @@ impl App {
         self.todos = todos;
         self.undo.clear();
         self.redo.clear();
+        self.moves.clear();
         self.forget_gone_folds();
         self.clamp_cursor();
         self.message = Some("reloaded".to_string());

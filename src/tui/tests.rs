@@ -19,6 +19,14 @@ fn press(app: &mut App, keys: &str) -> bool {
         .fold(false, |write, c| app.handle_key(KeyEvent::from(KeyCode::Char(c)), TODAY) | write)
 }
 
+fn moved(app: &App) -> Vec<String> {
+    let line = |moved: &Move| match moved {
+        Move::Append(todo) => format!("+{}", todo.to_line()),
+        Move::Remove(todo) => format!("-{}", todo.to_line()),
+    };
+    app.moves.iter().map(line).collect()
+}
+
 fn popup(app: &App) -> &Popup {
     match &app.focus {
         Focus::Popup(popup) => popup,
@@ -36,9 +44,105 @@ fn x_completes_the_selected_task_and_the_next_one_takes_its_row() {
 
     assert!(press(&mut app, "jx"));
 
-    assert_eq!(shown(&app), ["one", "three"]);
+    assert_eq!(lines(&app), ["one", "three"]);
     assert_eq!(app.cursor, 1);
-    assert_eq!(app.todos[1].to_line(), "x 2026-09-26 two");
+    assert_eq!(moved(&app), ["+x 2026-09-26 two"]);
+}
+
+#[test]
+fn u_takes_the_completed_task_back_from_done_txt_and_ctrl_r_sends_it_again() {
+    let mut app = app_of(&["one", "(A) 2026-09-01 two", "three"]);
+
+    press(&mut app, "x");
+    assert_eq!(lines(&app), ["one", "three"]);
+    press(&mut app, "u");
+    assert_eq!(lines(&app), ["one", "(A) 2026-09-01 two", "three"]);
+    assert!(redo(&mut app));
+    assert_eq!(lines(&app), ["one", "three"]);
+
+    let line = "x 2026-09-26 2026-09-01 two";
+    assert_eq!(moved(&app), [format!("+{line}"), format!("-{line}"), format!("+{line}")]);
+}
+
+#[test]
+fn undoing_another_change_asks_nothing_of_done_txt_even_with_a_move_still_waiting() {
+    let mut app = app();
+
+    press(&mut app, "xddu");
+
+    assert_eq!(lines(&app), ["two", "three"]);
+    assert_eq!(moved(&app), ["+x 2026-09-26 one"]);
+}
+
+fn folder(name: &str) -> std::path::PathBuf {
+    let folder = std::env::temp_dir().join(format!("todo-{}-tui-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::create_dir(&folder).unwrap();
+    folder
+}
+
+#[test]
+fn save_writes_done_txt_then_the_task_file_and_u_takes_the_line_back_out() {
+    let folder = folder("save");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\n(A) two\n").unwrap();
+    std::fs::write(&done, "x 2026-09-01 zero\nx 2026-09-26 two\n").unwrap();
+    let mut app = app_of(&["one", "(A) two"]);
+    let mut text = "one\n(A) two\n".to_string();
+    let read = |path| std::fs::read_to_string(path).unwrap();
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    let completed = (read(&file), read(&done), text.clone());
+    press(&mut app, "u");
+    app.save(&file, &mut text);
+    let undone = (read(&file), read(&done), app.message.clone());
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    std::fs::write(&done, "x 2026-09-01 zero\n").unwrap();
+    press(&mut app, "u");
+    app.save(&file, &mut text);
+    let missing = (read(&file), read(&done), app.message.clone(), app.refused);
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    let history = "x 2026-09-01 zero\nx 2026-09-26 two\n";
+    assert_eq!(completed, ("one\n".into(), format!("{history}x 2026-09-26 two\n"), "one\n".into()));
+    assert_eq!(undone, ("one\n(A) two\n".into(), history.into(), Some("undone".into())));
+    let restored = ("one\n(A) two\n".into(), "x 2026-09-01 zero\n".into());
+    assert_eq!(
+        missing,
+        (restored.0, restored.1, Some("undone, the task was no longer in done.txt".into()), false)
+    );
+}
+
+#[test]
+fn save_leaves_both_files_alone_when_the_move_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("save-refused");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+    std::fs::write(&done, "").unwrap();
+    std::fs::set_permissions(&done, std::fs::Permissions::from_mode(0o444)).unwrap();
+    let mut app = app_of(&["one", "two"]);
+    let mut text = "one\ntwo\n".to_string();
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    let refused = (lines(&app), app.refused, std::fs::read_to_string(&file).unwrap());
+    let itself = folder.join("itself");
+    std::fs::create_dir(&itself).unwrap();
+    std::fs::write(itself.join("done.txt"), "one\ntwo\n").unwrap();
+    press(&mut app, "x");
+    app.save(&itself.join("done.txt"), &mut text);
+    let kept = std::fs::read_to_string(itself.join("done.txt")).unwrap();
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(refused, (vec!["one".to_string(), "two".to_string()], true, "one\ntwo\n".to_string()));
+    assert_eq!(kept, "one\ntwo\n");
+    assert_eq!(
+        app.message.as_deref(),
+        Some("could not save: the task file is done.txt itself (file left unchanged)")
+    );
 }
 
 #[test]
@@ -538,28 +642,20 @@ fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
 }
 
 #[test]
-fn h_shows_done_tasks_from_the_top_where_x_reopens_them() {
+fn h_shows_done_tasks_from_the_top_where_x_is_refused() {
     let mut app = app_of(&["x 2026-09-20 one", "two"]);
 
     assert!(!press(&mut app, "H"));
     assert_eq!(shown(&app), ["two", "x 2026-09-20 one"]);
-    assert!(press(&mut app, "jx"));
-    assert_eq!(shown(&app), ["one", "two"]);
+    assert!(!press(&mut app, "jx"));
+    assert_eq!(shown(&app), ["two", "x 2026-09-20 one"]);
+    assert_eq!(app.message.as_deref(), Some("already done: todo archive moves it to done.txt"));
+    assert!(app.refused);
+    assert!(moved(&app).is_empty());
 
     assert_eq!(app.cursor, 1);
     press(&mut app, "H");
     assert_eq!(app.cursor, 0);
-}
-
-#[test]
-fn x_refuses_to_reopen_a_task_whose_line_would_still_read_as_done() {
-    let mut app = app_of(&["x x one", "two"]);
-
-    assert!(!press(&mut app, "Hjx"));
-
-    assert_eq!(shown(&app), ["two", "x x one"]);
-    assert_eq!(app.message.as_deref(), Some("cannot reopen a task whose text starts with x"));
-    assert!(app.refused);
 }
 
 #[test]
@@ -773,7 +869,7 @@ fn u_steps_back_through_every_change_and_ctrl_r_forward_again() {
     let mut app = app();
 
     press(&mut app, "ddx");
-    assert_eq!(lines(&app), ["x 2026-09-26 two", "three"]);
+    assert_eq!(lines(&app), ["three"]);
     press(&mut app, "uu");
     assert_eq!(lines(&app), ["one", "two", "three"]);
 
@@ -852,12 +948,12 @@ fn a_failed_save_goes_back_to_what_the_file_holds_and_says_so() {
         &mut text,
         Err(io::ErrorKind::InvalidData.into()),
     );
-    assert_eq!(lines(&app), ["x 2026-09-26 one", "four"]);
+    assert_eq!(lines(&app), ["four"]);
     assert!(app.refused);
 
     app.saved(Ok("one\n".to_string()), &mut text, Ok(String::new()));
     assert_eq!(text, "one\n");
-    assert_eq!(lines(&app), ["x 2026-09-26 one", "four"]);
+    assert_eq!(lines(&app), ["four"]);
 }
 
 #[test]
@@ -1170,7 +1266,7 @@ fn a_control_key_in_the_list_is_not_its_letter() {
     assert!(!app.handle_key(control('x'), TODAY));
 
     assert_eq!(shown(&app), ["two", "three"]);
-    assert_eq!(app.todos.len(), 3);
+    assert_eq!(app.todos.len(), 2);
 
     press(&mut app, "p");
     assert!(!app.handle_key(control('a'), TODAY));
@@ -1240,4 +1336,45 @@ fn esc_closes_the_date_picker_on_due_colon_and_a_key_leaving_due_colon_again_reo
     assert_eq!(popup(&app).picker, None);
     key(&mut app, KeyCode::Backspace, KeyModifiers::NONE);
     assert_eq!(popup(&app).picker, Some(TODAY));
+}
+
+#[test]
+fn a_reload_drops_the_moves_still_waiting_with_the_history_they_belong_to() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    let x = Some(Event::Key(KeyEvent::from(KeyCode::Char('x'))));
+
+    assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, x, TODAY));
+    assert_eq!(moved(&app), ["+x 2026-09-26 one"]);
+    app.turn(Ok("one\ntwo\nthree\nfour\n".to_string()), &mut text, None, TODAY);
+
+    assert_eq!(lines(&app), ["one", "two", "three", "four"]);
+    assert!(moved(&app).is_empty());
+}
+
+#[test]
+fn a_save_failing_after_the_move_says_done_txt_holds_the_task() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("save-half");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+    std::fs::write(&done, "").unwrap();
+    std::fs::set_permissions(&folder, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let mut app = app_of(&["one", "two"]);
+    let mut text = "one\ntwo\n".to_string();
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+
+    std::fs::set_permissions(&folder, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let history = std::fs::read_to_string(&done).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(lines(&app), ["one", "two"]);
+    assert_eq!(history, "x 2026-09-26 one\n");
+    assert!(app.refused);
+    let message = app.message.unwrap();
+    assert!(
+        message.starts_with("could not save: ") && message.ends_with(" (done.txt already holds the task)"),
+        "{message}"
+    );
 }

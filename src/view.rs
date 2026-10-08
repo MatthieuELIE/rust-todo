@@ -23,7 +23,7 @@ const ON_ACCENT: Color = Color::Rgb(0x11, 0x11, 0x1b);
 /// Text read first, painted on every unset cell (text).
 const PRIMARY: Color = Color::Rgb(0xcd, 0xd6, 0xf4);
 
-/// Text read second: labels, section names, a message (subtext0).
+/// Text read second: labels, section names, a message, the history (subtext0).
 const SECONDARY: Color = Color::Rgb(0xa6, 0xad, 0xc8);
 
 /// Labels of the detail zone, a step greyer than the values they name (overlay2).
@@ -92,7 +92,7 @@ u/Ctrl-r     undo, redo
 zM/zR        fold, unfold all
 za           fold, unfold group
 /            search
-H            show, hide done
+H            show, hide history
 Tab          panel
 Esc          drop filter and search
 ?            these keys
@@ -180,10 +180,12 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
     let shown = app.shown();
     if shown.is_empty() {
         frame.render_widget(
-            Paragraph::new(if app.search.is_empty() && app.filter.is_none() {
-                "nothing to do"
-            } else {
+            Paragraph::new(if !app.search.is_empty() || app.filter.is_some() {
                 "no matching task"
+            } else if app.in_history {
+                "nothing done"
+            } else {
+                "nothing to do"
             })
             .fg(TERTIARY),
             area,
@@ -199,6 +201,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
             }
             lines.push(match shown {
                 Shown::Header(group, count, folded) => header(group, count, folded, area.width.saturating_sub(2) as usize),
+                Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(SECONDARY),
                 Shown::Task(number, todo) => line(number, todo, today),
             });
         }
@@ -252,9 +255,6 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date)
     detail(frame, "Projects", tags('+', todo.projects()), projects_area);
     detail(frame, "Contexts", tags('@', todo.contexts()), contexts_area);
     draw_cut(frame, others, key_values_row);
-    if todo.done {
-        frame.buffer_mut().set_style(inner, Style::new().fg(TERTIARY));
-    }
 }
 
 /// Draws a row of the detail zone, its `label` dimmed then its `value`.
@@ -290,13 +290,11 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         format!("/{}▌", app.search)
     } else {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
-        let done = app.show_done.then(|| "+done".to_string());
-        [app.filter.clone(), search, done].into_iter().flatten().collect::<Vec<_>>().join("  ")
+        [app.filter.clone(), search].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
     let mut status = Line::from_iter([mode_block(mode), " ".into()]);
     for (i, word) in filters.split(' ').enumerate() {
-        let style = if word == "+done" { Style::new() } else { tag_style(word) };
-        status.extend([if i > 0 { " " } else { "" }.into(), Span::styled(word.to_string(), style)]);
+        status.extend([if i > 0 { " " } else { "" }.into(), Span::styled(word.to_string(), tag_style(word))]);
     }
     let mut hints = Line::from(if filters.is_empty() { "" } else { "  " });
     for (i, hint) in keys.split(" · ").enumerate() {
@@ -535,6 +533,7 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         } else {
             "  ".into()
         };
+        let style = if app.in_history { style.fg(SECONDARY) } else { style };
         let name = Span::styled(format!("{term:<13.13}"), style);
         lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(TERTIARY)]));
     }
@@ -611,7 +610,6 @@ fn header(group: Group, count: usize, folded: bool, width: usize) -> Line<'stati
     let (title, style) = match group {
         Group::Priority(letter) => (format!("PRIORITY {letter}"), Style::new().bold().fg(priority(letter))),
         Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().fg(SECONDARY)),
-        Group::Done => ("DONE".to_string(), Style::new().bold().fg(TERTIARY)),
     };
     let count = format!(" ({count})");
     let end = if folded { " ▸" } else { "" };

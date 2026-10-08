@@ -259,17 +259,16 @@ fn the_status_bar_shows_the_mode_and_filters_left_and_the_message_right() {
     let mut app = app_of(&["Pay +rent"]);
     app.filter = Some("+rent".to_string());
     app.search = "pay".to_string();
-    app.show_done = true;
     app.message = Some("reloaded".to_string());
 
     let buffer = render(&app);
     let status = rows(&buffer)[4].clone();
-    assert!(status.starts_with(" LIST  +rent  /pay  +done "), "{status}");
+    assert!(status.starts_with(" LIST  +rent  /pay "), "{status}");
     assert!(status.ends_with(" reloaded"), "{status}");
     assert_eq!((buffer[(1, 4)].bg, buffer[(1, 4)].fg), (ACCENT, ON_ACCENT));
     assert!(buffer[(1, 4)].modifier.contains(Modifier::BOLD));
     assert_eq!(buffer[(7, 4)].bg, BACKGROUND);
-    assert_eq!((buffer[(7, 4)].fg, buffer[(14, 4)].fg, buffer[(20, 4)].fg), (PROJECT, PRIMARY, PRIMARY));
+    assert_eq!((buffer[(7, 4)].fg, buffer[(14, 4)].fg), (PROJECT, PRIMARY));
     assert_eq!(buffer[(45, 4)].fg, SECONDARY);
 
     app.refused = true;
@@ -605,16 +604,41 @@ fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_valu
 }
 
 #[test]
-fn a_done_task_shows_its_completion_date_first_and_the_whole_zone_greyed_but_not_struck_through() {
-    let mut app = app_of(&["x 2026-09-28 2026-09-01 Ship it +work due:2026-09-20"]);
-    app.show_done = true;
+fn the_history_shows_its_lines_and_the_panel_in_light_grey_not_struck_through_and_the_details_keep_their_colours() {
+    use ratatui::crossterm::event::{KeyCode, KeyEvent};
+    let mut app = app_of(&["Pay +rent"]);
+    app.set_history(Ok("x 2026-09-28 2026-09-01 Ship it +work @desk due:2026-09-20\n".to_string()));
+    app.handle_key(KeyEvent::from(KeyCode::Char('H')), TODAY);
 
     let buffer = render_in(&app, 75, 18);
 
+    let line = "→   1  x 2026-09-28 2026-09-01 Ship it +work @desk";
+    assert_eq!(list_rows(&buffer)[1], line);
+    let cells = (26..74).map(|x| &buffer[(x, 1)]);
+    assert!(cells.clone().all(|cell| cell.fg == SECONDARY));
+    assert!(cells.clone().all(|cell| !cell.modifier.contains(Modifier::CROSSED_OUT)));
+    assert_eq!(
+        panel_rows(&buffer)[1..8],
+        [
+            "→ All tasks       1",
+            "",
+            " PROJECTS",
+            "  +work           1",
+            "",
+            " CONTEXTS",
+            "  @desk           1"
+        ]
+    );
+    assert_eq!(
+        (buffer[(3, 1)].fg, buffer[(3, 4)].fg, buffer[(3, 7)].fg),
+        (SECONDARY, SECONDARY, SECONDARY)
+    );
     assert_eq!(list_rows(&buffer)[11], " Done      2026-09-28");
-    let zone = (24..74).flat_map(|x| (11..16).map(move |y| (x, y)));
-    assert!(zone.clone().all(|cell| buffer[cell].fg == TERTIARY));
-    assert!(zone.clone().all(|cell| !buffer[cell].modifier.contains(Modifier::CROSSED_OUT)));
+    assert_eq!(
+        (buffer[(35, 12)].fg, buffer[(35, 14)].fg, buffer[(60, 14)].fg),
+        (PRIMARY, PROJECT, CONTEXT)
+    );
+    assert!(!rows(&buffer)[17].contains("+done"));
 }
 
 #[test]
@@ -717,6 +741,9 @@ fn an_empty_list_says_nothing_to_do_and_a_search_or_a_filter_that_nothing_matche
     app.search.clear();
     app.filter = Some("+bank".to_string());
     assert_eq!(said(&app), "no matching task");
+    app.filter = None;
+    app.in_history = true;
+    assert_eq!(said(&app), "nothing done");
 }
 
 #[test]

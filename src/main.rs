@@ -74,8 +74,8 @@ fn main() -> ExitCode {
 
         Commands::List { due, done, terms } => {
             let today = today();
-            let mut tasks = todo::list(&todos, done, &terms);
-            tasks.retain(|(_, todo)| !due || todo.is_due(today));
+            let mut tasks = todo::list(&todos, &terms);
+            tasks.retain(|(_, todo)| done || (!todo.done && (!due || todo.is_due(today))));
             if done {
                 tasks.sort_by_key(|(number, _)| *number);
             }
@@ -269,6 +269,7 @@ fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
     on_terminal(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;
         while !app.quit {
+            app.refresh_history(path);
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
             execute!(io::stdout(), app.cursor_shape())?;
             let event = if event::poll(Duration::from_millis(250))? {

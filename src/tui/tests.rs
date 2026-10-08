@@ -738,6 +738,54 @@ fn done_txt_is_read_when_the_list_opens_at_each_h_and_at_a_reload_and_not_in_bet
 }
 
 #[test]
+fn done_txt_is_read_again_after_a_save_that_moved_a_task_so_its_names_still_complete() {
+    let folder = folder("moved");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay +bank\nRead +books\n").unwrap();
+    let mut app = app_of(&["Pay +bank", "Read +books"]);
+    let mut text = "Pay +bank\nRead +books\n".to_string();
+
+    app.refresh_history(&file);
+    press(&mut app, "jx");
+    app.save(&file, &mut text);
+    app.refresh_history(&file);
+    press(&mut app, "o+b");
+    let completed = names(&app);
+    key(&mut app, KeyCode::Esc, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Esc, KeyModifiers::NONE);
+    press(&mut app, "u");
+    app.save(&file, &mut text);
+    app.refresh_history(&file);
+    let undone = app.history.len();
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(completed, ["+bank 1", "+books 0"]);
+    assert_eq!(undone, 0);
+}
+
+#[test]
+fn reading_done_txt_again_after_a_save_keeps_the_refusal_that_save_left() {
+    let folder = folder("kept");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+    let mut app = app_of(&["one", "two"]);
+    let mut text = "one\ntwo\n".to_string();
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    app.refresh_history(&file);
+    std::fs::write(&done, [0xff, 0xfe, b'\n']).unwrap();
+    press(&mut app, "u");
+    app.save(&file, &mut text);
+    app.refresh_history(&file);
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(app.history.is_empty());
+    assert!(app.refused);
+    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+}
+
+#[test]
 fn a_reload_after_a_refusal_is_not_told_as_one() {
     let mut app = app();
     app.refuse("history is read-only");
@@ -908,6 +956,23 @@ fn wait_colon_typed_in_the_popup_lists_the_wait_values_of_the_file_most_used_fir
     assert_eq!(names(&app), ["wait:designer 1"]);
     key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
     assert_eq!(popup(&app).editor.text, "Draw wait:designer ");
+}
+
+#[test]
+fn the_names_of_done_txt_complete_a_tag_after_those_of_the_task_file_with_a_count_of_zero() {
+    let mut app = history_of(
+        &["Pay +bank", "Call +bank @phone", "Read +books"],
+        &["x 2026-09-20 Old +bank +archive @Home wait:bob", "x 2026-09-21 Older +Attic +archive"],
+    );
+
+    press(&mut app, "o+");
+    assert_eq!(names(&app), ["+bank 2", "+books 1", "+archive 0", "+Attic 0"]);
+    press(&mut app, " @");
+    assert_eq!(names(&app), ["@phone 1", "@Home 0"]);
+    press(&mut app, " wait:");
+    assert_eq!(names(&app), ["wait:bob 0"]);
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    assert_eq!(popup(&app).editor.text, "+ @ wait:bob ");
 }
 
 #[test]

@@ -56,7 +56,7 @@ The tasks are numbered by their position in `done.txt`, as `todo list --done` nu
 Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
 The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way.
 The history is read-only: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`. `todo reopen` brings a task back.
-`done.txt` is read when the list opens, at each `H` and when the task file is reloaded; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
+`done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
 A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or an empty one, the list says `nothing done`.
 
 ## Priority groups

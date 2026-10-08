@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- In the popup, the completion of `+projects`, `@contexts` and `wait:` values also lists the names of `done.txt`: counts and order still come from the task file alone, and a name found in `done.txt` only comes last, with 0.
 - In the interactive list, `H` shows the history: the tasks of `done.txt`, numbered as `todo list --done` numbers them, the last completed first, in light grey and without groups, the names of the filter panel turning grey with them. The panel lists its `+projects` and `@contexts`, `/` searches it, and the filter and search in use are kept. It is read-only: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` answer `history is read-only`. `H` used to add a `DONE` group of the done tasks left in the task file; those are no longer listed, and `todo archive` moves them.
 - In the popup, a task whose `x` is typed in front moves to `done.txt` when saved, as with `x` in the list, instead of staying in the task file marked done; `u` brings it back.
 - In the interactive list, `x` moves the completed task to the end of `done.txt` and takes it off the list, as `todo do` does; it no longer marks a task pending again. `u` brings the task back at its place, priority included, and takes its line out of `done.txt`; `Ctrl-R` sends it again.

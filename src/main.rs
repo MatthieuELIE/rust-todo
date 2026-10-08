@@ -5,7 +5,7 @@ mod todo;
 mod tui;
 mod view;
 
-use std::io::{self, IsTerminal};
+use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::time::Duration;
@@ -67,10 +67,16 @@ fn main() -> ExitCode {
     let mut archived = None;
     let mut history = None;
     let mut moved = Vec::new();
+    let mut confirmed = None;
     match command {
-        Commands::List { all, due, done, terms } => {
+        Commands::List { terms, .. } if terms.first().is_some_and(|term| term == "--all" || term == "-a") => {
+            eprintln!("--all is gone: list shows the pending tasks, list --done the done ones");
+            return ExitCode::from(2);
+        }
+
+        Commands::List { due, done, terms } => {
             let today = today();
-            let mut tasks = todo::list(&todos, all || done, &terms);
+            let mut tasks = todo::list(&todos, done, &terms);
             tasks.retain(|(_, todo)| !due || todo.is_due(today));
             if done {
                 tasks.sort_by_key(|(number, _)| *number);
@@ -85,13 +91,8 @@ fn main() -> ExitCode {
                 };
                 eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
-            let colour = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty());
             for (number, todo) in tasks {
-                if colour {
-                    println!("{}", styled(&view::line(number, todo, today)));
-                } else {
-                    println!("{}{}", view::number(number), clean(&todo.to_line()));
-                }
+                println!("{}{}", view::number(number), shown(todo, today));
             }
             return ExitCode::SUCCESS;
         }
@@ -109,9 +110,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
 
-        Commands::Remove { number } => {
-            todos.remove(number - 1);
-        }
+        Commands::Remove { number } => confirmed = Some(("removed", todos.remove(number - 1))),
 
         Commands::Do { number } if todos[number - 1].done => {
             eprintln!("task {number} is already done");
@@ -120,6 +119,7 @@ fn main() -> ExitCode {
 
         Commands::Do { number } => {
             let mut todo = todos.remove(number - 1);
+            confirmed = Some(("done", todo.clone()));
             todo.complete(today());
             moved.push(todo);
         }
@@ -178,6 +178,7 @@ fn main() -> ExitCode {
                 eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
                 return ExitCode::FAILURE;
             }
+            confirmed = Some(("reopened", todo.clone()));
             todos.push(todo);
             history = Some(lines.concat());
         }
@@ -216,8 +217,11 @@ fn main() -> ExitCode {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
         return ExitCode::FAILURE;
     }
+    if let Some((verb, todo)) = confirmed {
+        let _ = writeln!(io::stdout(), "{verb}: {}", shown(&todo, today()));
+    }
     if let Some(count) = archived {
-        println!("{count} task{} archived", if count == 1 { "" } else { "s" });
+        let _ = writeln!(io::stdout(), "{count} task{} archived", if count == 1 { "" } else { "s" });
     }
 
     ExitCode::SUCCESS
@@ -228,9 +232,19 @@ fn clean(text: &str) -> String {
     text.replace(char::is_control, "\u{fffd}")
 }
 
-/// A listed line as text carrying its styles for a terminal.
+/// A task as `list` prints it, without its number: styled on a terminal that takes colours, its plain line otherwise.
+fn shown(todo: &Todo, today: Date) -> String {
+    if std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty()) {
+        styled(&view::line(0, todo, today))
+    } else {
+        clean(&todo.to_line())
+    }
+}
+
+/// A listed line, without its number, as text carrying its styles for a terminal.
 fn styled(line: &Line) -> String {
     line.iter()
+        .skip(1)
         .map(|span| span.style.into_crossterm().apply(clean(&span.content)).to_string())
         .collect()
 }
@@ -308,5 +322,15 @@ mod tests {
 
         assert!(styled.contains("\u{fffd}[2Jrent"));
         assert!(!styled.contains("\u{1b}[2J"));
+    }
+
+    #[test]
+    fn a_styled_line_leaves_its_number_out() {
+        for line in ["(A) Pay rent", "x 2026-09-03 Pay rent"] {
+            let styled = styled(&view::line(7, &Todo::from_line(line), date!(2026 - 09 - 26)));
+
+            assert!(!styled.contains(&view::number(7)));
+            assert!(styled.contains("rent"));
+        }
     }
 }

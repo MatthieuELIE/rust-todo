@@ -16,9 +16,12 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
     std::fs::write(&file, "2026-09-01 Call the bank\nPay rent\nx 2026-08-30 Typed by hand\n").unwrap();
     std::fs::write(&done, "x 2026-08-01 Water plants\n").unwrap();
 
-    assert!(todo(&file, &["add", "(B) 2026-09-02 Buy milk"]).status.success());
-    assert!(todo(&file, &["do", "1"]).status.success());
-    assert!(todo(&file, &["rm", "1"]).status.success());
+    let said = [
+        (todo(&file, &["add", "(B) 2026-09-02 Buy milk"]), ""),
+        (todo(&file, &["edit", "2", "(C) Pay rent"]), ""),
+        (todo(&file, &["do", "1"]), "done: 2026-09-01 Call the bank\n"),
+        (todo(&file, &["rm", "1"]), "removed: (C) Pay rent\n"),
+    ];
     let refused = [
         (todo(&file, &["add", "x Buy bread"]), "cannot add a task that is already done\n"),
         (
@@ -34,8 +37,13 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
 
     let (text, history) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
     std::fs::remove_dir_all(&folder).unwrap();
+    for (output, confirmation) in said {
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stdout), confirmation);
+    }
     for (output, error) in refused {
         assert!(!output.status.success());
+        assert!(output.stdout.is_empty());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
     assert_eq!(text, "x 2026-08-30 Typed by hand\n(B) 2026-09-02 Buy milk\n");
@@ -147,7 +155,7 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
         (todo(&file, &["reopen", "0"]), "no task numbered 0\n"),
     ];
     let untouched = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
-    assert!(todo(&file, &["reopen", "1"]).status.success());
+    let reopened = todo(&file, &["reopen", "1"]);
 
     let (text, left) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
     std::fs::remove_dir_all(&folder).unwrap();
@@ -155,6 +163,8 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+    assert!(reopened.status.success());
+    assert_eq!(String::from_utf8_lossy(&reopened.stdout), "reopened: 2026-09-02 Pay rent\n");
     assert_eq!(untouched, ("Buy milk\n".to_string(), history.to_string()));
     assert_eq!(text, "Buy milk\n2026-09-02 Pay rent\n");
     assert_eq!(left, "\nStray line\nx x Sell it\nx (A) 2026-09-05 Kept as written\nx 2026-09-06 \n");

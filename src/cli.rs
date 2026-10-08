@@ -12,19 +12,15 @@ pub struct Cli {
 /// Subcommands for the todo CLI.
 #[derive(Subcommand)]
 pub enum Commands {
-    /// List pending tasks (--all to include done ones, --done for done.txt), filtered by terms (-term excludes)
+    /// List pending tasks (--done for done.txt), filtered by terms (-term excludes)
     #[command(alias = "ls")]
     List {
-        /// Show all tasks, including done ones
-        #[arg(short, long)]
-        all: bool,
-
         /// Keep the pending tasks whose due date is today or past
         #[arg(long)]
         due: bool,
 
         /// List done.txt instead, in the order of the file
-        #[arg(long, conflicts_with_all = ["all", "due"])]
+        #[arg(long, conflicts_with = "due")]
         done: bool,
 
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
@@ -102,23 +98,18 @@ mod tests {
     #[test]
     fn list_flags_come_before_terms_which_may_start_with_a_dash() {
         let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
-            Some(Commands::List { all, terms, .. }) => (all, terms),
+            Some(Commands::List { due, terms, .. }) => (due, terms),
             _ => panic!("not a list command"),
         };
 
         assert_eq!(
-            terms_of(&["todo", "list", "--all", "+work", "-@home"]),
+            terms_of(&["todo", "list", "--due", "+work", "-@home"]),
             (true, vec!["+work".into(), "-@home".into()])
         );
         assert_eq!(
-            terms_of(&["todo", "list", "+work", "--all"]),
-            (false, vec!["+work".into(), "--all".into()])
+            terms_of(&["todo", "list", "+work", "--due"]),
+            (false, vec!["+work".into(), "--due".into()])
         );
-        assert!(matches!(
-            Cli::try_parse_from(["todo", "list", "+work", "--due"]).unwrap().command,
-            Some(Commands::List { due: false, .. })
-        ));
-        assert!(Cli::try_parse_from(["todo", "list", "--done", "--all"]).is_err());
         assert!(Cli::try_parse_from(["todo", "list", "--done", "--due"]).is_err());
     }
 }

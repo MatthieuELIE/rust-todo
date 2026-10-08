@@ -24,7 +24,6 @@ Tasks are numbered by their position in the file, so a filtered `list` shows gap
 todo add "Buy milk"           # append a task, stamped with today's date
 todo add "(A) Call the bank"  # with a priority
 todo list                     # pending tasks
-todo list --all               # including the done ones
 todo list +finance -@phone    # tasks with +finance and without @phone
 todo list --due               # pending tasks due today or overdue
 todo list --done              # the tasks of done.txt
@@ -40,6 +39,7 @@ Only `add`, `do`, `edit`, `reopen`, `remove`, `archive` and the interactive list
 `archive` moves there every done task still in the task file, one typed by hand or completed in the interactive list, in the order of the file, and says how many.
 `reopen` takes the number `list --done` shows, adds the task to the end of the task file and removes its line from `done.txt`.
 `done.txt` is created when it is missing and `do` and `archive` only add to it, which is not an atomic write; it is written first, so an interruption leaves a task in both files rather than in neither.
+`do`, `remove` and `reopen` print the task they handled, such as `done: (A) Call the bank`; `add` and `edit` print nothing.
 `ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` still works for `do`.
 
 ## Interactive list

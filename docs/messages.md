@@ -10,6 +10,7 @@ Messages go to stderr; stdout carries task lines, and the count `archive` gives,
 | --- | --- | --- |
 | `nothing to do` | `list` has no pending task to show | 0 |
 | `nothing due` | `list --due` has no pending task due today or before | 0 |
+| `nothing done` | `list --done` found no `done.txt`, or an empty one | 0 |
 | `no matching task` | `list` was given terms and no task has them | 0 |
 | `a task needs a description` | `add` or `edit` was given an empty text, or only a priority or a date | 1 |
 | `cannot add a task that is already done` | `add` was given a line starting with `x` | 1 |
@@ -22,7 +23,7 @@ Messages go to stderr; stdout carries task lines, and the count `archive` gives,
 | `cannot archive <path> into itself` | `archive` was run on a task file that is `done.txt` itself, or a link to it | 1 |
 | `task 2 is not done` | `reopen` was given the number of a pending task | 1 |
 | `task 2 cannot be reopened: its text starts with x` | `reopen` was given a done task with no creation date whose text starts with `x `: its line would still read as done | 1 |
-| `could not read <path>: <reason>` | the task file exists and cannot be read, or is not UTF-8 text | 1 |
+| `could not read <path>: <reason>` | the task file, or `done.txt` for `list --done`, exists and cannot be read, or is not UTF-8 text | 1 |
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive` | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `error: unrecognized subcommand`, `error: unexpected argument` | the command line itself is wrong | 2 |

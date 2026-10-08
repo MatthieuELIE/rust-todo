@@ -112,3 +112,81 @@ fn due_keeps_the_pending_tasks_due_today_or_before() {
     assert_eq!(String::from_utf8_lossy(&narrowed.stdout), "  4  (A) Fix the roof +house due:2020-06-01\n");
     assert_eq!(String::from_utf8_lossy(&none.stderr), "no matching task\n");
 }
+
+#[test]
+fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
+    let folder = std::env::temp_dir().join(format!("todo-{}-list-done", std::process::id()));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(folder.join("todo.txt"), "Buy milk +home\n").unwrap();
+    let history = "x 2026-09-01 Pay rent +home\nx 2026-09-02 Call the bank\n(A) Stray line +home\n";
+    std::fs::write(folder.join("done.txt"), history).unwrap();
+    let list = |args: &[&str]| {
+        Command::new(env!("CARGO_BIN_EXE_todo"))
+            .arg("list")
+            .args(args)
+            .env("TODO_FILE", folder.join("todo.txt"))
+            .output()
+            .unwrap()
+    };
+
+    let (all, narrowed, none) = (list(&["--done"]), list(&["--done", "+home"]), list(&["--done", "+garden"]));
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(
+        String::from_utf8_lossy(&all.stdout),
+        "  1  x 2026-09-01 Pay rent +home\n  2  x 2026-09-02 Call the bank\n  3  (A) Stray line +home\n"
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&narrowed.stdout),
+        "  1  x 2026-09-01 Pay rent +home\n  3  (A) Stray line +home\n"
+    );
+    assert!(none.status.success());
+    assert_eq!(String::from_utf8_lossy(&none.stderr), "no matching task\n");
+}
+
+#[test]
+fn done_without_a_done_txt_is_an_empty_list() {
+    let folder = std::env::temp_dir().join(format!("todo-{}-list-done-absent", std::process::id()));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(folder.join("todo.txt"), "Buy milk\n").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .args(["list", "--done"])
+        .env("TODO_FILE", folder.join("todo.txt"))
+        .output()
+        .unwrap();
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "nothing done\n");
+}
+
+#[test]
+fn done_reads_done_txt_only_and_fails_when_it_cannot_be_read() {
+    let folder = std::env::temp_dir().join(format!("todo-{}-list-done-unreadable", std::process::id()));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::create_dir(&folder).unwrap();
+    std::fs::write(folder.join("todo.txt"), b"\xff\n").unwrap();
+    std::fs::write(folder.join("done.txt"), "x 2026-09-01 Pay rent\n").unwrap();
+    let list = || {
+        Command::new(env!("CARGO_BIN_EXE_todo"))
+            .args(["list", "--done"])
+            .env("TODO_FILE", folder.join("todo.txt"))
+            .output()
+            .unwrap()
+    };
+
+    let listed = list();
+    std::fs::write(folder.join("done.txt"), b"\xff\n").unwrap();
+    let refused = list();
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(String::from_utf8_lossy(&listed.stdout), "  1  x 2026-09-01 Pay rent\n");
+    let error = String::from_utf8_lossy(&refused.stderr);
+    assert!(!refused.status.success());
+    assert!(refused.stdout.is_empty());
+    assert!(error.starts_with("could not read ") && error.contains("done.txt"), "{error}");
+}

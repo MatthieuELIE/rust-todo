@@ -28,6 +28,11 @@ use tui::App;
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
+    let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
+        path.with_file_name("done.txt")
+    } else {
+        path
+    };
 
     let (text, mut todos) = match repository::load(&path) {
         Ok(loaded) => loaded,
@@ -53,12 +58,21 @@ fn main() -> ExitCode {
 
     let mut archived = None;
     match command {
-        Commands::List { all, due, terms } => {
+        Commands::List { all, due, done, terms } => {
             let today = today();
-            let mut tasks = todo::list(&todos, all, &terms);
+            let mut tasks = todo::list(&todos, all || done, &terms);
             tasks.retain(|(_, todo)| !due || todo.is_due(today));
+            if done {
+                tasks.sort_by_key(|(number, _)| *number);
+            }
             if tasks.is_empty() {
-                let nothing = if due { "nothing due" } else { "nothing to do" };
+                let nothing = if due {
+                    "nothing due"
+                } else if done {
+                    "nothing done"
+                } else {
+                    "nothing to do"
+                };
                 eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
             let colour = std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty());

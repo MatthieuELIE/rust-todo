@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `todo archive` moves the done tasks of the task file to the end of `done.txt`, in the same folder, in the order of the file, and says how many. `done.txt` is created when it is missing; with no done task, it says `nothing to archive` and writes nothing.
+- `todo list --done` lists `done.txt` alone, in the order of the file and numbered by position in it, and takes terms. It does not combine with `--all` or `--due`; a missing `done.txt` is an empty list, `nothing done`.
 - `todo list --due` lists the pending tasks whose `due:` date is today or past, and combines with terms.
 - The filter panel has a `Due` entry under `All tasks` for those same tasks, shown only when there are some: red when one is overdue, yellow when they are all for today. A task added under it is due today unless its line holds a `due:` with a value.
 

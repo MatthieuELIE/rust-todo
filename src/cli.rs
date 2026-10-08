@@ -12,7 +12,7 @@ pub struct Cli {
 /// Subcommands for the todo CLI.
 #[derive(Subcommand)]
 pub enum Commands {
-    /// List pending tasks (--all to include done ones), filtered by terms (-term excludes)
+    /// List pending tasks (--all to include done ones, --done for done.txt), filtered by terms (-term excludes)
     #[command(alias = "ls")]
     List {
         /// Show all tasks, including done ones
@@ -22,6 +22,10 @@ pub enum Commands {
         /// Keep the pending tasks whose due date is today or past
         #[arg(long)]
         due: bool,
+
+        /// List done.txt instead, in the order of the file
+        #[arg(long, conflicts_with_all = ["all", "due"])]
+        done: bool,
 
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
         #[arg(allow_hyphen_values = true)]
@@ -114,5 +118,7 @@ mod tests {
             Cli::try_parse_from(["todo", "list", "+work", "--due"]).unwrap().command,
             Some(Commands::List { due: false, .. })
         ));
+        assert!(Cli::try_parse_from(["todo", "list", "--done", "--all"]).is_err());
+        assert!(Cli::try_parse_from(["todo", "list", "--done", "--due"]).is_err());
     }
 }

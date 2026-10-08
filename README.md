@@ -27,6 +27,7 @@ todo list                     # pending tasks
 todo list --all               # including the done ones
 todo list +finance -@phone    # tasks with +finance and without @phone
 todo list --due               # pending tasks due today or overdue
+todo list --done              # the tasks of done.txt
 todo do 2                     # mark task 2 as done
 todo edit 2 "(B) Oat milk"    # replace pending task 2, its creation date kept
 todo reopen 2                 # make done task 2 pending again

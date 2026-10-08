@@ -4,7 +4,7 @@ What `todo` says when something is refused or fails, on the command line and in 
 
 ## Command line
 
-Messages go to stderr; stdout carries task lines only.
+Messages go to stderr; stdout carries task lines, and the count `archive` gives, such as `2 tasks archived`.
 
 | Message | When | Exit code |
 | --- | --- | --- |
@@ -18,14 +18,17 @@ Messages go to stderr; stdout carries task lines only.
 | `task 2 is already done` | `do` was given the number of a done task | 1 |
 | `task 2 is done` | `edit` was given the number of a done task | 1 |
 | `cannot edit a task into a done one` | `edit` was given a line starting with `x` | 1 |
+| `nothing to archive` | `archive` found no done task in the file; nothing is written | 0 |
+| `cannot archive <path> into itself` | `archive` was run on a task file that is `done.txt` itself, or a link to it | 1 |
 | `task 2 is not done` | `reopen` was given the number of a pending task | 1 |
 | `task 2 cannot be reopened: its text starts with x` | `reopen` was given a done task with no creation date whose text starts with `x `: its line would still read as done | 1 |
 | `could not read <path>: <reason>` | the task file exists and cannot be read, or is not UTF-8 text | 1 |
-| `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written | 1 |
+| `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive` | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `error: unrecognized subcommand`, `error: unexpected argument` | the command line itself is wrong | 2 |
 
 A command that is refused leaves the file as it was.
+When `archive` has added to `done.txt` and the task file then cannot be saved, the done tasks are in both files: remove them from one by hand before running it again.
 A task file that does not exist is not an error: it is an empty list, and the first `add` creates it.
 
 When `todo` is run with no command and the file cannot be read, the message is also shown full screen until a key is pressed, so that a popup closing with the program does not hide it.

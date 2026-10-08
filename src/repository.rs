@@ -57,6 +57,17 @@ pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     written.map(|()| body)
 }
 
+/// Add the tasks to the end of a file, created if it is missing, without rewriting what it holds.
+pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
+    let mut body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
+    if read(path)?.chars().last().is_some_and(|last| last != '\n') {
+        body.insert(0, '\n');
+    }
+    let mut file = fs::OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
+    file.write_all(body.as_bytes())?;
+    file.sync_all()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

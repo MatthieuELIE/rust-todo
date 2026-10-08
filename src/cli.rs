@@ -65,6 +65,9 @@ pub enum Commands {
         /// Task number to reopen
         number: usize,
     },
+
+    /// Move the done tasks to the end of done.txt, next to the task file
+    Archive,
 }
 
 #[cfg(test)]

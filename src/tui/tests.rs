@@ -22,7 +22,7 @@ fn press(app: &mut App, keys: &str) -> bool {
 fn moved(app: &App) -> Vec<String> {
     let line = |moved: &Move| match moved {
         Move::Append(todo) => format!("+{}", todo.to_line()),
-        Move::Remove(todo) => format!("-{}", todo.to_line()),
+        Move::Remove(todo, _) => format!("-{}", todo.to_line()),
     };
     app.moves.iter().map(line).collect()
 }
@@ -1566,4 +1566,170 @@ fn a_save_failing_after_the_move_says_done_txt_holds_the_task() {
         message.starts_with("could not save: ") && message.ends_with(" (done.txt already holds the task)"),
         "{message}"
     );
+}
+
+#[test]
+fn r_in_the_history_reopens_the_task_under_the_cursor_as_todo_reopen_does_and_does_nothing_in_the_list() {
+    let mut app = history_of(&["one"], &["x 2026-09-20 old", "x 2026-09-25 2026-09-01 mid", "x 2026-09-26 new"]);
+
+    assert!(!press(&mut app, "r"));
+    press(&mut app, "Hj");
+    assert!(!app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::ALT), TODAY));
+    assert!(press(&mut app, "r"));
+
+    assert_eq!(lines(&app), ["one", "2026-09-01 mid"]);
+    assert_eq!(shown(&app), ["x 2026-09-26 new", "x 2026-09-20 old"]);
+    assert_eq!((app.cursor, app.message.as_deref(), app.refused), (1, Some("reopened"), false));
+}
+
+#[test]
+fn r_refuses_a_line_todo_reopen_refuses_in_its_words_with_its_number() {
+    let mut app = history_of(&["one"], &["Stray line", "x x Sell it", "x 2026-09-06 old"]);
+
+    assert!(!press(&mut app, "Hjr"));
+
+    let refusal = "task 2 cannot be reopened: its text starts with x";
+    assert_eq!((app.message.as_deref(), app.refused), (Some(refusal), true));
+    assert_eq!((lines(&app), app.history.len(), moved(&app).len()), (vec!["one".to_string()], 3, 0));
+}
+
+#[test]
+fn save_takes_the_reopened_line_out_of_done_txt_among_lines_reading_the_same_and_u_sends_it_back_to_its_end() {
+    let folder = folder("reopen");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::write(&done, "x 2026-09-20 dup\r\nx 2026-09-20 dup\n\nx 2026-09-21 other\nx 2026-09-20 dup\r\n").unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+    let read = |path| std::fs::read_to_string(path).unwrap();
+
+    app.refresh_history(&file);
+    press(&mut app, "Hjjr");
+    app.save(&file, &mut text);
+    app.refresh_history(&file);
+    let reopened = (read(&file), read(&done), shown(&app), app.cursor, app.message.clone());
+    press(&mut app, "Hu");
+    app.save(&file, &mut text);
+    let undone = (read(&file), read(&done), app.message.clone());
+    redo(&mut app);
+    app.save(&file, &mut text);
+    let redone = (read(&file), read(&done), app.message.clone());
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    let left = "x 2026-09-20 dup\r\n\nx 2026-09-21 other\nx 2026-09-20 dup\r\n";
+    let listed = ["x 2026-09-20 dup", "x 2026-09-21 other", "x 2026-09-20 dup"].map(String::from).to_vec();
+    assert_eq!(reopened, ("one\ndup\n".into(), left.into(), listed, 2, Some("reopened".into())));
+    assert_eq!(undone, ("one\n".into(), format!("{left}x 2026-09-20 dup\n"), Some("undone".into())));
+    assert_eq!(redone, ("one\ndup\n".into(), left.into(), Some("redone".into())));
+}
+
+#[test]
+fn a_reopen_writes_nothing_when_done_txt_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("reopen-refused");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::write(&done, "x 2026-09-20 old\n").unwrap();
+    std::fs::set_permissions(&done, std::fs::Permissions::from_mode(0o444)).unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+    let read = |path| std::fs::read_to_string(path).unwrap();
+
+    app.refresh_history(&file);
+    press(&mut app, "Hr");
+    app.save(&file, &mut text);
+    let refused = (
+        lines(&app),
+        read(&file),
+        read(&done),
+        app.refused,
+        app.message.clone().unwrap_or_default(),
+    );
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    let message = refused.4.clone();
+    assert!(
+        message.starts_with("could not save: ") && message.ends_with(" (file left unchanged)"),
+        "{message}"
+    );
+    assert_eq!(
+        (refused.0, refused.1, refused.2, refused.3),
+        (vec!["one".to_string()], "one\n".to_string(), "x 2026-09-20 old\n".to_string(), true)
+    );
+}
+
+#[test]
+fn a_reopened_line_ending_in_stray_carriage_returns_leaves_done_txt_and_comes_back_without_them() {
+    let folder = folder("reopen-cr");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::write(&done, "x 2026-09-20 old\r\r\nx 2026-09-21 new\r").unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+    let read = |path| std::fs::read_to_string(path).unwrap();
+
+    app.refresh_history(&file);
+    press(&mut app, "Hr");
+    app.save(&file, &mut text);
+    let last = (read(&file), read(&done), app.message.clone());
+    app.refresh_history(&file);
+    press(&mut app, "r");
+    app.save(&file, &mut text);
+    let first = (read(&file), read(&done), app.message.clone());
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(last, ("one\nnew\n".into(), "x 2026-09-20 old\r\r\n".into(), Some("reopened".into())));
+    assert_eq!(first, ("one\nnew\nold\n".into(), String::new(), Some("reopened".into())));
+}
+
+#[test]
+fn a_reopened_line_gone_from_done_txt_since_it_was_read_is_kept_and_said_so() {
+    let folder = folder("reopen-gone");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::write(&done, "x 2026-09-20 old\nx 2026-09-21 new\n").unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+
+    app.refresh_history(&file);
+    std::fs::write(&done, "x 2026-09-20 old\n").unwrap();
+    press(&mut app, "Hr");
+    app.save(&file, &mut text);
+    let files = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(files, ("one\nnew\n".to_string(), "x 2026-09-20 old\n".to_string()));
+    assert_eq!(
+        (app.message.as_deref(), app.refused),
+        (Some("reopened, the task was no longer in done.txt"), false)
+    );
+}
+
+#[test]
+fn u_after_a_reopen_whose_line_could_not_leave_done_txt_does_not_add_it_there_again() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("reopen-held");
+    let (file, locked) = (folder.join("todo.txt"), folder.join("locked"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("done.txt"), "x 2026-09-20 old\n").unwrap();
+    std::os::unix::fs::symlink(locked.join("done.txt"), folder.join("done.txt")).unwrap();
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+    let read = |path| std::fs::read_to_string(path).unwrap();
+
+    app.refresh_history(&file);
+    press(&mut app, "Hr");
+    app.save(&file, &mut text);
+    let held = (read(&file), app.refused, app.message.clone().unwrap_or_default());
+    press(&mut app, "Hu");
+    app.save(&file, &mut text);
+    let undone = (read(&file), read(&locked.join("done.txt")));
+
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(held.2.starts_with("reopened, but done.txt still holds the task: "), "{}", held.2);
+    assert_eq!((held.0, held.1), ("one\nold\n".to_string(), true));
+    assert_eq!(undone, ("one\n".to_string(), "x 2026-09-20 old\n".to_string()));
 }

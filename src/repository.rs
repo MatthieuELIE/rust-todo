@@ -14,7 +14,8 @@ pub fn read(path: &Path) -> io::Result<String> {
 
 /// Parse the tasks of a todo file's text, its blank lines dropped.
 pub fn parse(text: &str) -> Vec<Todo> {
-    text.lines().filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect()
+    let lines = text.split('\n').map(|line| line.trim_end_matches('\r'));
+    lines.filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect()
 }
 
 /// Load the todo list from a file along with its raw text, both empty if the file is missing.
@@ -72,11 +73,14 @@ pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     file.sync_all()
 }
 
-/// Remove the last line of a file equal to `line`, the others kept as written, and tell whether there was one.
-pub fn remove_last(path: &Path, line: &str) -> io::Result<bool> {
+/// Remove from a file its task `number` when it reads as `line`, else its last line that does, the others kept as written, and tell whether there was one.
+pub fn remove_task(path: &Path, number: Option<usize>, line: &str) -> io::Result<bool> {
     let text = read(path)?;
     let mut lines: Vec<&str> = text.split_inclusive('\n').collect();
-    let Some(index) = lines.iter().rposition(|l| l.trim_end_matches(['\n', '\r']) == line) else {
+    let reads = |i: &usize| Todo::from_line(lines[*i].trim_end_matches(['\n', '\r'])).to_line() == line;
+    let mut tasks = (0..lines.len()).filter(|&i| !lines[i].trim().is_empty());
+    let numbered = number.and_then(|number| tasks.clone().nth(number - 1)).filter(reads);
+    let Some(index) = numbered.or_else(|| tasks.rfind(reads)) else {
         return Ok(false);
     };
     lines.remove(index);

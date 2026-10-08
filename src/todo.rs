@@ -90,18 +90,24 @@ impl Todo {
     }
 
     /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
-    /// Returns `false`, the task untouched, when its line would still read as done.
-    pub fn reopen(&mut self) -> bool {
+    /// Refused with the reason, the task untouched, when it is not done, its line would still read as done or it has no description.
+    pub fn reopen(&mut self) -> Result<(), &'static str> {
+        if !self.done {
+            return Err("is not done");
+        }
         let pending = Todo {
             done: false,
             completed: None,
             ..self.clone()
         };
         if Todo::from_line(&pending.to_line()).done {
-            return false;
+            return Err("cannot be reopened: its text starts with x");
+        }
+        if pending.description.trim().is_empty() {
+            return Err("cannot be reopened: it has no description");
         }
         *self = pending;
-        true
+        Ok(())
     }
 
     /// `+project` names in the description, without the `+`, once each in order of appearance.
@@ -329,7 +335,7 @@ mod tests {
         let mut task = Todo::from_line("(A) 2026-08-01 Lorem ipsum");
         task.complete(date!(2026 - 09 - 01));
 
-        task.reopen();
+        task.reopen().unwrap();
 
         assert_eq!(task.to_line(), "2026-08-01 Lorem ipsum");
     }
@@ -338,7 +344,7 @@ mod tests {
     fn a_task_whose_line_would_still_read_as_done_is_not_reopened() {
         let mut task = Todo::from_line("x 2026-09-03 x Lorem");
 
-        assert!(!task.reopen());
+        assert!(task.reopen().is_err());
 
         assert_eq!(task.to_line(), "x 2026-09-03 x Lorem");
     }

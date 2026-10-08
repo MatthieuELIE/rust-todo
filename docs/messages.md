@@ -47,11 +47,13 @@ A red one says that something was refused or failed; a grey one only says what h
 | `priority is a to e, or space` | red | the key after `p` was not a priority |
 | `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u` or `Ctrl-R` was pressed in the history, the list of `done.txt` shown by `H` |
 | `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, or is not UTF-8 text, when the list opens or at `H`; the history is then empty |
-| `undone, the task was no longer in done.txt` | grey | `u` brought back a completed task whose line was not found in `done.txt`; nothing is lost |
-| `undone, but done.txt still holds the task: <reason>` | red | `u` brought back a completed task and `done.txt` could not be read or written: the task is in both files |
+| `task 2 is not done`, `task 2 cannot be reopened: its text starts with x`, `task 2 cannot be reopened: it has no description` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
+| `reopened` | grey | `r` brought a task of the history back to the task file |
+| `undone, the task was no longer in done.txt`, `reopened, the task was no longer in done.txt` | grey | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
+| `undone, but done.txt still holds the task: <reason>`, `reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files |
 | `a task needs a description` | red | the popup was saved with nothing but a priority or dates |
 | `cannot add a task that is already done` | red | a task added in the popup starts with `x` |
-| `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x` and for an `x` typed in the popup, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
+| `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
 | `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving; the change stays on screen and is saved with the next one, once the file reads again |
 | `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
 | `reloaded` | grey | the file changed on disk; the key pressed at that moment was ignored |

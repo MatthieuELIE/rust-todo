@@ -19,6 +19,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `za` | fold or unfold the group under the cursor |
 | `/` | search, filtering at each letter |
 | `H` | show the history, the tasks of `done.txt`, or go back to the list |
+| `r` | in the history, reopen the task: it moves back to the task file |
 | `Tab` | move to the filter panel |
 | `Esc` | drop the filter and the search |
 | `?` | show the keys |
@@ -55,7 +56,9 @@ The history is not saved: it is lost when the list closes or the file is reloade
 The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
 Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
 The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way.
-The history is read-only: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`. `todo reopen` brings a task back.
+The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`.
+`r` reopens the task under the cursor, as `todo reopen` does with its number: the task goes to the end of the task file, pending and without its completion date, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`. A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words. Outside the history `r` does nothing.
+A reopen is undone from the list, not from the history: after `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.
 `done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
 A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or an empty one, the list says `nothing done`.
 

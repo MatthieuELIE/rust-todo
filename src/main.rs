@@ -160,16 +160,8 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             };
             let mut todo = Todo::from_line(lines.remove(index).trim_end_matches(['\n', '\r']));
-            if !todo.done {
-                eprintln!("task {number} is not done");
-                return ExitCode::FAILURE;
-            }
-            if !todo.reopen() {
-                eprintln!("task {number} cannot be reopened: its text starts with x");
-                return ExitCode::FAILURE;
-            }
-            if todo.description.trim().is_empty() {
-                eprintln!("task {number} cannot be reopened: it has no description");
+            if let Err(reason) = todo.reopen() {
+                eprintln!("task {number} {reason}");
                 return ExitCode::FAILURE;
             }
             if let Err(e) = std::fs::OpenOptions::new().write(true).open(&done_path) {

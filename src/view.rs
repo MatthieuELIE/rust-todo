@@ -93,6 +93,7 @@ zM/zR        fold, unfold all
 za           fold, unfold group
 /            search
 H            show, hide history
+r            reopen, in the history
 Tab          panel
 Esc          drop filter and search
 ?            these keys

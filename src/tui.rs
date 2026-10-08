@@ -57,11 +57,12 @@ pub enum Focus {
 }
 
 /// What a change asks of `done.txt`, which is never rewritten from a copy held here.
+#[derive(Clone)]
 pub enum Move {
     /// Add this done task at its end.
     Append(Todo),
-    /// Take the last line equal to this done task out of it.
-    Remove(Todo),
+    /// Take this done task out of it: the task with this number when `r` reopened it, else the last line reading as it.
+    Remove(Todo, Option<usize>),
 }
 
 /// A group of the list, in display order.
@@ -125,10 +126,10 @@ pub struct App {
     pub filter: Option<String>,
     /// Groups shown folded, as their header alone.
     folded: Vec<Group>,
-    /// Tasks as they were before each change, the latest last, with the task the change moved to `done.txt`.
-    undo: Vec<(Vec<Todo>, Option<Todo>)>,
-    /// Tasks as they were before each `u`, the latest last, with the task `u` took back from `done.txt`.
-    redo: Vec<(Vec<Todo>, Option<Todo>)>,
+    /// Tasks as they were before each change, the latest last, with what the change asked of `done.txt`.
+    undo: Vec<(Vec<Todo>, Option<Move>)>,
+    /// Tasks as they were before each `u`, the latest last, with what the change undone asked of `done.txt`.
+    redo: Vec<(Vec<Todo>, Option<Move>)>,
     /// Moves not yet applied to `done.txt`, the oldest first.
     moves: Vec<Move>,
     /// Tasks of `done.txt` in file order, as last read.
@@ -330,11 +331,7 @@ impl App {
         let write = self.apply(key, today);
         self.forget_gone_folds();
         if write && history == (self.undo.len(), self.redo.len()) {
-            let moved = match self.moves.get(queued) {
-                Some(Move::Append(todo)) => Some(todo.clone()),
-                _ => None,
-            };
-            self.undo.push((before, moved));
+            self.undo.push((before, self.moves.get(queued).cloned()));
             self.redo.clear();
         }
         write
@@ -539,6 +536,11 @@ impl App {
             KeyCode::Char('z') => self.pending = Some('z'),
             KeyCode::Char('u') => write = self.step(true),
             KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
+            KeyCode::Char('r') if self.in_history && key.modifiers.is_empty() => {
+                if let Some(number) = selected {
+                    write = self.reopen(number);
+                }
+            }
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
             KeyCode::Char('g') => self.pending = Some('g'),
             KeyCode::Char('G') => self.cursor = last,
@@ -692,6 +694,19 @@ impl App {
         true
     }
 
+    /// Brings task `number` of the history back, pending, at the end of the tasks, as `todo reopen` does and refuses.
+    fn reopen(&mut self, number: usize) -> bool {
+        let mut todo = self.history[number - 1].clone();
+        if let Err(reason) = todo.reopen() {
+            self.refuse(&format!("task {number} {reason}"));
+            return false;
+        }
+        self.todos.push(todo);
+        self.moves.push(Move::Remove(self.history.remove(number - 1), Some(number)));
+        self.message = Some("reopened".to_string());
+        true
+    }
+
     /// Leaves `message` in the status bar as a refusal.
     pub fn refuse(&mut self, message: &str) {
         self.message = Some(message.to_string());
@@ -715,7 +730,11 @@ impl App {
         match from.pop() {
             Some((todos, moved)) => {
                 to.push((std::mem::replace(&mut self.todos, todos), moved.clone()));
-                self.moves.extend(moved.map(if back { Move::Remove } else { Move::Append }));
+                self.moves.extend(moved.map(|moved| match moved {
+                    Move::Append(todo) if back => Move::Remove(todo, None),
+                    Move::Remove(todo, _) if back => Move::Append(todo),
+                    moved => moved,
+                }));
                 self.message = Some(done.to_string());
                 true
             }
@@ -744,14 +763,14 @@ impl App {
         false
     }
 
-    /// The save `turn` asked for, destination first: the tasks completed go to the end of `done.txt`, the list is saved to `path`, then the tasks `u` brought back leave `done.txt`.
+    /// The save `turn` asked for, destination first: the tasks completed go to the end of `done.txt`, the list is saved to `path`, then the tasks `u` or `r` brought back leave `done.txt`.
     pub fn save(&mut self, path: &Path, text: &mut String) {
         let done_path = path.with_file_name("done.txt");
         let (mut gone, mut back) = (Vec::new(), Vec::new());
         for moved in std::mem::take(&mut self.moves) {
             match moved {
                 Move::Append(todo) => gone.push(todo),
-                Move::Remove(todo) => back.push(todo),
+                Move::Remove(todo, number) => back.push((todo, number)),
             }
         }
         self.history_read &= gone.is_empty() && back.is_empty();
@@ -759,11 +778,15 @@ impl App {
             Ok(())
         } else if repository::same_file(path, &done_path) {
             Err(io::Error::other("the task file is done.txt itself"))
-        } else if gone.is_empty() {
-            Ok(())
         } else {
-            let writable = std::fs::OpenOptions::new().write(true).open(path);
-            writable.and_then(|_| repository::append(&done_path, &gone))
+            let writable = |path: &Path| std::fs::OpenOptions::new().write(true).open(path).map(drop);
+            let reopens = back.iter().any(|(_, number)| number.is_some());
+            let checked = if reopens { writable(&done_path) } else { Ok(()) };
+            if gone.is_empty() {
+                checked
+            } else {
+                checked.and_then(|()| writable(path)).and_then(|()| repository::append(&done_path, &gone))
+            }
         };
         let moved = !gone.is_empty() && appended.is_ok();
         let written = appended.and_then(|()| repository::save(path, &self.todos));
@@ -775,11 +798,21 @@ impl App {
         {
             self.refuse(&format!("could not save: {e} (done.txt already holds the task)"));
         }
-        for todo in back.iter().filter(|_| saved) {
-            match repository::remove_last(&done_path, &todo.to_line()) {
+        for (todo, number) in back.iter().filter(|_| saved) {
+            let verb = if number.is_some() { "reopened" } else { "undone" };
+            match repository::remove_task(&done_path, *number, &todo.to_line()) {
                 Ok(true) => {}
-                Ok(false) => self.message = Some("undone, the task was no longer in done.txt".to_string()),
-                Err(e) => self.refuse(&format!("undone, but done.txt still holds the task: {e}")),
+                Ok(false) => self.message = Some(format!("{verb}, the task was no longer in done.txt")),
+                Err(e) => {
+                    if number.is_some()
+                        && back.len() == 1
+                        && gone.is_empty()
+                        && let Some(reopen) = self.undo.last_mut()
+                    {
+                        reopen.1 = None;
+                    }
+                    self.refuse(&format!("{verb}, but done.txt still holds the task: {e}"));
+                }
             }
         }
     }

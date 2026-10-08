@@ -45,11 +45,14 @@ A red one says that something was refused or failed; a grey one only says what h
 | Message | Colour | When |
 | --- | --- | --- |
 | `priority is a to e, or space` | red | the key after `p` was not a priority |
-| `cannot reopen a task whose text starts with x` | red | `x` was pressed on a done task with no creation date whose text starts with `x `: its line would still read as done |
+| `already done: todo archive moves it to done.txt` | red | `x` was pressed on a done task still in the task file |
+| `undone, the task was no longer in done.txt` | grey | `u` brought back a completed task whose line was not found in `done.txt`; nothing is lost |
+| `undone, but done.txt still holds the task: <reason>` | red | `u` brought back a completed task and `done.txt` could not be read or written: the task is in both files |
 | `a task needs a description` | red | the popup was saved with nothing but a priority or dates |
 | `cannot add a task that is already done` | red | a task added in the popup starts with `x` |
-| `could not save: <reason> (file left unchanged)` | red | the file could not be written; the list goes back to what the file holds |
+| `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
 | `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving; the change stays on screen and is saved with the next one, once the file reads again |
+| `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
 | `reloaded` | grey | the file changed on disk; the key pressed at that moment was ignored |
 | `reloaded, edit cancelled` | grey | the file changed on disk while a task was being edited |
 | `added, hidden by the filter` | grey | the task added does not match the search |

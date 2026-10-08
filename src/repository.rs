@@ -72,6 +72,22 @@ pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     file.sync_all()
 }
 
+/// Remove the last line of a file equal to `line`, the others kept as written, and tell whether there was one.
+pub fn remove_last(path: &Path, line: &str) -> io::Result<bool> {
+    let text = read(path)?;
+    let mut lines: Vec<&str> = text.split_inclusive('\n').collect();
+    let Some(index) = lines.iter().rposition(|l| l.trim_end_matches(['\n', '\r']) == line) else {
+        return Ok(false);
+    };
+    lines.remove(index);
+    write(path, lines.concat()).map(|_| true)
+}
+
+/// Whether both paths lead to one existing file.
+pub fn same_file(a: &Path, b: &Path) -> bool {
+    fs::canonicalize(a).is_ok_and(|a| fs::canonicalize(b).is_ok_and(|b| a == b))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

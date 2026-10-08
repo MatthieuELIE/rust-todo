@@ -57,9 +57,7 @@ fn main() -> ExitCode {
     };
 
     let done_path = path.with_file_name("done.txt");
-    if matches!(command, Commands::Archive | Commands::Reopen { .. } | Commands::Do { .. })
-        && std::fs::canonicalize(&done_path).is_ok_and(|done| std::fs::canonicalize(&path).is_ok_and(|todo| todo == done))
-    {
+    if matches!(command, Commands::Archive | Commands::Reopen { .. } | Commands::Do { .. }) && repository::same_file(&path, &done_path) {
         eprintln!("the task file is done.txt itself: {}", path.display());
         return ExitCode::FAILURE;
     }
@@ -279,8 +277,7 @@ fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
                 None
             };
             if app.turn(repository::read(path), &mut text, event, today()) {
-                let written = repository::save(path, &app.todos);
-                app.saved(written, &mut text, repository::read(path));
+                app.save(path, &mut text);
             }
         }
         execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)

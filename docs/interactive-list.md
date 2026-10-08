@@ -11,7 +11,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `gg`, `G` | top, bottom |
 | `Enter` | edit the task in the popup |
 | `o` | add a task in the popup, typed as for `todo add` |
-| `x` | mark done, or pending again |
+| `x` | complete: the task moves to `done.txt` |
 | `dd` | delete |
 | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |
 | `u`, `Ctrl-R` | undo, redo |
@@ -26,7 +26,8 @@ Adding and editing a task happen in [the popup](popup.md).
 
 `gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
-A task marked pending again with `x` loses its completion date and does not get back the priority dropped when it was done, but `u` brings it back.
+`x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
+On a done task still in the task file, shown by `H`, `x` is refused: `todo archive` moves it.
 `p` leaves a done task alone, since todo.txt drops the priority of a completed task.
 `?` shows every key, grouped by mode, and any key closes it.
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
@@ -44,7 +45,9 @@ While a command waits for its end, in the list or the popup, the keys typed so f
 ## Undo
 
 `u` steps back through the changes made since the list was opened, and `Ctrl-R` steps forward again.
-Each step restores the whole list, so undoing `x` brings back the priority dropped when the task was done.
+Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
+Undoing `x` also reads `done.txt` again and takes out its last line equal to the task; when the line is no longer there the task comes back all the same and the status bar says so. `Ctrl-R` sends it to `done.txt` again.
+`done.txt` is not watched: a change made to it elsewhere shows at the next read.
 The history is not saved: it is lost when the list closes or the file is reloaded.
 
 ## Priority groups

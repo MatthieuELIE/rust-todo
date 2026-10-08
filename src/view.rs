@@ -84,7 +84,7 @@ j/k/↓/↑      move
 gg/G         top, bottom
 Enter        edit
 o            add
-x            done, not done
+x            done: moves to done.txt
 dd           delete
 p a…e        priority
 p Space      no priority

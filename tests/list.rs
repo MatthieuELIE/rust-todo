@@ -45,21 +45,18 @@ fn without_todo_file_the_list_is_todo_txt_in_the_home_folder() {
 }
 
 #[test]
-fn a_piped_listing_carries_no_colour_codes() {
+fn a_piped_listing_carries_no_colour_codes_nor_the_done_tasks() {
     let file = std::env::temp_dir().join(format!("todo-{}-colour.txt", std::process::id()));
     std::fs::write(&file, "(A) Call the bank\nx 2026-09-03 Buy milk\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
-        .args(["list", "--all"])
+        .arg("list")
         .env("TODO_FILE", &file)
         .output()
         .unwrap();
     std::fs::remove_file(&file).unwrap();
 
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
-        "  1  (A) Call the bank\n  2  x 2026-09-03 Buy milk\n"
-    );
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  1  (A) Call the bank\n");
 }
 
 #[test]
@@ -95,7 +92,7 @@ fn due_keeps_the_pending_tasks_due_today_or_before() {
             .unwrap()
     };
 
-    let due = list(&["--all", "--due"]);
+    let due = list(&["--due"]);
     let narrowed = list(&["--due", "+house"]);
     let none = list(&["--due", "+garden"]);
     std::fs::write(&file, "Buy milk due:2999-01-01\n").unwrap();
@@ -189,4 +186,29 @@ fn done_reads_done_txt_only_and_fails_when_it_cannot_be_read() {
     assert!(!refused.status.success());
     assert!(refused.stdout.is_empty());
     assert!(error.starts_with("could not read ") && error.contains("done.txt"), "{error}");
+}
+
+#[test]
+fn the_former_all_flag_is_refused_rather_than_read_as_a_term() {
+    let file = std::env::temp_dir().join(format!("todo-{}-all.txt", std::process::id()));
+    std::fs::write(&file, "Call the bank\n").unwrap();
+    let list = |flag: &str| {
+        Command::new(env!("CARGO_BIN_EXE_todo"))
+            .args(["list", flag])
+            .env("TODO_FILE", &file)
+            .output()
+            .unwrap()
+    };
+
+    let outputs = [list("--all"), list("-a")];
+
+    std::fs::remove_file(&file).unwrap();
+    for output in outputs {
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "--all is gone: list shows the pending tasks, list --done the done ones\n"
+        );
+    }
 }

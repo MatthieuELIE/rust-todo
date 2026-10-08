@@ -7,15 +7,20 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `do`, `remove` and `reopen` print the task they handled on stdout, `done: (A) Call the bank`, coloured as `list` on a terminal; they used to print nothing, as `add` and `edit` still do.
 - `todo do <number>` moves the completed task to the end of `done.txt` instead of leaving it, marked done, in the task file: the tasks after it move up one number, and `todo list --done` shows it. The interactive list still marks a task done in place.
 - `todo reopen <number>` now takes a number of `done.txt`, the one `todo list --done` shows: the task is added to the end of the task file, pending again, and its line is removed from `done.txt`, whose other lines are left as written. A done task still in the task file is no longer reopened there: `todo archive` moves it first.
 
 ### Added
 
 - `todo archive` moves the done tasks of the task file to the end of `done.txt`, in the same folder, in the order of the file, and says how many. `done.txt` is created when it is missing; with no done task, it says `nothing to archive` and writes nothing.
-- `todo list --done` lists `done.txt` alone, in the order of the file and numbered by position in it, and takes terms. It does not combine with `--all` or `--due`; a missing `done.txt` is an empty list, `nothing done`.
+- `todo list --done` lists `done.txt` alone, in the order of the file and numbered by position in it, and takes terms. It does not combine with `--due`; a missing `done.txt` is an empty list, `nothing done`.
 - `todo list --due` lists the pending tasks whose `due:` date is today or past, and combines with terms.
 - The filter panel has a `Due` entry under `All tasks` for those same tasks, shown only when there are some: red when one is overdue, yellow when they are all for today. A task added under it is due today unless its line holds a `due:` with a value.
+
+### Removed
+
+- `todo list --all`: `list` shows pending tasks only and `todo list --done` shows the history. A done task still in the task file is not listed until `todo archive` moves it. `todo list --all` and `todo list -a` are refused with a message and exit code 2, rather than read as terms that would hide tasks.
 
 ## [0.3.0] - 2026-10-07
 

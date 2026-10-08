@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `todo reopen <number>` now takes a number of `done.txt`, the one `todo list --done` shows: the task is added to the end of the task file, pending again, and its line is removed from `done.txt`, whose other lines are left as written. A done task still in the task file is no longer reopened there: `todo archive` moves it first.
+
 ### Added
 
 - `todo archive` moves the done tasks of the task file to the end of `done.txt`, in the same folder, in the order of the file, and says how many. `done.txt` is created when it is missing; with no done task, it says `nothing to archive` and writes nothing.

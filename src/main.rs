@@ -56,7 +56,16 @@ fn main() -> ExitCode {
         };
     };
 
+    let done_path = path.with_file_name("done.txt");
+    if matches!(command, Commands::Archive | Commands::Reopen { .. })
+        && std::fs::canonicalize(&done_path).is_ok_and(|done| std::fs::canonicalize(&path).is_ok_and(|todo| todo == done))
+    {
+        eprintln!("the task file is done.txt itself: {}", path.display());
+        return ExitCode::FAILURE;
+    }
+
     let mut archived = None;
+    let mut history = None;
     match command {
         Commands::List { all, due, done, terms } => {
             let today = today();
@@ -94,9 +103,7 @@ fn main() -> ExitCode {
             }
         },
 
-        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } | Commands::Reopen { number }
-            if !(1..=todos.len()).contains(&number) =>
-        {
+        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } if !(1..=todos.len()).contains(&number) => {
             eprintln!("no task numbered {number}");
             return ExitCode::FAILURE;
         }
@@ -135,16 +142,39 @@ fn main() -> ExitCode {
             }
         },
 
-        Commands::Reopen { number } if !todos[number - 1].done => {
-            eprintln!("task {number} is not done");
-            return ExitCode::FAILURE;
-        }
-
         Commands::Reopen { number } => {
-            if !todos[number - 1].reopen() {
+            let text = match repository::read(&done_path) {
+                Ok(text) => text,
+                Err(e) => {
+                    eprintln!("could not read {}: {e}", done_path.display());
+                    return ExitCode::FAILURE;
+                }
+            };
+            let mut lines: Vec<&str> = text.split_inclusive('\n').collect();
+            let mut tasks = (0..lines.len()).filter(|&i| !lines[i].trim().is_empty());
+            let Some(index) = tasks.nth(number.wrapping_sub(1)) else {
+                eprintln!("no task numbered {number}");
+                return ExitCode::FAILURE;
+            };
+            let mut todo = Todo::from_line(lines.remove(index).trim_end_matches(['\n', '\r']));
+            if !todo.done {
+                eprintln!("task {number} is not done");
+                return ExitCode::FAILURE;
+            }
+            if !todo.reopen() {
                 eprintln!("task {number} cannot be reopened: its text starts with x");
                 return ExitCode::FAILURE;
             }
+            if todo.description.trim().is_empty() {
+                eprintln!("task {number} cannot be reopened: it has no description");
+                return ExitCode::FAILURE;
+            }
+            if let Err(e) = std::fs::OpenOptions::new().write(true).open(&done_path) {
+                eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+                return ExitCode::FAILURE;
+            }
+            todos.push(todo);
+            history = Some(lines.concat());
         }
 
         Commands::Archive => {
@@ -152,11 +182,6 @@ fn main() -> ExitCode {
             if done.is_empty() {
                 eprintln!("nothing to archive");
                 return ExitCode::SUCCESS;
-            }
-            let done_path = path.with_file_name("done.txt");
-            if std::fs::canonicalize(&done_path).is_ok_and(|done| std::fs::canonicalize(&path).is_ok_and(|todo| todo == done)) {
-                eprintln!("cannot archive {} into itself", path.display());
-                return ExitCode::FAILURE;
             }
             if let Err(e) = repository::append(&done_path, &done) {
                 eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
@@ -169,6 +194,12 @@ fn main() -> ExitCode {
 
     if let Err(e) = repository::save(&path, &todos) {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
+        return ExitCode::FAILURE;
+    }
+    if let Some(body) = history
+        && let Err(e) = repository::write(&done_path, body)
+    {
+        eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
         return ExitCode::FAILURE;
     }
     if let Some(count) = archived {

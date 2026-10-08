@@ -45,6 +45,7 @@ A paste goes in at the cursor as one line, its line breaks and other control cha
 ## Completion
 
 While a word starting with `+`, `@` or `wait:` is typed, a drop-down lists the projects, contexts or `wait:` values of the whole file, done tasks included, that start like it whatever the case, the most used first.
+The names of `done.txt` are listed too, so a project whose tasks are all done can still be picked: only the task file is counted, and a name found in `done.txt` alone comes last, with 0.
 `↓` `↑` or `Ctrl-N` `Ctrl-P` pick one, and `Tab` writes it in place of the word, followed by a space; `Esc` and `Enter` keep their meaning.
 
 ## Date picker

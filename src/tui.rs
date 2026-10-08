@@ -287,7 +287,7 @@ impl App {
         filters
     }
 
-    /// Names completing the popup's tag, from every task, with their counts, most used first; and the row picked among them.
+    /// Names completing the popup's tag, from the task file and `done.txt`, with their counts in the task file, most used first; and the row picked.
     pub fn completions(&self) -> (Vec<(String, usize)>, usize) {
         let Focus::Popup(popup) = &self.focus else {
             return Default::default();
@@ -303,6 +303,9 @@ impl App {
         let mut counts = HashMap::new();
         for name in self.todos.iter().flat_map(names) {
             *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
+        }
+        for name in self.history.iter().flat_map(names) {
+            counts.entry(format!("{sigil}{name}")).or_insert(0);
         }
         let tag = tag.to_lowercase();
         let mut names: Vec<(String, usize)> = counts.into_iter().filter(|(name, _)| name.to_lowercase().starts_with(&tag)).collect();
@@ -751,6 +754,7 @@ impl App {
                 Move::Remove(todo) => back.push(todo),
             }
         }
+        self.history_read &= gone.is_empty() && back.is_empty();
         let appended = if gone.is_empty() && back.is_empty() {
             Ok(())
         } else if repository::same_file(path, &done_path) {
@@ -793,17 +797,19 @@ impl App {
         }
     }
 
-    /// Reads `done.txt`, next to the task file at `path`, when it was not read since the list opened, the last `H` or the last reload.
+    /// Reads `done.txt`, next to the task file at `path`, when it was not read since the list opened, the last `H`, the last reload or the last save that moved a task.
     pub fn refresh_history(&mut self, path: &Path) {
         if !std::mem::replace(&mut self.history_read, true) {
             self.set_history(repository::read(&path.with_file_name("done.txt")));
         }
     }
 
-    /// Takes the tasks of `done.txt`, `read` just now, as the history; a failed read empties it and is told.
+    /// Takes the tasks of `done.txt`, `read` just now, as the history; a failed read empties it and is told, unless a refusal is already shown.
     pub fn set_history(&mut self, read: io::Result<String>) {
         self.history = repository::parse(&read.unwrap_or_else(|e| {
-            self.refuse(&format!("could not read done.txt: {e}"));
+            if !self.refused {
+                self.refuse(&format!("could not read done.txt: {e}"));
+            }
             String::new()
         }));
     }

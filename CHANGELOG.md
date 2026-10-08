@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- `todo do <number>` moves the completed task to the end of `done.txt` instead of leaving it, marked done, in the task file: the tasks after it move up one number, and `todo list --done` shows it. The interactive list still marks a task done in place.
 - `todo reopen <number>` now takes a number of `done.txt`, the one `todo list --done` shows: the task is added to the end of the task file, pending again, and its line is removed from `done.txt`, whose other lines are left as written. A done task still in the task file is no longer reopened there: `todo archive` moves it first.
 
 ### Added

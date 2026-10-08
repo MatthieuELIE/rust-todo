@@ -16,22 +16,22 @@ Messages go to stderr; stdout carries task lines, and the count `archive` gives,
 | `cannot add a task that is already done` | `add` was given a line starting with `x` | 1 |
 | `a task is one line, without control characters` | `add` or `edit` was given a text holding a line break, a tab or an escape character | 1 |
 | `no task numbered 9` | `do`, `edit` or `remove` was given a number that is not in the task file, or `reopen` one that is not in `done.txt` | 1 |
-| `task 2 is already done` | `do` was given the number of a done task | 1 |
+| `task 2 is already done` | `do` was given the number of a done task still in the task file: `archive` moves it | 1 |
 | `task 2 is done` | `edit` was given the number of a done task | 1 |
 | `cannot edit a task into a done one` | `edit` was given a line starting with `x` | 1 |
 | `nothing to archive` | `archive` found no done task in the file; nothing is written | 0 |
-| `the task file is done.txt itself: <path>` | `archive` or `reopen` was run on a task file that is `done.txt` itself, or a link to it | 1 |
+| `the task file is done.txt itself: <path>` | `archive`, `do` or `reopen` was run on a task file that is `done.txt` itself, or a link to it | 1 |
 | `task 2 is not done` | `reopen` was given the number of a line of `done.txt` that is not a done task | 1 |
 | `task 2 cannot be reopened: its text starts with x` | `reopen` was given a done task with no creation date whose text starts with `x `: its line would still read as done | 1 |
 | `task 2 cannot be reopened: it has no description` | `reopen` was given a line of `done.txt` holding nothing but `x` and dates: it would become an empty line | 1 |
 | `could not read <path>: <reason>` | the task file, or `done.txt` for `list --done` and `reopen`, exists and cannot be read, or is not UTF-8 text | 1 |
-| `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive` and `reopen` | 1 |
+| `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive`, `do` and `reopen` | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `error: unrecognized subcommand`, `error: unexpected argument` | the command line itself is wrong | 2 |
 
 A command that is refused leaves the file as it was.
-When `archive` has added to `done.txt` and the task file then cannot be saved, the done tasks are in both files: remove them from one by hand before running it again.
-The same holds for `reopen` when the task file was saved and `done.txt` then cannot be: the task is pending in the task file and still in `done.txt`. A `done.txt` that may not be written is refused before the task file is touched.
+When `archive` or `do` has added to `done.txt` and the task file then cannot be saved, the done tasks are in both files: remove them from one by hand before running it again.
+The same holds for `reopen` when the task file was saved and `done.txt` then cannot be: the task is pending in the task file and still in `done.txt`. A `done.txt` that may not be written is refused before the task file is touched, and so is a task file that may not be written before `archive` or `do` adds to `done.txt`; a folder that may not be written is only found out at the second write.
 A task file that does not exist is not an error: it is an empty list, and the first `add` creates it.
 
 When `todo` is run with no command and the file cannot be read, the message is also shown full screen until a key is pressed, so that a popup closing with the program does not hide it.

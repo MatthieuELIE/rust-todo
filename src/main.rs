@@ -57,7 +57,7 @@ fn main() -> ExitCode {
     };
 
     let done_path = path.with_file_name("done.txt");
-    if matches!(command, Commands::Archive | Commands::Reopen { .. })
+    if matches!(command, Commands::Archive | Commands::Reopen { .. } | Commands::Do { .. })
         && std::fs::canonicalize(&done_path).is_ok_and(|done| std::fs::canonicalize(&path).is_ok_and(|todo| todo == done))
     {
         eprintln!("the task file is done.txt itself: {}", path.display());
@@ -66,6 +66,7 @@ fn main() -> ExitCode {
 
     let mut archived = None;
     let mut history = None;
+    let mut moved = Vec::new();
     match command {
         Commands::List { all, due, done, terms } => {
             let today = today();
@@ -117,7 +118,11 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
 
-        Commands::Do { number } => todos[number - 1].complete(today()),
+        Commands::Do { number } => {
+            let mut todo = todos.remove(number - 1);
+            todo.complete(today());
+            moved.push(todo);
+        }
 
         Commands::Edit { number, .. } if todos[number - 1].done => {
             eprintln!("task {number} is done");
@@ -183,15 +188,24 @@ fn main() -> ExitCode {
                 eprintln!("nothing to archive");
                 return ExitCode::SUCCESS;
             }
-            if let Err(e) = repository::append(&done_path, &done) {
-                eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
-                return ExitCode::FAILURE;
-            }
             archived = Some(done.len());
+            moved = done;
             todos = pending;
         }
     }
 
+    if !moved.is_empty()
+        && let Err(e) = std::fs::OpenOptions::new().write(true).open(&path)
+    {
+        eprintln!("could not save {}: {e} (file left unchanged)", path.display());
+        return ExitCode::FAILURE;
+    }
+    if !moved.is_empty()
+        && let Err(e) = repository::append(&done_path, &moved)
+    {
+        eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+        return ExitCode::FAILURE;
+    }
     if let Err(e) = repository::save(&path, &todos) {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
         return ExitCode::FAILURE;

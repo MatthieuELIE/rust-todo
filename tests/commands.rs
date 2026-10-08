@@ -148,3 +148,131 @@ fn reopen_makes_a_done_task_pending_again_without_its_completion_date() {
     }
     assert_eq!(text, "2026-09-02 Pay rent\nBuy milk\nx x Sell it\n");
 }
+
+fn folder(name: &str) -> std::path::PathBuf {
+    let folder = std::env::temp_dir().join(format!("todo-{}-{name}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&folder);
+    std::fs::create_dir(&folder).unwrap();
+    folder
+}
+
+#[test]
+fn archive_moves_the_done_tasks_to_the_end_of_done_txt_in_file_order() {
+    let folder = folder("archive");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "x 2026-09-03 Pay rent\nBuy milk\nx 2026-09-04 Call the bank\n").unwrap();
+    std::fs::write(&done, "x 2026-09-01 Water plants").unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    let (text, archived) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "2 tasks archived\n");
+    assert_eq!(text, "Buy milk\n");
+    assert_eq!(archived, "x 2026-09-01 Water plants\nx 2026-09-03 Pay rent\nx 2026-09-04 Call the bank\n");
+}
+
+#[test]
+fn archive_with_no_done_task_says_so_and_writes_no_file() {
+    let folder = folder("archive-nothing");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Buy milk\n\nPay rent\n").unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    let created = folder.join("done.txt").exists();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "nothing to archive\n");
+    assert_eq!(text, "Buy milk\n\nPay rent\n");
+    assert!(!created);
+}
+
+#[test]
+fn archive_creates_a_missing_done_txt_readable_by_its_owner_only() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("archive-absent");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "Buy milk\nx 2026-09-03 Pay rent\n").unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    let (text, archived) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
+    let mode = std::fs::metadata(&done).unwrap().permissions().mode() & 0o777;
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "1 task archived\n");
+    assert_eq!(text, "Buy milk\n");
+    assert_eq!(archived, "x 2026-09-03 Pay rent\n");
+    assert_eq!(mode, 0o600);
+}
+
+#[test]
+fn archive_refuses_a_task_file_that_is_done_txt_itself() {
+    let folder = folder("archive-itself");
+    let file = folder.join("done.txt");
+    std::fs::write(&file, "x 2026-09-03 Pay rent\nBuy milk\n").unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!("cannot archive {} into itself\n", file.display())
+    );
+    assert_eq!(text, "x 2026-09-03 Pay rent\nBuy milk\n");
+}
+
+#[test]
+fn archive_adds_no_blank_line_after_a_done_txt_ending_with_a_line_break() {
+    let folder = folder("archive-twice");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "x 2026-09-03 Pay rent\n").unwrap();
+    std::fs::write(&done, "x 2026-09-01 Water plants\n").unwrap();
+
+    assert!(todo(&file, &["archive"]).status.success());
+
+    let archived = std::fs::read_to_string(&done).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(archived, "x 2026-09-01 Water plants\nx 2026-09-03 Pay rent\n");
+}
+
+#[test]
+fn archive_leaves_the_task_file_alone_when_done_txt_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("archive-readonly");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "x 2026-09-03 Pay rent\nBuy milk\n").unwrap();
+    std::fs::write(&done, "").unwrap();
+    std::fs::set_permissions(&done, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
+    assert_eq!(text, "x 2026-09-03 Pay rent\nBuy milk\n");
+}
+
+#[test]
+fn archive_does_not_announce_a_count_when_the_task_file_cannot_be_saved() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("archive-unsaved");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "x 2026-09-03 Pay rent\nBuy milk\n").unwrap();
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let output = todo(&file, &["archive"]);
+
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
+}

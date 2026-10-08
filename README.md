@@ -31,9 +31,12 @@ todo do 2                     # mark task 2 as done
 todo edit 2 "(B) Oat milk"    # replace pending task 2, its creation date kept
 todo reopen 2                 # make done task 2 pending again
 todo remove 2                 # delete task 2
+todo archive                  # move the done tasks to done.txt
 ```
 
-Only `add`, `do`, `edit`, `reopen`, `remove` and the interactive list write the file, and the write is atomic.
+Only `add`, `do`, `edit`, `reopen`, `remove`, `archive` and the interactive list write the file, and the write is atomic.
+`archive` moves every done task to the end of `done.txt`, in the folder of the task file, in the order of the file, and says how many.
+`done.txt` is created when it is missing and only ever added to, which is not an atomic write; it is written first, so an interruption leaves a task in both files rather than in neither.
 `ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` still works for `do`.
 
 ## Interactive list

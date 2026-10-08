@@ -51,6 +51,7 @@ fn main() -> ExitCode {
         };
     };
 
+    let mut archived = None;
     match command {
         Commands::List { all, due, terms } => {
             let today = today();
@@ -131,11 +132,33 @@ fn main() -> ExitCode {
                 return ExitCode::FAILURE;
             }
         }
+
+        Commands::Archive => {
+            let (done, pending): (Vec<Todo>, Vec<Todo>) = todos.into_iter().partition(|todo| todo.done);
+            if done.is_empty() {
+                eprintln!("nothing to archive");
+                return ExitCode::SUCCESS;
+            }
+            let done_path = path.with_file_name("done.txt");
+            if std::fs::canonicalize(&done_path).is_ok_and(|done| std::fs::canonicalize(&path).is_ok_and(|todo| todo == done)) {
+                eprintln!("cannot archive {} into itself", path.display());
+                return ExitCode::FAILURE;
+            }
+            if let Err(e) = repository::append(&done_path, &done) {
+                eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+                return ExitCode::FAILURE;
+            }
+            archived = Some(done.len());
+            todos = pending;
+        }
     }
 
     if let Err(e) = repository::save(&path, &todos) {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
         return ExitCode::FAILURE;
+    }
+    if let Some(count) = archived {
+        println!("{count} task{} archived", if count == 1 { "" } else { "s" });
     }
 
     ExitCode::SUCCESS

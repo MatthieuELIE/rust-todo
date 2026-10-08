@@ -47,10 +47,10 @@ pub enum Commands {
         number: usize,
     },
 
-    /// Mark a task done by its number
+    /// Complete a task by its number: it moves to the end of done.txt
     #[command(alias = "done")]
     Do {
-        /// Task number to mark as done
+        /// Task number to complete
         number: usize,
     },
 

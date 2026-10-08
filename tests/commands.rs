@@ -11,12 +11,14 @@ fn todo(file: &Path, args: &[&str]) -> Output {
 
 #[test]
 fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
-    let file = std::env::temp_dir().join(format!("todo-{}-commands.txt", std::process::id()));
-    std::fs::write(&file, "2026-09-01 Call the bank\nPay rent\n").unwrap();
+    let folder = folder("commands");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "2026-09-01 Call the bank\nPay rent\nx 2026-08-30 Typed by hand\n").unwrap();
+    std::fs::write(&done, "x 2026-08-01 Water plants\n").unwrap();
 
     assert!(todo(&file, &["add", "(B) 2026-09-02 Buy milk"]).status.success());
     assert!(todo(&file, &["do", "1"]).status.success());
-    assert!(todo(&file, &["rm", "2"]).status.success());
+    assert!(todo(&file, &["rm", "1"]).status.success());
     let refused = [
         (todo(&file, &["add", "x Buy bread"]), "cannot add a task that is already done\n"),
         (
@@ -30,17 +32,18 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
         (todo(&file, &["rm", "9"]), "no task numbered 9\n"),
     ];
 
-    let text = std::fs::read_to_string(&file).unwrap();
-    std::fs::remove_file(&file).unwrap();
+    let (text, history) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
+    std::fs::remove_dir_all(&folder).unwrap();
     for (output, error) in refused {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
-    let lines: Vec<&str> = text.lines().collect();
+    assert_eq!(text, "x 2026-08-30 Typed by hand\n(B) 2026-09-02 Buy milk\n");
+    let lines: Vec<&str> = history.lines().collect();
     assert_eq!(lines.len(), 2);
-    let completed = lines[0].strip_prefix("x ").expect("task 1 is done");
+    assert_eq!(lines[0], "x 2026-08-01 Water plants");
+    let completed = lines[1].strip_prefix("x ").expect("the task moved is done");
     assert_eq!(&completed[10..], " 2026-09-01 Call the bank");
-    assert_eq!(lines[1], "(B) 2026-09-02 Buy milk");
 }
 
 #[test]
@@ -218,16 +221,16 @@ fn archive_creates_a_missing_done_txt_readable_by_its_owner_only() {
 }
 
 #[test]
-fn archive_and_reopen_refuse_a_task_file_that_is_done_txt_itself() {
+fn archive_reopen_and_do_refuse_a_task_file_that_is_done_txt_itself() {
     let folder = folder("archive-itself");
     let file = folder.join("done.txt");
     std::fs::write(&file, "x 2026-09-03 Pay rent\nBuy milk\n").unwrap();
 
-    let (output, reopened) = (todo(&file, &["archive"]), todo(&file, &["reopen", "1"]));
+    let outputs = [todo(&file, &["archive"]), todo(&file, &["reopen", "1"]), todo(&file, &["do", "2"])];
 
     let text = std::fs::read_to_string(&file).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
-    for output in [output, reopened] {
+    for output in outputs {
         assert!(!output.status.success());
         assert!(output.stdout.is_empty());
         assert_eq!(
@@ -322,4 +325,39 @@ fn reopen_writes_nothing_when_done_txt_cannot_be_written() {
     assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
     assert_eq!(text, "Buy milk\n");
     assert_eq!(left, "x 2026-09-03 Pay rent\n");
+}
+
+#[test]
+fn do_leaves_the_task_file_alone_when_done_txt_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("do-readonly");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "Pay rent\nBuy milk\n").unwrap();
+    std::fs::write(&done, "").unwrap();
+    std::fs::set_permissions(&done, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let output = todo(&file, &["do", "1"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
+    assert_eq!(text, "Pay rent\nBuy milk\n");
+}
+
+#[test]
+fn do_writes_nothing_when_the_task_file_cannot_be_written() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("do-unsaved");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent\nBuy milk\n").unwrap();
+    std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let output = todo(&file, &["do", "1"]);
+
+    let created = folder.join("done.txt").exists();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(!output.status.success());
+    assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
+    assert!(!created);
 }

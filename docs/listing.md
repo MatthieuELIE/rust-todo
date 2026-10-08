@@ -4,6 +4,7 @@ A task is listed when its line contains every term, compared as a case-insensiti
 `+` and `@` are plain characters, so `-+work` hides the `+work` tasks, and a date is a term like any other: `todo list 2026-09` finds what was created or completed in September.
 Flags go before terms: in `todo list +work --all`, `--all` is one more term, excluding `-all`, and done tasks stay hidden.
 `--due` keeps the pending tasks holding a `due:` date that is today or past, and combines with the terms after it: `todo list --due +work`. A done task is never due, so `--all` adds nothing to it, and a `due:` that is not a `YYYY-MM-DD` date is ignored.
+`--done` lists `done.txt`, the file `todo archive` fills, instead of the task file: its lines in the order of the file, numbered by their position in it, and filtered by the terms after it. Blank lines are not counted. A line of `done.txt` that is not a done task is listed as it is; a done one is listed as `todo` would write it, without the priority a line such as `x (A) Pay rent` holds. It does not combine with `--all` or `--due`.
 
 Pending tasks come first, prioritised ones by priority, then the rest; ties keep the file order.
 stdout carries task lines only, coloured when it is a terminal and `NO_COLOR` is unset or empty, otherwise plain todo.txt lines.

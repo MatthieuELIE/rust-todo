@@ -26,7 +26,11 @@ pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
 
 /// Save the todo list to a file, overwriting any existing content, and return the text written.
 pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
-    let body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
+    write(path, todos.iter().map(|todo| todo.to_line() + "\n").collect())
+}
+
+/// Replace the content of a file with `body` and return it.
+pub fn write(path: &Path, body: String) -> io::Result<String> {
     let path = fs::canonicalize(path).unwrap_or_else(|_| match fs::read_link(path) {
         Ok(target) => path.with_file_name(target),
         Err(_) => path.to_path_buf(),

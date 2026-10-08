@@ -64,9 +64,9 @@ pub enum Commands {
         text: String,
     },
 
-    /// Make a done task pending again by its number
+    /// Move a task of done.txt back to the task file, pending again, by its number in done.txt
     Reopen {
-        /// Task number to reopen
+        /// Number of the task in done.txt, as list --done shows it
         number: usize,
     },
 

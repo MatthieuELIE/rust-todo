@@ -536,6 +536,45 @@ fn due_follows_all_tasks_and_shows_the_pending_tasks_due_today_or_before() {
 }
 
 #[test]
+fn shift_d_shows_the_due_tasks_from_any_filter_and_drops_a_pending_d() {
+    let mut app = app_of(&["Note +home", "Pay rent due:2026-09-26", "Call +home due:2026-09-01"]);
+    app.filter = Some("+home".to_string());
+    app.search = "e".to_string();
+    press(&mut app, "j");
+
+    assert!(!press(&mut app, "dD"));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (Some(DUE_NOW), 0));
+    assert_eq!(shown(&app), ["Pay rent due:2026-09-26", "Call +home due:2026-09-01"]);
+    assert_eq!((app.todos.len(), app.search.as_str()), (3, "e"));
+    assert_eq!(app.message, None);
+
+    press(&mut app, "jD");
+    assert_eq!(app.cursor, 1);
+}
+
+#[test]
+fn shift_d_says_nothing_due_and_keeps_the_filter_when_no_task_is_due() {
+    let mut app = app_of(&["Note +home", "Buy milk due:2026-10-01"]);
+    app.filter = Some("+home".to_string());
+
+    press(&mut app, "D");
+
+    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing due"), false));
+    assert_eq!(app.filter.as_deref(), Some("+home"));
+}
+
+#[test]
+fn shift_d_is_refused_in_the_history() {
+    let mut app = history_of(&["Pay rent due:2026-09-26"], &["x old"]);
+
+    press(&mut app, "HD");
+
+    assert_eq!((app.message.as_deref(), app.refused), (Some("history is read-only"), true));
+    assert_eq!((app.filter.as_deref(), app.in_history), (None, true));
+}
+
+#[test]
 fn a_turn_brings_the_day_the_due_entry_is_counted_against() {
     let mut app = App::new(vec![Todo::from_line("Pay rent due:2026-09-27")]);
     let mut text = String::new();

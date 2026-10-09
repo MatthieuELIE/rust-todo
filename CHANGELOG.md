@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- In the interactive list, `D` shows the tasks due, as the panel's `Due` entry does, from any filter; with no task due it says `nothing due`, and in the history it is refused.
+
 ## [0.4.0] - 2026-10-09
 
 ### Changed

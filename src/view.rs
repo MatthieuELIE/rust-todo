@@ -92,6 +92,7 @@ u/Ctrl-r     undo, redo
 zM/zR        fold, unfold all
 za           fold, unfold group
 /            search
+D            due tasks
 H            show, hide history
 r            reopen, in the history
 Tab          panel

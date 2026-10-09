@@ -45,7 +45,8 @@ A red one says that something was refused or failed; a grey one only says what h
 | Message | Colour | When |
 | --- | --- | --- |
 | `priority is a to e, or space` | red | the key after `p` was not a priority |
-| `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u` or `Ctrl-R` was pressed in the history, the list of `done.txt` shown by `H` |
+| `nothing due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |
+| `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
 | `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, or is not UTF-8 text, when the list opens or at `H`; the history is then empty |
 | `task 2 is not done`, `task 2 cannot be reopened: its text starts with x`, `task 2 cannot be reopened: it has no description` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
 | `reopened` | grey | `r` brought a task of the history back to the task file |

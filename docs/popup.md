@@ -50,6 +50,8 @@ The names of `done.txt` are listed too, so a project whose tasks are all done ca
 
 ## Date picker
 
+![The popup adding a task, with the calendar of October 2026 under due:, the picked day in peach and today in yellow](images/calendar.png)
+
 When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it, weeks from Monday, on today: the picked date peach, today yellow, past days greyed.
 `h` `l` move by a day, `k` `j` by a week, `H` `L` by a month, the arrows as their letters; `Enter` writes the date after `due:`, followed by a space, and `Esc` closes it, leaving `due:` to be typed by hand.
 Any other key and a paste are ignored while it is open.

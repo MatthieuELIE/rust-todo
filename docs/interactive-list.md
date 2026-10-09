@@ -32,6 +32,8 @@ A done task still in the task file, one typed by hand, is not listed: `todo arch
 `?` shows every key, grouped by mode, and any key closes it.
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 
+![The key help over the list: the keys of the list, the calendar, the popup's insert and normal modes, and the filter panel](images/help.png)
+
 ## Screen
 
 The rows are those of `todo list`: same numbers, order and colours.
@@ -52,6 +54,8 @@ Undoing `x` also reads `done.txt` again and takes out its last line equal to the
 These steps are not saved: they are lost when the list closes or the file is reloaded.
 
 ## History
+
+![The history view: the lines of done.txt in light grey, the last completed first, and the names of the filter panel in the same grey](images/history.png)
 
 `H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
 The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
@@ -77,6 +81,8 @@ A value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows.
 
 ## Filter panel
+
+![The filter panel on its Due entry, in red: the list holds an overdue task, its date in red, and one due today, in yellow](images/due.png)
 
 The panel on the left lists `All tasks`, `Due` when a task is due, `Waiting` when a task shown waits, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
 Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.

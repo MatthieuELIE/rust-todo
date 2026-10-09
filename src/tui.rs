@@ -594,6 +594,14 @@ impl App {
                 self.history_read = false;
                 self.cursor = 0;
             }
+            KeyCode::Char('D') if self.in_history => self.refuse("history is read-only"),
+            KeyCode::Char('D') if self.filters().iter().any(|(term, _)| term == DUE_NOW) => {
+                if self.filter.as_deref() != Some(DUE_NOW) {
+                    self.filter = Some(DUE_NOW.to_string());
+                    self.cursor = 0;
+                }
+            }
+            KeyCode::Char('D') => self.message = Some("nothing due".to_string()),
             _ => {}
         }
         write

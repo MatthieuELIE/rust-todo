@@ -18,6 +18,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `zM`, `zR` | fold, unfold every priority group |
 | `za` | fold or unfold the group under the cursor |
 | `/` | search, filtering at each letter |
+| `D` | show the tasks due, as the panel's `Due` entry does |
 | `H` | show the history, the tasks of `done.txt`, or go back to the list |
 | `r` | in the history, reopen the task: it moves back to the task file |
 | `Tab` | move to the filter panel |
@@ -61,7 +62,7 @@ These steps are not saved: they are lost when the list closes or the file is rel
 The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
 Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
 The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way. Under `Due` the history shows no done task, a done task being never due, and under `Waiting` it shows its tasks holding a `wait:`, though the panel marks no entry: `Esc` drops the filter.
-The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`.
+The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` and `D` are refused there with `history is read-only`.
 `r` reopens the task under the cursor, as `todo reopen` does with its number: the task goes to the end of the task file, pending and without its completion date, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`. A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words. Outside the history `r` does nothing.
 A reopen is undone from the list, not from the history: after `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.
 `done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
@@ -88,6 +89,7 @@ The panel on the left lists `All tasks`, `Due` when a task is due, `Waiting` whe
 Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
 `Due` shows the pending tasks whose `due:` date is today or past, as `todo list --due` does; its name is red when one of them is overdue and yellow when they are all for today, and it keeps that colour while selected. A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
+From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`; with no task due it says `nothing due` and changes nothing.
 `Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`; `/wait:figma` narrows it to one.
 
 ## Search

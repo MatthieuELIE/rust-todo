@@ -34,13 +34,9 @@ todo remove 2                 # delete task 2
 todo archive                  # move the done tasks to done.txt
 ```
 
-Only `add`, `do`, `edit`, `reopen`, `remove`, `archive` and the interactive list write the file, and the write is atomic.
-`do` stamps the task with today's date and moves it to the end of `done.txt`, in the folder of the task file, so the tasks after it move up one number.
-`archive` moves there every done task still in the task file, one typed by hand, in the order of the file, and says how many.
-`reopen` takes the number `list --done` shows, adds the task to the end of the task file and removes its line from `done.txt`.
-`done.txt` is created when it is missing and `do` and `archive` only add to it, which is not an atomic write; it is written first, so an interruption leaves a task in both files rather than in neither.
-`do`, `remove` and `reopen` print the task they handled, such as `done: (A) Call the bank`; `add` and `edit` print nothing.
-`ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` still works for `do`.
+`done.txt` sits in the folder of the task file.
+`ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`.
+What each command takes, writes and prints is described in [the documentation](https://matthieuelie.github.io/rust-todo/commands.html).
 
 ## Interactive list
 
@@ -64,7 +60,7 @@ height = "75%"
 
 ## Documentation
 
-The keys of the list, the popup, how `list` filters and colours, and the line format are described in [the documentation](https://matthieuelie.github.io/rust-todo/).
+The keys of the list, the popup, the commands, how `list` filters and colours, and the line format are described in [the documentation](https://matthieuelie.github.io/rust-todo/).
 
 ## License
 

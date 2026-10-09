@@ -35,8 +35,9 @@ A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, t
 ## Screen
 
 The rows are those of `todo list`: same numbers, order and colours.
+An empty list says `nothing to do`, or `no matching task` under a filter or a search.
 The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, rather than left to the terminal's; outside herdr it stays that colour.
-Text is in Mocha's `text` colour, and greyer the less it needs reading: labels and section names, then dates, counts, `key:value` words and done tasks.
+Text is in Mocha's `text` colour, and greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
 The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach; the popups float over them on a lighter background.
 The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
 The status bar shows the mode in a peach block, the active filters coloured as in the list, then the mode's main keys, bold before their greyed action, when they fit and no message is shown; a message goes on the right, red when something was refused.
@@ -48,14 +49,14 @@ While a command waits for its end, in the list or the popup, the keys typed so f
 Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
 Undoing `x` also reads `done.txt` again and takes out its last line equal to the task; when the line is no longer there the task comes back all the same and the status bar says so. `Ctrl-R` sends it to `done.txt` again.
 `done.txt` is not watched: a change made to it elsewhere shows at the next read.
-The history is not saved: it is lost when the list closes or the file is reloaded.
+These steps are not saved: they are lost when the list closes or the file is reloaded.
 
 ## History
 
 `H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
 The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
 Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
-The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way.
+The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the filter and the search in use are kept when `H` is pressed, either way. Under `Due` the history shows no done task, a done task being never due, and under `Waiting` it shows its tasks holding a `wait:`, though the panel marks no entry: `Esc` drops the filter.
 The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u` and `Ctrl-R` are refused there with `history is read-only`.
 `r` reopens the task under the cursor, as `todo reopen` does with its number: the task goes to the end of the task file, pending and without its completion date, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`. A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words. Outside the history `r` does nothing.
 A reopen is undone from the list, not from the history: after `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.

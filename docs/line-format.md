@@ -22,4 +22,4 @@ The same goes for a description starting with `x `, read as the done marker once
 Two `key:value` words mean something to `todo`; any other is kept as written and only greyed.
 
 - `due:2026-10-15` is the task's due date: red once past and yellow on the day wherever the task is [listed](listing.md), gathered once due by `todo list --due` and under `Due` in the [filter panel](interactive-list.md#filter-panel), and picked from a calendar in [the popup](popup.md#date-picker).
-- `wait:designer` is what the task waits for: such tasks are gathered under `Waiting` in the [filter panel](interactive-list.md#filter-panel), and the popup completes the value.
+- `wait:designer` is what the task waits for: such tasks are gathered under `Waiting` in the [filter panel](interactive-list.md#filter-panel), and the popup completes the value. The key is dropped when the task is completed: `Mail wait:designer +work` becomes `Mail +work` in `done.txt`, and reopening does not bring it back. An empty `wait:` and a `wait://` link stay.

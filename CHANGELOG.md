@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Completing a task, with `todo do` or `x` in the list, drops its `wait:` key:values with the space before each; an empty `wait:` and a `wait://` link stay, other words are untouched, and reopening does not bring the `wait:` back. Lines already in `done.txt` are left as written.
+
 ### Added
 
 - In the interactive list, `D` shows the tasks due, as the panel's `Due` entry does, from any filter; with no task due it says `nothing due`, and in the history it is refused.

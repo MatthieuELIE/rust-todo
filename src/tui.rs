@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::cmp::Reverse;
 use std::collections::HashMap;
 use std::io;
@@ -10,6 +11,7 @@ use time::{Date, Month};
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
 use crate::todo::{DUE, Todo, WAIT, list};
+use crate::view::HELP;
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
 pub const WAITING: &str = "Waiting";
@@ -50,8 +52,8 @@ pub enum Focus {
     Panel,
     /// The search line, in the status bar.
     Search,
-    /// The key help over the list, closed by any key.
-    Help,
+    /// The key help over the list, scrolled down by this many lines.
+    Help(u16),
     /// The popup where a task is typed.
     Popup(Popup),
 }
@@ -122,6 +124,8 @@ pub struct App {
     pub copy: Option<String>,
     /// Where the keys go.
     pub focus: Focus,
+    /// Lines of the help the last drawing showed, which bound its scrolling.
+    pub help_rows: Cell<u16>,
     /// Search terms, separated by whitespace, as `todo list` takes them.
     pub search: String,
     /// Term picked in the panel, `None` for `All tasks`.
@@ -361,7 +365,7 @@ impl App {
         let pending = self.pending.take();
         self.message = None;
         self.refused = false;
-        if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL && !matches!(self.focus, Focus::Help) {
+        if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
             self.quit = true;
             return false;
         }
@@ -375,8 +379,8 @@ impl App {
             return false;
         }
         let write = match self.focus {
-            Focus::Help => {
-                self.focus = Focus::List;
+            Focus::Help(_) => {
+                self.help_key(key, pending);
                 false
             }
             Focus::Popup(_) => self.popup_key(key, today),
@@ -392,6 +396,24 @@ impl App {
         };
         self.clamp_cursor();
         write
+    }
+
+    /// Applies a key typed in the help: `j`/`k` and `gg`/`G` scroll within the lines the last drawing showed, `Esc`, `Enter`, `?` and `q` close.
+    fn help_key(&mut self, key: KeyEvent, pending: Option<char>) {
+        let Focus::Help(scroll) = &mut self.focus else {
+            unreachable!("the help is open");
+        };
+        let max = (HELP.lines().count() as u16).saturating_sub(self.help_rows.get());
+        match key.code {
+            _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => {}
+            KeyCode::Esc | KeyCode::Enter | KeyCode::Char('?' | 'q') => self.focus = Focus::List,
+            KeyCode::Char('j') | KeyCode::Down => *scroll = (*scroll + 1).min(max),
+            KeyCode::Char('k') | KeyCode::Up => *scroll = scroll.saturating_sub(1).min(max),
+            KeyCode::Char('g') if pending == Some('g') => *scroll = 0,
+            KeyCode::Char('g') => self.pending = Some('g'),
+            KeyCode::Char('G') => *scroll = max,
+            _ => {}
+        }
     }
 
     /// Applies a key typed in the popup, to the date picker when open, arrows and `Tab` to the completions when shown; tells whether to write.
@@ -595,7 +617,7 @@ impl App {
                 }
             }
             KeyCode::Tab => self.focus = Focus::Panel,
-            KeyCode::Char('?') => self.focus = Focus::Help,
+            KeyCode::Char('?') => self.focus = Focus::Help(0),
             KeyCode::Char('H') => {
                 self.in_history = !self.in_history;
                 self.history_read = false;

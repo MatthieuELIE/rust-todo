@@ -211,42 +211,87 @@ fn a_folded_group_is_its_header_alone_ended_by_a_marker_and_the_cursor_can_stand
 }
 
 #[test]
-fn the_help_shows_each_mode_s_keys_under_its_name_keys_bold_actions_and_slashes_greyed() {
+fn the_help_shows_one_column_of_modes_under_their_names_keys_bold_actions_and_slashes_greyed() {
     let mut app = app_of(&["Pay +rent"]);
-    app.focus = Focus::Help;
+    app.focus = Focus::Help(0);
 
-    let buffer = render_in(&app, 90, 35);
+    let buffer = render_in(&app, 109, 36);
     let rows = rows(&buffer);
-    let y = rows.iter().position(|row| row.contains(" LIST ")).expect("list block");
+    let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
+    let y = top + 2;
 
-    assert!(rows[y - 2].contains("╭ HELP ─"), "{}", rows[y - 2]);
-    let corner = rows[y - 2].chars().position(|c| c == '╭').expect("corner") as u16;
-    assert_eq!(buffer[(corner, y as u16 - 2)].fg, ACCENT);
-    assert!(rows.iter().any(|row| row.contains("─ any key closes ╯")));
-    assert!(rows[y].contains(" INSERT "), "{}", rows[y]);
+    assert_eq!(
+        rows[top..]
+            .iter()
+            .position(|row| row.contains('╯') && row.contains("esc close"))
+            .expect("bottom")
+            + 1,
+        30
+    );
+    let corner = rows[top].chars().position(|c| c == '╭').expect("corner") as u16;
+    assert_eq!((corner, buffer[(corner, top as u16)].fg), (32, ACCENT));
+    assert!(rows[top + 29].contains("─ j/k scroll · esc close ╯"), "{}", rows[top + 29]);
+    assert!(rows[y].contains(" LIST "), "{}", rows[y]);
     assert!(rows[y + 1].contains("j/k/↓/↑      move"), "{}", rows[y + 1]);
-    assert!(rows.iter().any(|row| row.contains(" NORMAL ")));
-    assert!(rows.iter().any(|row| row.contains(" PANEL ")));
-    assert!(rows.iter().any(|row| row.contains("za           fold, unfold group")));
-    assert!(rows.iter().any(|row| row.contains("Tab/Enter    back to the list")));
-    assert!(rows.iter().any(|row| row.contains("Esc          all tasks")));
-    assert_eq!(rows.iter().filter(|row| row.contains("p Space      no priority")).count(), 2);
+    assert!(rows[y + 21].chars().skip(33).take(44).all(|c| c == ' ' || c == '▐'), "{}", rows[y + 21]);
+    assert!(rows[y + 22].contains(" PANEL "), "{}", rows[y + 22]);
+    assert!(rows[y + 25].contains("Tab/Enter    back to the list"), "{}", rows[y + 25]);
+    assert!(!rows.iter().any(|row| row.contains(" DATE ")));
+    assert!(rows.iter().any(|row| row.contains("▐")));
 
     let y = y as u16;
-    assert_eq!((buffer[(9, y)].fg, buffer[(47, y)].fg), (SECONDARY, SECONDARY));
-    assert!(buffer[(9, y)].modifier.contains(Modifier::BOLD));
-    let (key, slash, action) = (&buffer[(8, y + 1)], &buffer[(9, y + 1)], &buffer[(21, y + 1)]);
+    assert_eq!(buffer[(36, y)].fg, SECONDARY);
+    assert!(buffer[(36, y)].modifier.contains(Modifier::BOLD));
+    let (key, slash, action) = (&buffer[(36, y + 1)], &buffer[(37, y + 1)], &buffer[(49, y + 1)]);
     assert!(key.fg == PRIMARY && key.modifier.contains(Modifier::BOLD));
     assert!(slash.fg == SEPARATOR && !slash.modifier.contains(Modifier::BOLD));
     assert!(action.fg == TERTIARY && !action.modifier.contains(Modifier::BOLD));
-    let search = rows.iter().position(|row| row.contains("/            search")).expect("search key") as u16;
-    assert_eq!(buffer[(8, search)].fg, PRIMARY);
+}
+
+#[test]
+fn the_help_scrolled_to_the_bottom_ends_on_the_date_keys_and_a_low_screen_shrinks_the_box() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.focus = Focus::Help(u16::MAX);
+
+    let rows_tall = rows(&render_in(&app, 109, 36));
+    assert!(rows_tall.iter().any(|row| row.contains("Enter/Esc    pick, close")));
+    assert!(rows_tall.iter().any(|row| row.contains(" DATE ")));
+
+    let rows_low = rows(&render_in(&app, 109, 20));
+    let top = rows_low.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
+    assert_eq!(top, 0);
+    assert!(rows_low[18].contains("─ j/k scroll · esc close ╯"), "{}", rows_low[18]);
+    assert!(rows_low[16].contains("Enter/Esc    pick, close"), "{}", rows_low[16]);
+}
+
+#[test]
+fn the_help_has_a_scrollbar_in_its_right_margin_when_its_lines_overflow_the_box() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.focus = Focus::Help(0);
+
+    let bar = |buffer: &Buffer| {
+        buffer
+            .content
+            .iter()
+            .filter(|cell| cell.symbol() == "▐")
+            .map(|cell| cell.fg)
+            .collect::<Vec<_>>()
+    };
+    let low = bar(&render_in(&app, 109, 20));
+    assert!(low.contains(&TERTIARY) && low.contains(&SEPARATOR));
+
+    app.focus = Focus::Help(u16::MAX);
+    let buffer = render_in(&app, 109, 20);
+    let thumb = (0..20)
+        .filter(|&y| buffer[(75, y)].symbol() == "▐" && buffer[(75, y)].fg == TERTIARY)
+        .max();
+    assert_eq!(thumb, Some(16));
 }
 
 #[test]
 fn every_cell_left_unpainted_takes_the_background_and_the_text_colour_and_a_floating_window_its_raised_one() {
     let mut app = app_of(&["Pay +rent"]);
-    app.focus = Focus::Help;
+    app.focus = Focus::Help(0);
 
     let buffer = render_in(&app, 80, 30);
 

@@ -4,7 +4,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout, Position, Rect};
 use ratatui::style::{Color, Modifier, Style, Stylize};
 use ratatui::text::{Line, Span};
-use ratatui::widgets::{Block, BorderType, Clear, List, ListState, Padding, Paragraph, Wrap};
+use ratatui::widgets::{Block, BorderType, Clear, List, ListState, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState, Wrap};
 use time::Date;
 
 use crate::editor::{Editor, Mode};
@@ -68,6 +68,12 @@ const PRIORITIES: [Color; 5] = [
     Color::Rgb(0x89, 0xdc, 0xeb),
 ];
 
+/// Width of the help box, its borders included.
+const HELP_WIDTH: u16 = 46;
+
+/// Tallest the help box grows, its borders and padding included.
+const HELP_MAX_HEIGHT: u16 = 30;
+
 /// Height of the detail card under the list: its borders and five rows.
 const DETAILS_HEIGHT: u16 = 7;
 
@@ -77,8 +83,8 @@ const PANEL_WIDTH: u16 = 22;
 /// Fewest rows the list keeps inside its card; on a screen too low for them and the detail card, that card is hidden.
 const MIN_LIST_ROWS: u16 = 5;
 
-/// Keys of the list and of the date picker shown by `?` under the mode's name, one per line, a key's alternatives separated by `/`.
-const HELP_LIST: &str = "\
+/// Keys of every screen `?` can show, one section per mode under its name, one key per line, a key's alternatives separated by `/`.
+pub const HELP: &str = "\
 LIST
 j/k/↓/↑      move
 gg/G         top, bottom
@@ -101,14 +107,11 @@ Esc          drop filter and search
 ?            these keys
 q            quit
 
-DATE
-h/l/←/→      day
-k/j/↑/↓      week
-H/L          month
-Enter/Esc    pick, close";
+PANEL
+j/k          pick a filter
+Esc          all tasks
+Tab/Enter    back to the list
 
-/// Keys of the popup's two modes and of the panel shown by `?`, each under its mode's name, one per line.
-const HELP_EDIT: &str = "\
 INSERT
 Enter        save
 Esc          normal mode
@@ -133,10 +136,11 @@ p a…e        priority
 p Space      no priority
 Esc          cancel
 
-PANEL
-j/k          pick a filter
-Esc          all tasks
-Tab/Enter    back to the list";
+DATE
+h/l/←/→      day
+k/j/↑/↓      week
+H/L          month
+Enter/Esc    pick, close";
 
 /// Draws the filter panel and the task list above the status bar, due dates against `today`; `scroll` keeps the list's offset between frames.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
@@ -161,7 +165,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     }
     draw_status(frame, app, status_area);
     match &app.focus {
-        Focus::Help => draw_help(frame, main_area),
+        Focus::Help(scroll) => draw_help(frame, app, *scroll, main_area),
         Focus::Popup(popup) => draw_popup(frame, app, popup, main_area, today),
         _ => {}
     }
@@ -289,7 +293,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             Mode::Normal => ("NORMAL", "i insert · p priority · ⏎ save · esc cancel"),
         },
         Focus::Panel => ("PANEL", "j/k filter · esc all tasks · tab back"),
-        Focus::List | Focus::Help => ("LIST", "⏎ edit · o add · x done · p priority · ? help"),
+        Focus::List | Focus::Help(_) => ("LIST", "⏎ edit · o add · x done · p priority · ? help"),
     };
     let filters = if matches!(app.focus, Focus::Search) {
         format!("/{}▌", app.search)
@@ -322,22 +326,38 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     }
 }
 
-/// Draws the key help in two columns in a rounded box, centred in `area`.
-fn draw_help(frame: &mut Frame, area: Rect) {
-    let height = HELP_LIST.lines().count().max(HELP_EDIT.lines().count()) as u16 + 4;
-    let area = area.centered(Constraint::Length(82), Constraint::Length(height));
+/// Draws the key help in one scrolling column in a rounded box, centred in `area`, and tells the app how many lines it shows.
+fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
+    let lines = HELP.lines().count() as u16;
+    let height = (lines + 4).min(HELP_MAX_HEIGHT).min(area.height);
+    let area = area.centered(Constraint::Length(HELP_WIDTH), Constraint::Length(height));
     let block = floating(true)
         .title(" HELP ")
-        .title_bottom(Line::from(" any key closes ".fg(TERTIARY)).right_aligned())
+        .title_bottom(Line::from(" j/k scroll · esc close ".fg(TERTIARY)).right_aligned())
         .padding(Padding::new(3, 3, 1, 1));
-    let [list, edit] = Layout::horizontal([Constraint::Fill(1); 2]).spacing(2).areas(block.inner(area));
+    let inner = block.inner(area);
+    app.help_rows.set(inner.height);
+    let max = lines.saturating_sub(inner.height);
     frame.render_widget(Clear, area);
     frame.render_widget(block, area);
-    frame.render_widget(Paragraph::new(help_lines(HELP_LIST)), list);
-    frame.render_widget(Paragraph::new(help_lines(HELP_EDIT)), edit);
+    frame.render_widget(Paragraph::new(help_lines(HELP)).scroll((scroll.min(max), 0)), inner);
+    if max > 0 {
+        let bar = Rect::new(area.right() - 3, inner.y, 1, inner.height);
+        let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
+            .track_symbol(Some("▐"))
+            .thumb_symbol("▐")
+            .begin_symbol(None)
+            .end_symbol(None)
+            .track_style(Style::new().fg(SEPARATOR))
+            .thumb_style(Style::new().fg(TERTIARY));
+        let mut state = ScrollbarState::new(max as usize + 1)
+            .viewport_content_length(inner.height as usize)
+            .position(scroll.min(max) as usize);
+        frame.render_stateful_widget(scrollbar, bar, &mut state);
+    }
 }
 
-/// Lines of a help column: a mode name bold, keys bold, the `/` between alternatives and actions greyed.
+/// Lines of the help: a mode name bold, keys bold, the `/` between alternatives and actions greyed.
 fn help_lines(text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {

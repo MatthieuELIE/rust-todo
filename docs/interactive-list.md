@@ -31,10 +31,12 @@ Adding and editing a task happen in [the popup](popup.md).
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 `x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
 A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
-`?` shows every key, grouped by mode, and any key closes it.
+`?` shows every key, grouped by mode, in one column that scrolls: `j` and `k` (or the arrows) move a line, `gg` and `G` jump to the top and the bottom, and a scroll bar on the right shows where you stand.
+`Esc`, `Enter`, `?` and `q` close it; any other key does nothing, and `Ctrl-C` quits.
+Opened again, it starts from the top.
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 
-![The key help over the list: the keys of the list, the calendar, the popup's insert and normal modes, and the filter panel](images/help.png)
+![The key help over the list: the keys of the list, the filter panel, the popup's insert and normal modes, and the calendar](images/help.png)
 
 ## Screen
 

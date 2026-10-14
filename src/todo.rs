@@ -82,11 +82,40 @@ impl Todo {
         Ok(todo)
     }
 
-    /// Mark the task done on `today`, keeping an existing completion date and dropping the priority.
+    /// Mark the task done on `today`, keeping an existing completion date and dropping the priority and the `wait:` key:values.
     pub fn complete(&mut self, today: Date) {
         self.done = true;
         self.completed.get_or_insert(today);
         self.priority = None;
+        self.drop_waits();
+    }
+
+    /// Remove each `wait:` read as a wait, with the space before it, or after it when it opens the description.
+    fn drop_waits(&mut self) {
+        let text = self.description.clone();
+        let mut spans = Vec::new();
+        let mut start = None;
+        for (i, c) in text.char_indices().chain([(text.len(), ' ')]) {
+            match (start, c.is_whitespace()) {
+                (None, false) => start = Some(i),
+                (Some(s), true) => {
+                    let value = text[s..i].strip_prefix(WAIT).unwrap_or("//");
+                    if !value.is_empty() && !value.starts_with("//") {
+                        spans.push((s, i));
+                    }
+                    start = None;
+                }
+                _ => {}
+            }
+        }
+        for (s, e) in spans.into_iter().rev() {
+            let current = &self.description;
+            let range = match current[..s].chars().next_back() {
+                Some(c) => s - c.len_utf8()..e,
+                None => s..e + current[e..].chars().next().map_or(0, char::len_utf8),
+            };
+            self.description.replace_range(range, "");
+        }
     }
 
     /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
@@ -328,6 +357,35 @@ mod tests {
         let mut undated = Todo::from_line("Lorem ipsum");
         undated.complete(date!(2026 - 09 - 01));
         assert_eq!(undated.to_line(), "x 2026-09-01 Lorem ipsum");
+    }
+
+    fn completed_line(line: &str) -> String {
+        let mut task = Todo::from_line(line);
+        task.complete(date!(2026 - 09 - 01));
+        task.description
+    }
+
+    #[test]
+    fn completing_a_task_drops_its_waits_with_the_space_before_each() {
+        assert_eq!(completed_line("Mail wait:designer +work"), "Mail +work");
+        assert_eq!(completed_line("Mail wait:a  wait:b due:2026-10-01"), "Mail  due:2026-10-01");
+        assert_eq!(completed_line("wait:a Mail"), "Mail");
+        assert_eq!(completed_line("Café\twait:a +x"), "Café +x");
+        assert_eq!(completed_line("wait:a wait:b"), "");
+    }
+
+    #[test]
+    fn completing_leaves_a_task_without_wait_and_the_empty_or_url_waits_as_written() {
+        assert_eq!(completed_line("Pay  rent due:2026-10-01"), "Pay  rent due:2026-10-01");
+        assert_eq!(completed_line("Open wait: wait://figma"), "Open wait: wait://figma");
+    }
+
+    #[test]
+    fn a_reopened_task_does_not_get_its_wait_back() {
+        let mut task = Todo::from_line("Mail wait:designer");
+        task.complete(date!(2026 - 09 - 01));
+        task.reopen().unwrap();
+        assert_eq!(task.to_line(), "Mail");
     }
 
     #[test]

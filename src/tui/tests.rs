@@ -50,6 +50,15 @@ fn x_completes_the_selected_task_and_the_next_one_takes_its_row() {
 }
 
 #[test]
+fn x_drops_the_wait_of_the_completed_task() {
+    let mut app = app_of(&["Mail wait:designer +work"]);
+
+    press(&mut app, "x");
+
+    assert_eq!(moved(&app), ["+x 2026-09-26 Mail +work"]);
+}
+
+#[test]
 fn u_takes_the_completed_task_back_from_done_txt_and_ctrl_r_sends_it_again() {
     let mut app = app_of(&["one", "(A) 2026-09-01 two", "three"]);
 

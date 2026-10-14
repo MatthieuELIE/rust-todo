@@ -110,7 +110,7 @@ pub struct App {
     pub today: Option<Date>,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`, `dd`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
+    /// First key of a two-key command (`gg`, `dd`, `yy`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
     pending: Option<char>,
     /// Set once the user asked to leave.
     pub quit: bool,
@@ -118,6 +118,8 @@ pub struct App {
     pub message: Option<String>,
     /// Whether the message tells of something refused rather than done.
     pub refused: bool,
+    /// Line of the task `yy` asked to copy, taken by the loop of the list.
+    pub copy: Option<String>,
     /// Where the keys go.
     pub focus: Focus,
     /// Search terms, separated by whitespace, as `todo list` takes them.
@@ -559,6 +561,11 @@ impl App {
                 }
             }
             KeyCode::Char('d') => self.pending = Some('d'),
+            KeyCode::Char('y') if pending == Some('y') => match self.selected_task() {
+                Some(todo) => self.copy = Some(todo.to_line()),
+                None => self.refuse("no task under the cursor"),
+            },
+            KeyCode::Char('y') => self.pending = Some('y'),
             KeyCode::Char('o') => {
                 self.focus = Focus::Popup(Popup {
                     editor: Editor::default(),
@@ -713,6 +720,14 @@ impl App {
         self.moves.push(Move::Remove(self.history.remove(number - 1), Some(number)));
         self.message = Some("reopened".to_string());
         true
+    }
+
+    /// Says how copying the line `yy` asked for went.
+    pub fn copied(&mut self, copied: io::Result<()>) {
+        match copied {
+            Ok(()) => self.message = Some("copied".to_string()),
+            Err(e) => self.refuse(&format!("could not copy: {e}")),
+        }
     }
 
     /// Leaves `message` in the status bar as a refusal.

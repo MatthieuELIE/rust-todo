@@ -13,6 +13,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `o` | add a task in the popup, typed as for `todo add` |
 | `x` | complete: the task moves to `done.txt` |
 | `dd` | delete |
+| `yy` | copy the task's line to the clipboard, through `pbcopy`; in the history too |
 | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |
 | `u`, `Ctrl-R` | undo, redo |
 | `zM`, `zR` | fold, unfold every priority group |
@@ -26,7 +27,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `?` | show the keys |
 | `q`, `Ctrl-C` | quit |
 
-`gg`, `dd`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
+`gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
 `x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
 A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
@@ -71,7 +72,7 @@ A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or
 ## Priority groups
 
 When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`, each header with how many tasks it holds and a blank row before each group but the first.
-`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing.
+`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `yy`, `p` and `Enter` do nothing.
 Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
 
 ## Details

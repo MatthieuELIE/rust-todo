@@ -7,7 +7,7 @@ mod view;
 
 use std::io::{self, IsTerminal, Write};
 use std::path::{Path, PathBuf};
-use std::process::ExitCode;
+use std::process::{Command, ExitCode, Stdio};
 use std::time::Duration;
 
 use clap::Parser;
@@ -272,9 +272,23 @@ fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
             if app.turn(repository::read(path), &mut text, event, today()) {
                 app.save(path, &mut text);
             }
+            if let Some(line) = app.copy.take() {
+                app.copied(pbcopy(&line));
+            }
         }
         execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)
     })
+}
+
+/// Puts `line` in the clipboard through `pbcopy`, with a UTF-8 locale so accents arrive whole.
+fn pbcopy(line: &str) -> io::Result<()> {
+    let mut child = Command::new("pbcopy").env("LC_CTYPE", "UTF-8").stdin(Stdio::piped()).spawn()?;
+    let written = child.stdin.take().expect("stdin is piped").write_all(line.as_bytes());
+    let status = child.wait()?;
+    if !status.success() {
+        return Err(io::Error::other(status.to_string()));
+    }
+    written
 }
 
 /// Runs `f` on the terminal set up for the full screen and puts it back, with an error when it cannot be set up.

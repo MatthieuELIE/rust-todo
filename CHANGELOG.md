@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- In the interactive list, `yy` copies the line of the task under the cursor, as `Todo::to_line()` writes it (not the original bytes), to the clipboard through `pbcopy`, in the history too; the bar says `copied`, `no task under the cursor` or `could not copy: <reason>`. It needs `pbcopy`, so macOS.
 - In the interactive list, `D` shows the tasks due, as the panel's `Due` entry does, from any filter; with no task due it says `nothing due`, and in the history it is refused.
 
 ## [0.4.0] - 2026-10-09

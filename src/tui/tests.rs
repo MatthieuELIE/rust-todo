@@ -1781,3 +1781,43 @@ fn u_after_a_reopen_whose_line_could_not_leave_done_txt_does_not_add_it_there_ag
     assert_eq!((held.0, held.1), ("one\nold\n".to_string(), true));
     assert_eq!(undone, ("one\n".to_string(), "x 2026-09-20 old\n".to_string()));
 }
+
+#[test]
+fn yy_leaves_the_line_of_the_task_under_the_cursor_to_copy() {
+    let mut app = app_of(&["one", "(B) 2026-09-01 two +p @c k:v"]);
+    assert!(!press(&mut app, "yy"));
+    assert_eq!(app.copy.as_deref(), Some("(B) 2026-09-01 two +p @c k:v"));
+    assert_eq!(app.message, None);
+}
+
+#[test]
+fn yy_on_a_folded_group_copies_nothing_and_says_so() {
+    let mut app = app_of(&["(A) one"]);
+    press(&mut app, "zMyy");
+    assert_eq!(app.copy, None);
+    assert_eq!((app.message.as_deref(), app.refused), (Some("no task under the cursor"), true));
+}
+
+#[test]
+fn yy_in_the_history_copies_the_line_of_done_txt_without_refusing() {
+    let mut app = history_of(&["one"], &["x 2026-09-25 old"]);
+    press(&mut app, "Hyy");
+    assert_eq!(app.copy.as_deref(), Some("x 2026-09-25 old"));
+    assert_eq!((app.message, app.refused), (None, false));
+}
+
+#[test]
+fn y_then_another_key_copies_nothing() {
+    let mut app = app();
+    press(&mut app, "yjyg");
+    assert_eq!((app.copy, app.message), (None, None));
+}
+
+#[test]
+fn copied_says_copied_in_grey_or_why_it_could_not_in_red() {
+    let mut app = app();
+    app.copied(Ok(()));
+    assert_eq!((app.message.as_deref(), app.refused), (Some("copied"), false));
+    app.copied(Err(io::Error::other("boom")));
+    assert_eq!((app.message.as_deref(), app.refused), (Some("could not copy: boom"), true));
+}

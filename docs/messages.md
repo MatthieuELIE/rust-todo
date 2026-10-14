@@ -45,6 +45,9 @@ A red one says that something was refused or failed; a grey one only says what h
 | Message | Colour | When |
 | --- | --- | --- |
 | `priority is a to e, or space` | red | the key after `p` was not a priority |
+| `copied` | grey | `yy` put the line of the task under the cursor in the clipboard; the bar does not show the line |
+| `no task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
+| `could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
 | `nothing due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |
 | `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
 | `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, or is not UTF-8 text, when the list opens or at `H`; the history is then empty |

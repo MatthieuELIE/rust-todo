@@ -18,6 +18,8 @@ The line is coloured as you type, as in the list, and the terminal's cursor is a
 | insert | `Esc` | normal mode |
 | normal | `h` `l` `0` `$` | move |
 | normal | `w` `b` `e`, `W` `B` `E` | move by word, by blank-separated word |
+| normal | `f` `F` `t` `T`, then a character | move to the next, previous occurrence of it, or just before, just after it |
+| normal | `;`, `,` | repeat the last of these, reverse it |
 | normal | `x`, `D`, `C` | delete a character, to the end, change to the end |
 | normal | `d` or `c`, then a motion | delete, change up to where it goes |
 | normal | `d` or `c`, then `iw` `aw` `iW` `aW` | delete, change the word under the cursor, with its space for `a` |
@@ -35,6 +37,12 @@ The line is coloured as you type, as in the list, and the terminal's cursor is a
 In insert mode, characters go in at the cursor, and `←` `→`, `Home` `End`, `Backspace` `Delete`, `Ctrl-W` (the word before the cursor) and `Ctrl-U` (back to the start) edit the line.
 Normal mode is a small subset of vim: `h` `l` `0` `$`, `w` `b` `e` and `W` `B` `E`, `x`, `D`, `C`, `i` `a` `I` `A`.
 `d` and `c` take any of these motions, as in `db`, `ce` or `d$`, `c` then going to insert mode; `dd` empties the line and `cc` empties it to type it again.
+`f` then a character moves to its next occurrence after the cursor and `F` to the previous one; `t` stops just before the next one and `T` just after the previous one.
+Any character will do, a space and the letters of commands included (`fd` goes to the next `d`); when it is absent in that direction the cursor stays.
+`;` repeats the last search and `,` repeats it the other way (`f` with `F`, `t` with `T`); after `t` or `T` they skip the character next to the cursor and go to the occurrence beyond it.
+The last search is kept even when it failed, and is lost when the popup closes, like the history of `u`.
+`d` and `c` take these too: `f` and `t` include the character they arrive on (`dfx`, `ct:`), `F` and `T` leave the one the cursor was on (`dFx`), and so do `d;` and `c,`; a search that finds nothing changes nothing, and after `c` does not go to insert mode.
+After `f` `F` `t` `T`, a key that is not a character cancels the search without keeping it: `Esc` then leaves the popup open, and `Enter` does not save.
 `d` and `c` also take the word under the cursor, wherever the cursor is in it: `iw` is the run of letters or of punctuation, `iW` the whole blank-separated word, so `ciW` on `due:2026-10-15` replaces the tag; `aw` and `aW` take its space too, the one after it or, on the last word, the one before.
 After `d` or `c`, a key that completes no command cancels it and does nothing: `Esc` then leaves the popup open, and `Enter` does not save.
 `u` and `Ctrl-R` undo and redo the changes made in the popup, what was typed between entering insert mode and `Esc` being one change; this history is the popup's own and is lost when it closes.

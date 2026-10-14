@@ -42,6 +42,10 @@ pub struct Editor {
     pending: Option<char>,
     /// `i` or `a` typed after `d` or `c`, waiting for the `w` or `W` of its word.
     scope: Option<char>,
+    /// `f`, `F`, `t` or `T` waiting for the character to find.
+    finding: Option<char>,
+    /// Last search as its key and character, kept even when it failed, for `;` and `,`.
+    find: Option<(char, char)>,
     /// Text and cursor when normal mode last had no command under way: what `u` goes back to after the next change.
     rest: (String, usize),
     /// Texts and cursors before each change, the latest last.
@@ -68,13 +72,14 @@ impl Editor {
             self.pending = None;
             return Outcome::NotPriority;
         }
+        let busy = self.pending.is_some() || self.finding.is_some();
         match (self.mode, key.code) {
-            (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if self.pending.is_some() => (self.pending, self.scope) = (None, None),
+            (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if busy => (self.pending, self.scope, self.finding) = (None, None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
-            (Mode::Normal, KeyCode::Char('r')) if self.pending.is_none() && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
-            (Mode::Normal, _) if modified => (self.pending, self.scope) = (None, None),
-            (Mode::Normal, KeyCode::Char('u')) if self.pending.is_none() => return self.step(true),
+            (Mode::Normal, KeyCode::Char('r')) if !busy && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
+            (Mode::Normal, _) if modified => (self.pending, self.scope, self.finding) = (None, None, None),
+            (Mode::Normal, KeyCode::Char('u')) if !busy => return self.step(true),
             (Mode::Insert, _) => self.insert(key),
             (Mode::Normal, code) => self.normal(code),
         }
@@ -112,7 +117,7 @@ impl Editor {
 
     /// Keys typed so far of a command still waiting for its end, as `d` or `ci`.
     pub fn pending(&self) -> String {
-        self.pending.iter().chain(&self.scope).collect()
+        self.pending.iter().chain(&self.scope).chain(&self.finding).collect()
     }
 
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.
@@ -192,7 +197,25 @@ impl Editor {
     fn normal(&mut self, code: KeyCode) {
         let chars: Vec<char> = self.text.chars().collect();
         let (len, at) = (chars.len(), self.cursor);
-        let (pending, scope) = (self.pending.take(), self.scope.take());
+        let (pending, scope, finding) = (self.pending.take(), self.scope.take(), self.finding.take());
+        let free = scope.is_none() && matches!(pending, None | Some('d' | 'c'));
+        let search = match (finding, code) {
+            (Some(kind), KeyCode::Char(c)) => {
+                self.find = Some((kind, c));
+                Some((kind, c, false))
+            }
+            (Some(_), _) => return,
+            (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) if free => {
+                (self.pending, self.finding) = (pending, Some(kind));
+                return;
+            }
+            (None, KeyCode::Char(r @ (';' | ','))) if free => self.find.map(|(kind, c)| (if r == ';' { kind } else { opposite(kind) }, c, true)),
+            _ => None,
+        };
+        if let Some((kind, c, repeat)) = search {
+            self.seek(&chars, pending, kind, c, repeat);
+            return;
+        }
         match code {
             KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c')) && scope.is_none() => {
                 self.pending = pending;
@@ -244,6 +267,25 @@ impl Editor {
         }
     }
 
+    /// Moves the cursor to the character `target` found as `kind` says, or after `d` or `c` (`pending`) acts up to it; nothing happens when it is absent.
+    fn seek(&mut self, chars: &[char], pending: Option<char>, kind: char, target: char, repeat: bool) {
+        let at = self.cursor;
+        let Some(to) = find(chars, at, kind, target, repeat) else {
+            return;
+        };
+        if pending.is_none() {
+            self.cursor = to;
+            return;
+        }
+        let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
+        self.remove(range.start, range.end);
+        if pending == Some('c') {
+            self.mode = Mode::Insert;
+        } else {
+            self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+        }
+    }
+
     /// Writes priority `c`, `a` to `e` or a space to drop it, at the start of a pending line, the cursor kept on its character.
     fn set_priority(&mut self, c: char) {
         let todo = Todo::from_line(&self.text);
@@ -289,6 +331,28 @@ fn motion(chars: &[char], at: usize, code: KeyCode) -> Option<usize> {
         KeyCode::Char(e @ ('e' | 'E')) => next_end(chars, at, e == 'E'),
         _ => return None,
     })
+}
+
+/// The other direction of a find key.
+fn opposite(kind: char) -> char {
+    match kind {
+        'f' => 'F',
+        'F' => 'f',
+        't' => 'T',
+        _ => 't',
+    }
+}
+
+/// Where `f`, `F`, `t` or `T` takes a cursor at `at` to `target`; a repeat of `t` or `T` skips the character next to the cursor.
+fn find(chars: &[char], at: usize, kind: char, target: char, repeat: bool) -> Option<usize> {
+    let skip = usize::from(repeat && matches!(kind, 't' | 'T'));
+    if matches!(kind, 'f' | 't') {
+        let i = (at + 1 + skip..chars.len()).find(|&i| chars[i] == target)?;
+        Some(if kind == 't' { i - 1 } else { i })
+    } else {
+        let i = (0..at.saturating_sub(skip)).rev().find(|&i| chars[i] == target)?;
+        Some(if kind == 'T' { i + 1 } else { i })
+    }
 }
 
 /// The word under `at`, a run of one class, blanks being one; `around` adds the blanks after it, those before it when none follow.

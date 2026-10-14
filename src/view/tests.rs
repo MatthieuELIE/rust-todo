@@ -215,7 +215,7 @@ fn the_help_shows_each_mode_s_keys_under_its_name_keys_bold_actions_and_slashes_
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help;
 
-    let buffer = render_in(&app, 90, 33);
+    let buffer = render_in(&app, 90, 35);
     let rows = rows(&buffer);
     let y = rows.iter().position(|row| row.contains(" LIST ")).expect("list block");
 

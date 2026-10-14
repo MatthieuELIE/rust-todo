@@ -121,6 +121,8 @@ NORMAL
 h/l/0/$      move
 w/b/e        word
 W/B/E        blank-separated word
+f/F/t/T x    to, before a char
+;/,          repeat, reverse
 x/D/C        delete, to end, change
 d/c + move   delete, change up to
 dd/cc        delete, change the line

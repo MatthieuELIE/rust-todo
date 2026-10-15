@@ -577,7 +577,7 @@ fn the_details_card_under_the_list_shows_the_task_under_the_cursor() {
             String::new(),
             format!(" DETAILS {}", "─".repeat(41)),
             " Priority   A".to_string(),
-            " Text      Appeler +client pour le devis".to_string(),
+            " Text      Appeler +client pour le devis @work".to_string(),
             format!("{:<25} Due", " Created   2026-09-01"),
             format!("{:<25} Contexts  @work", " Projects  +client"),
             " wait:figma".to_string(),
@@ -595,6 +595,14 @@ fn the_details_card_under_the_list_shows_the_task_under_the_cursor() {
         (PROJECT, PROJECT, CONTEXT)
     );
     assert_eq!(buffer[(35, 12)].fg, PRIMARY);
+}
+
+#[test]
+fn a_project_ending_the_description_is_shown_coloured_in_the_text_row() {
+    let buffer = render_in(&app_of(&["Appeler pour le devis +client"]), 75, 18);
+
+    assert_eq!(list_rows(&buffer)[12], " Text      Appeler pour le devis +client");
+    assert_eq!((buffer[(35, 12)].fg, buffer[(57, 12)].fg), (PRIMARY, PROJECT));
 }
 
 #[test]

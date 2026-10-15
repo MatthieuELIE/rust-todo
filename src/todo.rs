@@ -160,14 +160,13 @@ impl Todo {
         names
     }
 
-    /// The description without its trailing run of `+project`, `@context` and `key:value` words.
+    /// The description without its trailing run of `key:value` words; a `+project` or `@context` ending it stays.
     pub fn text(&self) -> &str {
         let mut text = self.description.as_str();
         loop {
             let trimmed = text.trim_end();
             let (rest, last) = trimmed.rsplit_once(char::is_whitespace).unwrap_or(("", trimmed));
-            let tag = last.len() > 1 && last.starts_with(['+', '@']) || Todo::is_key_value(last);
-            if !tag {
+            if !Todo::is_key_value(last) {
                 return trimmed;
             }
             text = rest;
@@ -335,17 +334,23 @@ mod tests {
     }
 
     #[test]
-    fn the_text_is_the_description_without_its_trailing_tags_and_key_values() {
+    fn the_text_is_the_description_without_its_trailing_key_values() {
         let text = |description: &str| Todo::from_line(description).text().to_string();
 
-        assert_eq!(text("Appeler +client pour le devis @work wait:figma"), "Appeler +client pour le devis");
-        assert_eq!(text("Pay rent +home  @web "), "Pay rent");
+        assert_eq!(
+            text("Appeler +client pour le devis @work wait:figma"),
+            "Appeler +client pour le devis @work"
+        );
+        assert_eq!(text("Pay rent +home  @web "), "Pay rent +home  @web");
         assert_eq!(text("Meet at 10:30"), "Meet at 10:30");
         assert_eq!(text("Read http://example.com"), "Read http://example.com");
         assert_eq!(text("Call a+b + Note:"), "Call a+b + Note:");
         assert_eq!(text("Call +"), "Call +");
         assert_eq!(text("Mail @"), "Mail @");
-        assert_eq!(text("+rent @home due:2026-10-01"), "");
+        assert_eq!(text("+rent @home due:2026-10-01"), "+rent @home");
+        assert_eq!(text("Mail +work @home due:2026-10-20"), "Mail +work @home");
+        assert_eq!(text("Appeler pour le devis +client"), "Appeler pour le devis +client");
+        assert_eq!(text("Mail +work due:2026-10-20 @home"), "Mail +work due:2026-10-20 @home");
     }
 
     #[test]

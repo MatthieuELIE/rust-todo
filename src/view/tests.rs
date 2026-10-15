@@ -617,12 +617,43 @@ fn the_details_hide_when_the_list_would_get_fewer_than_five_rows() {
 }
 
 #[test]
-fn a_value_too_long_for_the_details_ends_with_an_ellipsis() {
-    let text = "A rather long description that will not fit here";
+fn a_text_too_long_for_its_place_wraps_under_the_value_and_grows_the_card() {
+    let app = app_of(&["Appeler le client pour le devis du printemps prochain +client"]);
 
-    let buffer = render_in(&app_of(&[text]), 65, 16);
+    let buffer = render_in(&app, 75, 18);
 
-    assert_eq!(list_rows(&buffer)[10], format!(" Text      {}…", &text[..28]));
+    assert_eq!(
+        list_rows(&buffer)[9..15],
+        [
+            format!(" DETAILS {}", "─".repeat(41)),
+            " Priority".to_string(),
+            " Text      Appeler le client pour le devis du".to_string(),
+            "           printemps prochain +client".to_string(),
+            format!("{:<25} Due", " Created"),
+            format!("{:<25} Contexts", " Projects  +client"),
+        ]
+    );
+    assert_eq!(rows(&buffer)[16].chars().nth(23), Some('╰'));
+    assert_eq!((buffer[(54, 12)].fg, buffer[(35, 12)].fg), (PROJECT, PRIMARY));
+}
+
+#[test]
+fn a_short_text_keeps_the_card_of_seven_rows_and_the_list_its_height() {
+    let buffer = render_in(&app_of(&["Pay rent"]), 75, 18);
+
+    assert!(list_rows(&buffer)[10].starts_with(" DETAILS"));
+    assert_eq!(rows(&buffer)[16].chars().nth(23), Some('╰'));
+}
+
+#[test]
+fn a_text_too_long_for_a_low_screen_leaves_the_list_five_rows_and_ends_its_last_row_with_an_ellipsis() {
+    let text = "A rather long description that will not fit here at all because it is far too long for the card";
+
+    let buffer = render_in(&app_of(&[text]), 65, 17);
+
+    assert!(list_rows(&buffer)[8].starts_with(" DETAILS"));
+    assert_eq!(list_rows(&buffer)[10], " Text      A rather long description");
+    assert!(list_rows(&buffer)[11].ends_with('…'));
 }
 
 #[test]

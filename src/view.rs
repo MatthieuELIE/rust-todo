@@ -74,7 +74,7 @@ const HELP_WIDTH: u16 = 46;
 /// Tallest the help box grows, its borders and padding included.
 const HELP_MAX_HEIGHT: u16 = 30;
 
-/// Height of the detail card under the list: its borders and five rows.
+/// Height of the detail card under the list when its text fits one line: its borders and five rows; `Text` wraps and the card grows with it.
 const DETAILS_HEIGHT: u16 = 7;
 
 /// Width of the filter panel's card, its borders included.
@@ -155,7 +155,13 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
     if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
-        let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(DETAILS_HEIGHT)])
+        let spare = list_area.height - (MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT);
+        let text_width = list_area.width.saturating_sub(2 + label("Text").width() as u16);
+        let text_rows = app
+            .selected_task()
+            .map_or(1, |todo| text_of(todo, (!todo.done).then_some(today)).line_count(text_width) as u16);
+        let height = DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare);
+        let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(height)])
             .spacing(1)
             .areas(list_area);
         draw_list(frame, app, list_area, scroll, today);
@@ -224,6 +230,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
 }
 
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
+/// The text wraps under its value over the rows `area` leaves it, its last row ended by `…` when it is cut; the other rows are cut by `…`.
 fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date) {
     let block = card(false).title(" DETAILS ".fg(SECONDARY).bold());
     let inner = block.inner(area);
@@ -231,7 +238,14 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date)
     let Some(todo) = todo else {
         return;
     };
-    let [first_row, text_row, dates_row, tags_row, key_values_row] = Layout::vertical([Constraint::Length(1); 5]).areas(inner);
+    let [first_row, text_row, dates_row, tags_row, key_values_row] = Layout::vertical([
+        Constraint::Length(1),
+        Constraint::Fill(1),
+        Constraint::Length(1),
+        Constraint::Length(1),
+        Constraint::Length(1),
+    ])
+    .areas(inner);
     let [created_area, due_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(dates_row);
     let [projects_area, contexts_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(tags_row);
     let today = (!todo.done).then_some(today);
@@ -258,7 +272,7 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date)
         let priority = todo.priority.map(badge);
         detail(frame, "Priority", priority.into_iter().collect(), first_row);
     }
-    detail(frame, "Text", words(todo.text(), today), text_row);
+    draw_text(frame, text_of(todo, today), text_row);
     detail(frame, "Created", date(todo.created), created_area);
     detail(frame, "Due", due.into_iter().collect(), due_area);
     detail(frame, "Projects", tags('+', todo.projects()), projects_area);
@@ -268,9 +282,31 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date)
 
 /// Draws a row of the detail zone, its `label` dimmed then its `value`.
 fn detail(frame: &mut Frame, label: &str, value: Vec<Span<'static>>, area: Rect) {
-    let mut line = Line::from(format!(" {label:<10}").fg(LABEL));
+    let mut line = Line::from(self::label(label));
     line.extend(value);
     draw_cut(frame, line, area);
+}
+
+/// The dimmed label of a row of the detail zone, padded to the column the values start at.
+fn label(label: &str) -> Span<'static> {
+    format!(" {label:<10}").fg(LABEL)
+}
+
+/// The words of the text of `todo`, wrapped like the popup's field.
+fn text_of(todo: &Todo, today: Option<Date>) -> Paragraph<'static> {
+    Paragraph::new(Line::from(words(todo.text(), today))).wrap(Wrap { trim: false })
+}
+
+/// Draws the `Text` row: its label, then `text` beside it, the lines after the first aligned under the value; `…` ends the last row when `text` is cut.
+fn draw_text(frame: &mut Frame, text: Paragraph, area: Rect) {
+    let label = label("Text");
+    let [label_area, value_area] = Layout::horizontal([Constraint::Length(label.width() as u16), Constraint::Fill(1)]).areas(area);
+    frame.render_widget(label, label_area);
+    let cut = text.line_count(value_area.width) > value_area.height as usize;
+    frame.render_widget(text, value_area);
+    if cut {
+        frame.buffer_mut()[(value_area.right() - 1, value_area.bottom() - 1)].set_symbol("…");
+    }
 }
 
 /// Draws `line` in `area`, ended by `…` when it overflows.

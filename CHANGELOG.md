@@ -3,7 +3,7 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.6.1] - 2026-10-17
 
 ### Fixed
 
@@ -131,6 +131,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 First tagged version: the command line (`add`, `list`, `do`, `remove`) and the interactive list with its filter panel, search, priority groups, undo and popup.
 
+[0.6.1]: https://github.com/MatthieuELIE/rust-todo/compare/v0.6.0...v0.6.1
 [0.6.0]: https://github.com/MatthieuELIE/rust-todo/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/MatthieuELIE/rust-todo/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/MatthieuELIE/rust-todo/compare/v0.3.0...v0.4.0

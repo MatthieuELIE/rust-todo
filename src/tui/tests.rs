@@ -606,6 +606,29 @@ fn shift_d_says_nothing_due_and_keeps_the_filter_when_no_task_is_due() {
 }
 
 #[test]
+fn shift_d_says_nothing_due_matches_the_search_and_keeps_filter_and_search() {
+    let mut app = app_of(&["Note +home", "Pay rent due:2026-09-26"]);
+    app.filter = Some("+home".to_string());
+    app.search = "Note".to_string();
+
+    press(&mut app, "D");
+
+    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing due matches the search"), false));
+    assert_eq!((app.filter.as_deref(), app.search.as_str()), (Some("+home"), "Note"));
+}
+
+#[test]
+fn shift_d_switches_to_due_when_the_search_keeps_a_due_task() {
+    let mut app = app_of(&["Note +home", "Pay rent due:2026-09-26"]);
+    app.search = "rent".to_string();
+
+    press(&mut app, "D");
+
+    assert_eq!((app.filter.as_deref(), app.message.as_deref()), (Some(DUE_NOW), None));
+    assert_eq!(app.search, "rent");
+}
+
+#[test]
 fn shift_d_is_refused_in_the_history() {
     let mut app = history_of(&["Pay rent due:2026-09-26"], &["x old"]);
 

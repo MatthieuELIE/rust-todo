@@ -168,6 +168,12 @@ impl App {
         tasks
     }
 
+    /// Whether a task due is left by the search, whatever the filter.
+    fn tasks_due_in_search(&self) -> bool {
+        let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
+        self.listed(&terms).iter().any(|(_, todo)| shows(todo, DUE_NOW, self.today))
+    }
+
     /// Tasks on screen, numbered and in display order.
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
@@ -631,6 +637,9 @@ impl App {
                 self.cursor = 0;
             }
             KeyCode::Char('D') if self.in_history => self.refuse("history is read-only"),
+            KeyCode::Char('D') if self.filters().iter().any(|(term, _)| term == DUE_NOW) && !self.tasks_due_in_search() => {
+                self.message = Some("nothing due matches the search".to_string())
+            }
             KeyCode::Char('D') if self.filters().iter().any(|(term, _)| term == DUE_NOW) => {
                 if self.filter.as_deref() != Some(DUE_NOW) {
                     self.filter = Some(DUE_NOW.to_string());

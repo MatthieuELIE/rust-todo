@@ -117,7 +117,7 @@ Enter        save
 Esc          normal mode
 Ctrl-w       erase a word
 Ctrl-u       erase to the start
-Tab          complete + or @ word
+Tab          complete +, @ or wait:
 ↓/↑/Ctrl-n/p pick a completion
 
 NORMAL

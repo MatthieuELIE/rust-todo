@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- In the history, the status bar shows `r reopen`, `H back` and `? help` instead of the list's `edit`, `add`, `done` and `priority`, which the history refuses.
+
 ## [0.5.0] - 2026-10-15
 
 ### Changed

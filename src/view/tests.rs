@@ -339,6 +339,9 @@ fn the_mode_keys_follow_when_they_fit_whole_and_no_message_is_shown() {
     app.message = None;
     assert_eq!(rows(&render(&app))[4], " LIST");
     assert_eq!(rows(&render_in(&app, 60, 5))[4], " LIST  ⏎ edit · o add · x done · p priority · ? help");
+    app.in_history = true;
+    assert_eq!(rows(&render_in(&app, 60, 5))[4], " LIST  r reopen · H back · ? help");
+    app.in_history = false;
 
     app.focus = Focus::Search;
     app.search = "ca".to_string();

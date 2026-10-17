@@ -329,6 +329,7 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             Mode::Normal => ("NORMAL", "i insert · p priority · ⏎ save · esc cancel"),
         },
         Focus::Panel => ("PANEL", "j/k filter · esc all tasks · tab back"),
+        Focus::List | Focus::Help(_) if app.in_history => ("LIST", "r reopen · H back · ? help"),
         Focus::List | Focus::Help(_) => ("LIST", "⏎ edit · o add · x done · p priority · ? help"),
     };
     let filters = if matches!(app.focus, Focus::Search) {

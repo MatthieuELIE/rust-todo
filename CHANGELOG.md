@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - When `u` or `r` brings a task back and it cannot leave `done.txt` (`… but done.txt still holds the task`), the `u` and `Ctrl-R` history is cleared, so that `u` and `Ctrl-R` answer `nothing to undo` and `nothing to redo` instead of putting the task in `done.txt` a second time.
+- When one save takes several tasks out of `done.txt`, the red `… but done.txt still holds the task` message of the first refusal stays in the status bar: a later refusal or a grey `… the task was no longer in done.txt` no longer replaces it.
 
 ## [0.6.0] - 2026-10-17
 

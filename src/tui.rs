@@ -863,15 +863,20 @@ impl App {
         {
             self.refuse(&format!("could not save: {e} (done.txt already holds the task)"));
         }
+        let mut held = false;
         for (todo, number) in back.iter().filter(|_| saved) {
             let verb = if number.is_some() { "reopened" } else { "undone" };
             match repository::remove_task(&done_path, *number, &todo.to_line()) {
                 Ok(true) => {}
-                Ok(false) => self.message = Some(format!("{verb}, the task was no longer in done.txt")),
+                Ok(false) if !held => self.message = Some(format!("{verb}, the task was no longer in done.txt")),
+                Ok(false) => {}
                 Err(e) => {
                     self.undo.clear();
                     self.redo.clear();
-                    self.refuse(&format!("{verb}, but done.txt still holds the task: {e}"));
+                    if !held {
+                        self.refuse(&format!("{verb}, but done.txt still holds the task: {e}"));
+                    }
+                    held = true;
                 }
             }
         }

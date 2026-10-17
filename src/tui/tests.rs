@@ -1963,6 +1963,71 @@ fn ctrl_r_after_a_u_whose_line_could_not_leave_done_txt_does_not_add_it_there_ag
 }
 
 #[test]
+fn a_refusal_to_take_a_line_out_of_done_txt_is_not_replaced_by_a_later_removal_of_the_same_save() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("held-then-gone");
+    let (file, locked) = (folder.join("todo.txt"), folder.join("locked"));
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("done.txt"), "").unwrap();
+    std::os::unix::fs::symlink(locked.join("done.txt"), folder.join("done.txt")).unwrap();
+    let mut app = app_of(&["one", "two"]);
+    let mut text = "one\ntwo\n".to_string();
+    let key = || Some(Event::Key(KeyEvent::new(KeyCode::Char('u'), KeyModifiers::NONE)));
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    let kept = std::fs::read_to_string(locked.join("done.txt"))
+        .unwrap()
+        .lines()
+        .last()
+        .unwrap()
+        .to_string();
+    std::fs::write(locked.join("done.txt"), format!("{kept}\n")).unwrap();
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key(), TODAY);
+    let saves = app.turn(Ok(text.clone()), &mut text.clone(), key(), TODAY);
+    app.save(&file, &mut text);
+
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(saves);
+    assert!(app.refused);
+    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+}
+
+#[test]
+fn a_second_refusal_to_take_a_line_out_of_done_txt_in_the_same_save_does_not_replace_the_first() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("held-twice");
+    let (file, locked) = (folder.join("todo.txt"), folder.join("locked"));
+    std::fs::write(&file, "one\n").unwrap();
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("done.txt"), "x 2026-09-20 old\n").unwrap();
+    std::os::unix::fs::symlink(locked.join("done.txt"), folder.join("done.txt")).unwrap();
+    let mut app = app_of(&["one"]);
+    let mut text = "one\n".to_string();
+    let key = |c| Some(Event::Key(KeyEvent::new(KeyCode::Char(c), KeyModifiers::NONE)));
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key('u'), TODAY);
+    press(&mut app, "H");
+    app.refresh_history(&file);
+    press(&mut app, "j");
+    let saves = app.turn(Ok(text.clone()), &mut text.clone(), key('r'), TODAY);
+    app.save(&file, &mut text);
+
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(saves);
+    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+}
+
+#[test]
 fn yy_leaves_the_line_of_the_task_under_the_cursor_to_copy() {
     let mut app = app_of(&["one", "(B) 2026-09-01 two +p @c k:v"]);
     assert!(!press(&mut app, "yy"));

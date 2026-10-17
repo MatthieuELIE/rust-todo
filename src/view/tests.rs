@@ -930,3 +930,15 @@ fn the_list_scrolls_one_row_ahead_of_the_cursor() {
     assert!(rows.iter().any(|row| row.contains("task08")), "{rows:?}");
     assert!(!rows.iter().any(|row| row.contains("task09")), "{rows:?}");
 }
+
+#[test]
+fn the_help_says_tab_completes_wait_values_too() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.focus = Focus::Help(10);
+
+    assert!(
+        rows(&render_in(&app, 109, 36))
+            .iter()
+            .any(|row| row.contains("Tab          complete +, @ or wait:  "))
+    );
+}

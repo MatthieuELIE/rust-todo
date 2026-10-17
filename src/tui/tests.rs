@@ -284,7 +284,7 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
     assert_eq!(popup(&app).editor.text, "(A) ");
     assert!(!app.handle_key(enter, TODAY));
     assert_eq!(app.message.as_deref(), Some("a task needs a description"));
-    assert!(!matches!(app.focus, Focus::Popup(_)));
+    assert_eq!(popup(&app).editor.text, "(A) ");
     assert_eq!(shown(&app), ["(A) one"]);
 }
 
@@ -364,6 +364,38 @@ fn a_rejected_input_adds_nothing_and_says_why() {
 
     assert_eq!(app.message.as_deref(), Some("a task needs a description"));
     assert_eq!(shown(&app), ["one", "two", "three"]);
+}
+
+#[test]
+fn a_refused_line_keeps_the_popup_open_with_its_text_and_esc_closes_it_writing_nothing() {
+    let mut app = app();
+    let enter = KeyEvent::from(KeyCode::Enter);
+    let esc = KeyEvent::from(KeyCode::Esc);
+
+    press(&mut app, "o");
+    assert!(!app.handle_key(enter, TODAY));
+    assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+    assert_eq!(popup(&app).editor.text, "");
+
+    press(&mut app, "x Lorem");
+    assert!(!app.handle_key(enter, TODAY));
+    assert_eq!(app.message.as_deref(), Some("cannot add a task that is already done"));
+    assert_eq!(popup(&app).editor.text, "x Lorem");
+
+    app.handle_key(esc, TODAY);
+    assert!(!app.handle_key(esc, TODAY));
+    assert!(!matches!(app.focus, Focus::Popup(_)));
+    assert_eq!(shown(&app), ["one", "two", "three"]);
+}
+
+#[test]
+fn an_accepted_add_closes_the_popup() {
+    let mut app = app();
+
+    press(&mut app, "oLorem");
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+    assert!(!matches!(app.focus, Focus::Popup(_)));
 }
 
 #[test]

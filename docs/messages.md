@@ -55,8 +55,8 @@ A red one says that something was refused or failed; a grey one only says what h
 | `reopened` | grey | `r` brought a task of the history back to the task file |
 | `undone, the task was no longer in done.txt`, `reopened, the task was no longer in done.txt` | grey | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
 | `undone, but done.txt still holds the task: <reason>`, `reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files |
-| `a task needs a description` | red | the popup was saved empty, or with a priority or dates followed by a space and nothing else |
-| `cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space |
+| `a task needs a description` | red | the popup was saved empty, or with a priority or dates followed by a space and nothing else; the popup stays open |
+| `cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space; the popup stays open |
 | `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
 | `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving; the change stays on screen and is saved with the next one, once the file reads again |
 | `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |

@@ -471,16 +471,20 @@ impl App {
         }
     }
 
-    /// Closes the popup, adding or editing the task when its text was submitted, and tells whether the file must be rewritten.
+    /// Closes the popup, adding or editing the task when its text was submitted, and tells whether the file must be rewritten; a refused line keeps the popup open.
     fn close_popup(&mut self, outcome: Outcome, today: Date) -> bool {
         let Focus::Popup(popup) = std::mem::replace(&mut self.focus, Focus::List) else {
             unreachable!("the popup is open");
         };
-        match (outcome, popup.target) {
+        let write = match (outcome, &popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
-            (Outcome::Submit, Target::Edit(number)) => self.edit(number, &popup.editor.text, today),
+            (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
             _ => false,
+        };
+        if self.refused {
+            self.focus = Focus::Popup(popup);
         }
+        write
     }
 
     /// Applies a key typed in the search line, the list back on its first row.

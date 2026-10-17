@@ -68,6 +68,6 @@ Any other key and a paste are ignored while it is open.
 ## Saving
 
 An added task is stamped with today's date, and under a panel filter it gets the filter's term appended when it lacks that exact word; under `Due` it gets `due:` with today's date unless its line holds a `due:` date or value, the popup being titled `ADD (Due)`; under `Waiting` it gets nothing and the panel goes back to `All tasks`.
-An edited line replaces the task as typed, marker, priority and dates included; only an empty description is refused.
+An edited line replaces the task as typed, marker, priority and dates included; only a line with no text word, as for `todo edit`, is refused: one made of `+projects`, `@contexts`, `key:` words, a priority and dates, which an unchanged line or one ended by a typed `x` escapes, unless nothing follows the `x`.
 A task whose `x` marker is typed is completed on the day, or on the date typed after the `x`, and moves to `done.txt`, as with `x` in the list; `u` in the list brings it back.
 When the file changes on disk during an edit, the edit is cancelled, since the task's number may now name another task; an add stays open.

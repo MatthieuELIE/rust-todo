@@ -709,7 +709,7 @@ impl App {
         }
     }
 
-    /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; an empty description is refused, an unchanged line ignored.
+    /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; a task with no text word is refused, an unchanged line ignored.
     fn edit(&mut self, number: usize, text: &str, today: Date) -> bool {
         let mut todo = match Todo::from_input(text) {
             Ok(todo) => todo,
@@ -718,7 +718,7 @@ impl App {
                 return false;
             }
         };
-        if todo.done {
+        if todo.done && !todo.description.is_empty() {
             if todo.created.is_none() && todo.completed == self.todos[number - 1].created {
                 todo.created = todo.completed.take();
             }
@@ -728,6 +728,10 @@ impl App {
             return true;
         }
         if todo.to_line() == self.todos[number - 1].to_line() {
+            return false;
+        }
+        if let Err(e) = todo.check_text() {
+            self.refuse(&e);
             return false;
         }
         self.todos[number - 1] = todo;

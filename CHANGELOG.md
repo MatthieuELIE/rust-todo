@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- A task made only of `+projects`, `@contexts`, `key:` words (`wait:` and a bare URL included), a priority or a date is refused, with `a task needs more than +projects, @contexts and key: words`, by `todo add`, `todo edit` and the popup, an empty line too. `todo reopen` and `r` in the history refuse such a task with `task 2 cannot be reopened: it is only +projects, @contexts and key: words`. An unchanged line and a line ended by an `x` typed in the popup are not checked, and lines already in `todo.txt` stay readable and can be completed.
+
 ### Fixed
 
 - A line the popup refuses, empty or starting with `x ` on an add, no longer closes it: the popup stays open with the text as typed and the reason in the status bar, and `Esc` closes it without writing.

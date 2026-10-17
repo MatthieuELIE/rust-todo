@@ -11,6 +11,9 @@ pub const WAIT: &str = "wait:";
 /// Key of the `key:value` holding a task's due date, as in `due:2026-10-15`.
 pub const DUE: &str = "due:";
 
+/// Why a task made only of non-text words is refused when typed.
+pub const NO_TEXT: &str = "a task needs more than +projects, @contexts and key: words";
+
 /// A todo item, with optional priority and dates.
 #[derive(Clone)]
 pub struct Todo {
@@ -59,22 +62,37 @@ impl Todo {
         }
     }
 
-    /// Parse a line typed by the user, its trailing spaces dropped, refusing a control character or an empty description.
+    /// Parse a line typed by the user, its trailing spaces dropped, refusing a control character.
     pub fn from_input(text: &str) -> Result<Todo, String> {
         if text.contains(char::is_control) {
             return Err("a task is one line, without control characters".to_string());
         }
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
-        if todo.description.is_empty() {
-            return Err("a task needs a description".to_string());
-        }
         Ok(todo)
+    }
+
+    /// Refuse a task whose description has no text word.
+    pub fn check_text(&self) -> Result<(), String> {
+        if self.has_text() { Ok(()) } else { Err(NO_TEXT.to_string()) }
+    }
+
+    /// Whether the description has a word that is not a `+project`, `@context`, `key:` word, priority or date.
+    fn has_text(&self) -> bool {
+        self.description.split_whitespace().any(|word| {
+            let named = |sigil| word.strip_prefix(sigil).is_some_and(|name| !name.is_empty());
+            let key = word
+                .split_once(':')
+                .is_some_and(|(key, _)| key.starts_with(char::is_alphabetic) && key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_'));
+            let priority = matches!(word.as_bytes(), [b'(', p, b')'] if Todo::is_valid_priority(*p as char));
+            !(named('+') || named('@') || key || priority || parse_date(word).is_some())
+        })
     }
 
     /// Build a pending task from user input, stamped with `today` unless it carries a creation date.
     pub fn new_from_input(text: &str, today: Date) -> Result<Todo, String> {
         let mut todo = Todo::from_input(text)?;
+        todo.check_text()?;
         if todo.done {
             return Err("cannot add a task that is already done".to_string());
         }
@@ -119,7 +137,7 @@ impl Todo {
     }
 
     /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
-    /// Refused with the reason, the task untouched, when it is not done, its line would still read as done or it has no description.
+    /// Refused with the reason, the task untouched, when it is not done, its line would still read as done or it has no text word.
     pub fn reopen(&mut self) -> Result<(), &'static str> {
         if !self.done {
             return Err("is not done");
@@ -132,8 +150,8 @@ impl Todo {
         if Todo::from_line(&pending.to_line()).done {
             return Err("cannot be reopened: its text starts with x");
         }
-        if pending.description.trim().is_empty() {
-            return Err("cannot be reopened: it has no description");
+        if !pending.has_text() {
+            return Err("cannot be reopened: it is only +projects, @contexts and key: words");
         }
         *self = pending;
         Ok(())
@@ -254,6 +272,42 @@ pub fn parse_date(text: &str) -> Option<Date> {
 mod tests {
     use super::*;
     use time::macros::date;
+
+    #[test]
+    fn a_task_made_only_of_non_text_words_is_refused() {
+        for line in [
+            "wait:designer",
+            "+work @home",
+            "due:2026-10-20 +work",
+            "wait://figma",
+            "wait:",
+            "https://example.com",
+            "(A)",
+            "2026-10-09",
+            "",
+            "+work (B) 2026-10-09 due:",
+        ] {
+            assert!(Todo::from_input(line).unwrap().check_text().is_err(), "{line}");
+        }
+        for line in [
+            "Appeler +banque",
+            "Appeler 2026-10-09",
+            "Lire https://example.com",
+            "10:30",
+            "+",
+            "(F)",
+            "@",
+        ] {
+            assert!(Todo::from_input(line).unwrap().check_text().is_ok(), "{line}");
+        }
+    }
+
+    #[test]
+    fn a_done_task_of_only_non_text_words_is_not_reopened() {
+        for line in ["x 2026-10-01", "x 2026-10-01 +work"] {
+            assert!(Todo::from_line(line).reopen().is_err(), "{line}");
+        }
+    }
 
     #[test]
     fn from_line_extracts_the_marker_priority_and_description() {

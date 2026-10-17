@@ -24,10 +24,11 @@ How `list` filters, sorts and colours is described in [Listing](listing.md).
 `add` takes one [todo.txt line](line-format.md) and appends it to the task file, so `todo add "(A) Call the bank +finance"` sets the priority.
 The task is stamped with today's date unless the line carries a creation date.
 A line starting with `x `, the marker of a done task, is refused, and so is a line break or any other control character.
+A line made only of `+projects`, `@contexts`, `key:` words, a priority or a date is refused too, an empty one included: `todo add "+work due:2026-10-20"` fails, `todo add "Call +bank"` does not.
 A text starting with `-` is taken as it is, `todo add "-5 degrees"`, but for `-h` and `--help`, which print the command's help.
 
 `edit` replaces a pending task with the line given: the creation date is kept unless the line carries one, and a priority left out is removed.
-A line equal to the task writes nothing.
+A line equal to the task writes nothing and is not checked; any other line is refused when it has no text word, as for `add`.
 It is stricter than [the popup](popup.md#saving): a line starting with `x ` is refused, where the popup completes the task.
 A done task still in the task file is refused too.
 
@@ -38,6 +39,7 @@ A done task still in the task file is refused too.
 `do` stamps the task with today's date, drops its priority and moves it to the end of `done.txt`, so the tasks after it move up one number.
 `archive` moves there every done task still in the task file, one typed by hand for instance, in the order of the file, and says how many: `2 tasks archived`.
 `reopen` adds the task to the end of the task file, pending and without its completion date, and removes its line from `done.txt`, whose other lines are left as written.
+A task made only of `+projects`, `@contexts`, `key:` words, a priority or a date is refused: `task 2 cannot be reopened: it is only +projects, @contexts and key: words`.
 The priority dropped when the task was completed does not come back: `edit` sets one.
 
 ## What is written

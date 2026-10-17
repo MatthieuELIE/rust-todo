@@ -118,7 +118,10 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
         (todo(&file, &["edit", "9", "Buy bread"]), "no task numbered 9\n"),
         (todo(&file, &["edit", "2", "Pay the rent"]), "task 2 is done\n"),
         (todo(&file, &["edit", "1", "x Call the bank"]), "cannot edit a task into a done one\n"),
-        (todo(&file, &["edit", "1", "(A) "]), "a task needs a description\n"),
+        (
+            todo(&file, &["edit", "1", "(A) "]),
+            "a task needs more than +projects, @contexts and key: words\n",
+        ),
     ];
     let untouched = std::fs::read_to_string(&file).unwrap();
     assert!(todo(&file, &["edit", "1", "(A) Call the @bank due:2026-10-09"]).status.success());
@@ -150,7 +153,10 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
     let refused = [
         (todo(&file, &["reopen", "2"]), "task 2 is not done\n"),
         (todo(&file, &["reopen", "3"]), "task 3 cannot be reopened: its text starts with x\n"),
-        (todo(&file, &["reopen", "5"]), "task 5 cannot be reopened: it has no description\n"),
+        (
+            todo(&file, &["reopen", "5"]),
+            "task 5 cannot be reopened: it is only +projects, @contexts and key: words\n",
+        ),
         (todo(&file, &["reopen", "9"]), "no task numbered 9\n"),
         (todo(&file, &["reopen", "0"]), "no task numbered 0\n"),
     ];

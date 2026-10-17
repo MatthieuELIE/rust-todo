@@ -283,7 +283,7 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
     press(&mut app, "WD");
     assert_eq!(popup(&app).editor.text, "(A) ");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
     assert_eq!(popup(&app).editor.text, "(A) ");
     assert_eq!(shown(&app), ["(A) one"]);
 }
@@ -362,7 +362,7 @@ fn a_rejected_input_adds_nothing_and_says_why() {
     press(&mut app, "o");
     assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
     assert_eq!(shown(&app), ["one", "two", "three"]);
 }
 
@@ -374,7 +374,7 @@ fn a_refused_line_keeps_the_popup_open_with_its_text_and_esc_closes_it_writing_n
 
     press(&mut app, "o");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs a description"));
+    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
     assert_eq!(popup(&app).editor.text, "");
 
     press(&mut app, "x Lorem");
@@ -1922,4 +1922,41 @@ fn copied_says_copied_in_grey_or_why_it_could_not_in_red() {
     assert_eq!((app.message.as_deref(), app.refused), (Some("copied"), false));
     app.copied(Err(io::Error::other("boom")));
     assert_eq!((app.message.as_deref(), app.refused), (Some("could not copy: boom"), true));
+}
+
+#[test]
+fn a_line_of_only_tags_is_refused_unchanged_ignored_and_ended_by_a_typed_x() {
+    let enter = KeyEvent::from(KeyCode::Enter);
+    let mut app = app_of(&["+work"]);
+
+    app.handle_key(enter, TODAY);
+    assert!(!app.handle_key(enter, TODAY));
+    assert_eq!(app.message, None);
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "A wait:a");
+    assert!(!app.handle_key(enter, TODAY));
+    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(shown(&app), ["+work"]);
+
+    let mut app = app_of(&["+work"]);
+    app.handle_key(enter, TODAY);
+    press(&mut app, "Ix ");
+    assert_eq!(popup(&app).editor.text, "x +work");
+    assert!(app.handle_key(enter, TODAY));
+    assert_eq!(moved(&app), ["+x 2026-09-26 +work"]);
+}
+
+#[test]
+fn a_line_replaced_by_a_lone_x_is_refused() {
+    let enter = KeyEvent::from(KeyCode::Enter);
+    let mut app = app_of(&["one"]);
+    app.handle_key(enter, TODAY);
+    press(&mut app, "0Dix ");
+    assert_eq!(popup(&app).editor.text, "x ");
+
+    assert!(!app.handle_key(enter, TODAY));
+    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(shown(&app), ["one"]);
+    assert!(moved(&app).is_empty());
 }

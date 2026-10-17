@@ -137,6 +137,10 @@ fn main() -> ExitCode {
                 if todo.to_line() == todos[number - 1].to_line() {
                     return ExitCode::SUCCESS;
                 }
+                if let Err(e) = todo.check_text() {
+                    eprintln!("{e}");
+                    return ExitCode::FAILURE;
+                }
                 todos[number - 1] = todo;
             }
             Err(e) => {

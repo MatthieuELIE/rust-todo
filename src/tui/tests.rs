@@ -841,6 +841,31 @@ fn the_panel_and_the_search_work_on_the_history_and_both_are_kept_across_h() {
 }
 
 #[test]
+fn h_under_due_or_waiting_switches_to_all_tasks_and_stays_there_on_the_way_back() {
+    for filter in [DUE_NOW, WAITING] {
+        let mut app = history_of(&["one due:2026-09-01 wait:bob"], &["x old", "x older wait:bob"]);
+        app.filter = Some(filter.to_string());
+
+        press(&mut app, "H");
+        assert_eq!((app.filter.as_deref(), shown(&app).len()), (None, 2));
+
+        press(&mut app, "H");
+        assert_eq!(app.filter, None);
+    }
+}
+
+#[test]
+fn h_under_a_project_keeps_it() {
+    let mut app = history_of(&["one +work"], &["x old +work", "x other"]);
+    app.filter = Some("+work".to_string());
+
+    press(&mut app, "H");
+
+    assert_eq!(app.filter.as_deref(), Some("+work"));
+    assert_eq!(shown(&app), ["x old +work"]);
+}
+
+#[test]
 fn the_history_panel_has_no_due_and_no_waiting_entry() {
     let mut app = history_of(&["one"], &["x Asked wait:bob +home", "Left pending due:2026-09-01"]);
 

@@ -624,6 +624,9 @@ impl App {
             KeyCode::Char('?') => self.focus = Focus::Help(0),
             KeyCode::Char('H') => {
                 self.in_history = !self.in_history;
+                if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {
+                    self.filter = None;
+                }
                 self.history_read = false;
                 self.cursor = 0;
             }

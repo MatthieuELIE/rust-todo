@@ -869,13 +869,8 @@ impl App {
                 Ok(true) => {}
                 Ok(false) => self.message = Some(format!("{verb}, the task was no longer in done.txt")),
                 Err(e) => {
-                    if number.is_some()
-                        && back.len() == 1
-                        && gone.is_empty()
-                        && let Some(reopen) = self.undo.last_mut()
-                    {
-                        reopen.1 = None;
-                    }
+                    self.undo.clear();
+                    self.redo.clear();
                     self.refuse(&format!("{verb}, but done.txt still holds the task: {e}"));
                 }
             }

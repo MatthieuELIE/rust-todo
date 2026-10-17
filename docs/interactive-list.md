@@ -55,7 +55,7 @@ While a command waits for its end, in the list or the popup, the keys typed so f
 Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
 Undoing `x` also reads `done.txt` again and takes out its last line equal to the task; when the line is no longer there the task comes back all the same and the status bar says so. `Ctrl-R` sends it to `done.txt` again.
 `done.txt` is not watched: a change made to it elsewhere shows at the next read.
-These steps are not saved: they are lost when the list closes or the file is reloaded.
+These steps are not saved: they are lost when the list closes or the file is reloaded, and when a task brought back by `u` or `r` could not leave `done.txt`.
 
 ## History
 

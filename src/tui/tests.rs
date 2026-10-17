@@ -1904,7 +1904,7 @@ fn a_reopened_line_gone_from_done_txt_since_it_was_read_is_kept_and_said_so() {
 }
 
 #[test]
-fn u_after_a_reopen_whose_line_could_not_leave_done_txt_does_not_add_it_there_again() {
+fn u_after_a_reopen_whose_line_could_not_leave_done_txt_has_nothing_to_undo() {
     use std::os::unix::fs::PermissionsExt;
     let folder = folder("reopen-held");
     let (file, locked) = (folder.join("todo.txt"), folder.join("locked"));
@@ -1921,15 +1921,45 @@ fn u_after_a_reopen_whose_line_could_not_leave_done_txt_does_not_add_it_there_ag
     press(&mut app, "Hr");
     app.save(&file, &mut text);
     let held = (read(&file), app.refused, app.message.clone().unwrap_or_default());
-    press(&mut app, "Hu");
-    app.save(&file, &mut text);
-    let undone = (read(&file), read(&locked.join("done.txt")));
+    let wrote = press(&mut app, "Hu");
 
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
     assert!(held.2.starts_with("reopened, but done.txt still holds the task: "), "{}", held.2);
     assert_eq!((held.0, held.1), ("one\nold\n".to_string(), true));
-    assert_eq!(undone, ("one\n".to_string(), "x 2026-09-20 old\n".to_string()));
+    assert!(!wrote);
+    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+}
+
+#[test]
+fn ctrl_r_after_a_u_whose_line_could_not_leave_done_txt_does_not_add_it_there_again() {
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("undo-held");
+    let (file, locked) = (folder.join("todo.txt"), folder.join("locked"));
+    std::fs::write(&file, "one\ntwo\n").unwrap();
+    std::fs::create_dir(&locked).unwrap();
+    std::fs::write(locked.join("done.txt"), "").unwrap();
+    std::os::unix::fs::symlink(locked.join("done.txt"), folder.join("done.txt")).unwrap();
+    let mut app = app_of(&["one", "two"]);
+    let mut text = "one\ntwo\n".to_string();
+    let ctrl_r = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL);
+
+    press(&mut app, "x");
+    app.save(&file, &mut text);
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
+    press(&mut app, "u");
+    app.save(&file, &mut text);
+    let held = (app.refused, app.message.clone().unwrap_or_default());
+    let wrote = app.handle_key(ctrl_r, TODAY);
+    let done = std::fs::read_to_string(locked.join("done.txt")).unwrap();
+
+    std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(held.1.starts_with("undone, but done.txt still holds the task: "), "{}", held.1);
+    assert!(held.0);
+    assert!(!wrote);
+    assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    assert_eq!(done.matches("one").count(), 1);
 }
 
 #[test]

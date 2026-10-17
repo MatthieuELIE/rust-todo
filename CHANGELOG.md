@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `D` pressed while the search hides every task due no longer switches to an empty `Due`: it says `nothing due matches the search` and leaves the filter and the search as they are.
 - `H` pressed under `Due` or `Waiting`, which the history panel does not have, switches to `All tasks` instead of showing an empty history or one filtered without a marked entry; the list stays on `All tasks` when `H` is pressed back. A `+project` or `@context` filter is kept as before.
 - `todo reopen` and `r` in the history drop the priority of the task, also on a `done.txt` line written by hand like `x (A) Pay rent`, which comes back as `Pay rent`. `u` after `x` still gives the task back with its priority.
 - A line the popup refuses, empty or starting with `x ` on an add, no longer closes it: the popup stays open with the text as typed and the reason in the status bar, and `Esc` closes it without writing.

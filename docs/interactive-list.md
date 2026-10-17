@@ -92,7 +92,7 @@ The panel on the left lists `All tasks`, `Due` when a task is due, `Waiting` whe
 Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
 `Due` shows the pending tasks whose `due:` date is today or past, as `todo list --due` does; its name is red when one of them is overdue and yellow when they are all for today, and it keeps that colour while selected. A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
-From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`; with no task due it says `nothing due` and changes nothing.
+From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`; with no task due it says `nothing due`, and when the search hides every task due it says `nothing due matches the search`, and changes nothing.
 `Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`; `/wait:figma` narrows it to one.
 
 ## Search

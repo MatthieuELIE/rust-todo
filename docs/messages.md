@@ -49,6 +49,7 @@ A red one says that something was refused or failed; a grey one only says what h
 | `no task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
 | `could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
 | `nothing due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |
+| `nothing due matches the search` | grey | `D` was pressed while the search hides every pending task due today or before; the filter and the search are kept |
 | `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
 | `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, or is not UTF-8 text, when the list opens or at `H`; the history is then empty |
 | `task 2 is not done`, `task 2 cannot be reopened: its text starts with x`, `task 2 cannot be reopened: it is only +projects, @contexts and key: words` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |

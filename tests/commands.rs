@@ -176,6 +176,21 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
     assert_eq!(left, "\nStray line\nx x Sell it\nx (A) 2026-09-05 Kept as written\nx 2026-09-06 \n");
 }
 
+#[test]
+fn reopen_drops_the_priority_of_a_line_written_with_one() {
+    let folder = folder("reopen-priority");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "").unwrap();
+    std::fs::write(folder.join("done.txt"), "x (A) Pay rent\n").unwrap();
+
+    let reopened = todo(&file, &["reopen", "1"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(reopened.status.success());
+    assert_eq!(text, "Pay rent\n");
+}
+
 fn folder(name: &str) -> std::path::PathBuf {
     let folder = std::env::temp_dir().join(format!("todo-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&folder);

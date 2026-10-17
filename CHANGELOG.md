@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- `todo reopen` and `r` in the history drop the priority of the task, also on a `done.txt` line written by hand like `x (A) Pay rent`, which comes back as `Pay rent`. `u` after `x` still gives the task back with its priority.
 - A line the popup refuses, empty or starting with `x ` on an add, no longer closes it: the popup stays open with the text as typed and the reason in the status bar, and `Esc` closes it without writing.
 - In the history, the status bar shows `r reopen`, `H back` and `? help` instead of the list's `edit`, `add`, `done` and `priority`, which the history refuses.
 - The help under `?` says that `Tab` in the popup completes a `wait:` value too, not only a `+` or `@` word.

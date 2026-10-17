@@ -136,7 +136,7 @@ impl Todo {
         }
     }
 
-    /// Mark the task pending again, clearing its completion date; the priority dropped on completion does not come back.
+    /// Mark the task pending again, clearing its completion date and its priority.
     /// Refused with the reason, the task untouched, when it is not done, its line would still read as done or it has no text word.
     pub fn reopen(&mut self) -> Result<(), &'static str> {
         if !self.done {
@@ -145,6 +145,7 @@ impl Todo {
         let pending = Todo {
             done: false,
             completed: None,
+            priority: None,
             ..self.clone()
         };
         if Todo::from_line(&pending.to_line()).done {
@@ -455,6 +456,15 @@ mod tests {
         task.reopen().unwrap();
 
         assert_eq!(task.to_line(), "2026-08-01 Lorem ipsum");
+    }
+
+    #[test]
+    fn reopening_a_done_line_written_with_a_priority_drops_it() {
+        let mut task = Todo::from_line("x (A) Pay rent");
+
+        task.reopen().unwrap();
+
+        assert_eq!(task.to_line(), "Pay rent");
     }
 
     #[test]

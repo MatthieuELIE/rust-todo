@@ -40,7 +40,7 @@ A done task still in the task file is refused too.
 `archive` moves there every done task still in the task file, one typed by hand for instance, in the order of the file, and says how many: `2 tasks archived`.
 `reopen` adds the task to the end of the task file, pending and without its completion date, and removes its line from `done.txt`, whose other lines are left as written.
 A task made only of `+projects`, `@contexts`, `key:` words, a priority or a date is refused: `task 2 cannot be reopened: it is only +projects, @contexts and key: words`.
-The priority dropped when the task was completed does not come back: `edit` sets one.
+The task comes back without a priority, even a `done.txt` line written by hand with one: `edit` sets one.
 
 ## What is written
 

@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- A line the popup refuses, empty or starting with `x ` on an add, no longer closes it: the popup stays open with the text as typed and the reason in the status bar, and `Esc` closes it without writing.
 - In the history, the status bar shows `r reopen`, `H back` and `? help` instead of the list's `edit`, `add`, `done` and `priority`, which the history refuses.
 - The help under `?` says that `Tab` in the popup completes a `wait:` value too, not only a `+` or `@` word.
 

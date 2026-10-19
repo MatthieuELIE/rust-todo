@@ -32,8 +32,8 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
     let no_color = config::no_color(std::env::var_os("NO_COLOR"));
-    let theme = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir()), no_color) {
-        Ok(theme) => theme,
+    let (theme, icons) = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir()), no_color) {
+        Ok(read) => read,
         Err(message) => {
             eprintln!("{message}");
             if cli.command.is_none() {
@@ -64,7 +64,7 @@ fn main() -> ExitCode {
     };
 
     let Some(command) = cli.command else {
-        return match run(todos, text, &path, theme) {
+        return match run(todos, text, &path, theme, icons) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");
@@ -275,9 +275,10 @@ fn todo_path() -> PathBuf {
 }
 
 /// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
-fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme) -> io::Result<()> {
+fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons: bool) -> io::Result<()> {
     let mut app = App::new(todos);
     app.theme = theme;
+    app.icons = icons;
     app.today = Some(today());
     let mut scroll = ListState::default();
     on_terminal(|terminal| {

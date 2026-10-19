@@ -146,6 +146,8 @@ pub struct App {
     pub in_history: bool,
     /// Colours the list is drawn in.
     pub theme: Theme,
+    /// Whether the panel and the detail zone carry Nerd Font icons.
+    pub icons: bool,
 }
 
 impl App {

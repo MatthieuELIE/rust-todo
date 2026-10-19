@@ -1045,3 +1045,93 @@ fn the_help_says_tab_completes_wait_values_too() {
             .any(|row| row.contains("Tab          complete +, @ or wait:  "))
     );
 }
+
+const GLYPHS: [char; 6] = ['\u{f07b}', '\u{f1fa}', '\u{f05a}', '\u{f0ca}', '\u{f073}', '\u{f252}'];
+
+/// The private-use glyphs on screen with their position.
+fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
+    let mut found = Vec::new();
+    for y in 0..buffer.area.height {
+        for x in 0..buffer.area.width {
+            if let Some(glyph) = buffer[(x, y)].symbol().chars().next().filter(|c| ('\u{e000}'..='\u{f8ff}').contains(c)) {
+                found.push((glyph, x, y));
+            }
+        }
+    }
+    found
+}
+
+fn app_with_every_entry() -> App {
+    app_of(&["(A) Call due:2026-09-01 wait:bank +app @work", "Pay due:2026-09-26"])
+}
+
+#[test]
+fn without_icons_no_cell_is_in_the_private_use_area() {
+    let buffer = render_in(&app_with_every_entry(), 109, 36);
+
+    assert!(glyph_cells(&buffer).is_empty());
+}
+
+#[test]
+fn with_icons_the_six_glyphs_stand_before_their_word_in_its_style() {
+    let mut app = app_with_every_entry();
+    app.icons = true;
+
+    let buffer = render_in(&app, 109, 36);
+
+    let found = glyph_cells(&buffer);
+    let words = ["PROJECTS", "CONTEXTS", "DETAILS", "All tasks", "Due", "Waiting"];
+    assert_eq!(found.len(), 6);
+    for (glyph, word) in GLYPHS.iter().zip(words) {
+        let &(_, x, y) = found.iter().find(|(found, ..)| found == glyph).unwrap();
+        let after: String = (x + 1..x + 2 + word.len() as u16).map(|x| buffer[(x, y)].symbol()).collect();
+        assert_eq!(after, format!(" {word}"));
+        let (icon, first) = (&buffer[(x, y)], &buffer[(x + 2, y)]);
+        assert_eq!((icon.fg, icon.modifier), (first.fg, first.modifier), "{word}");
+    }
+    let due = found.iter().find(|(glyph, ..)| *glyph == '\u{f073}').unwrap();
+    assert_eq!(buffer[(due.1, due.2)].fg, MOCHA.alert);
+}
+
+#[test]
+fn with_icons_the_section_headers_icons_stand_in_the_column_of_the_entries_icons() {
+    let mut app = app_with_every_entry();
+    app.icons = true;
+
+    let found = glyph_cells(&render_in(&app, 109, 36));
+
+    let column = |glyph| found.iter().find(|(found, ..)| *found == glyph).unwrap().1;
+    for header in ['\u{f07b}', '\u{f1fa}'] {
+        assert_eq!(column(header), column('\u{f0ca}'), "{header:?}");
+    }
+}
+
+#[test]
+fn in_the_history_the_panel_icon_is_grey() {
+    let mut app = app_with_every_entry();
+    app.icons = true;
+    app.in_history = true;
+
+    let buffer = render_in(&app, 109, 36);
+
+    let all = glyph_cells(&buffer).into_iter().find(|(glyph, ..)| *glyph == '\u{f0ca}').unwrap();
+    assert_eq!(buffer[(all.1, all.2)].fg, MOCHA.secondary);
+}
+
+#[test]
+fn icons_do_not_change_the_width_of_the_panel_entries() {
+    let mut app = app_with_every_entry();
+    let plain = panel_rows(&render_in(&app, 109, 36));
+    app.icons = true;
+
+    let iconed = panel_rows(&render_in(&app, 109, 36));
+
+    let entries = |rows: &[String]| {
+        rows.iter()
+            .filter(|row| row.ends_with(char::is_numeric))
+            .map(|row| row.chars().count())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(entries(&plain), entries(&iconed));
+    assert!(entries(&plain).len() >= 5);
+}

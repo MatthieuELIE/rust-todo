@@ -17,6 +17,8 @@ struct Config {
 #[serde(deny_unknown_fields)]
 struct Section {
     name: Option<Name>,
+    #[serde(default)]
+    icons: bool,
 }
 
 #[derive(Deserialize)]
@@ -68,15 +70,15 @@ pub fn choose(no_color: bool, name: Option<Name>) -> Theme {
     }
 }
 
-/// The theme `path` asks for, `no_color` deciding when it names none: an error naming the path and the fault when the file is refused.
-pub fn theme(path: &Path, no_color: bool) -> Result<Theme, String> {
+/// The theme `path` asks for, `no_color` deciding when it names none, and whether it asks for icons: an error naming the path and the fault when the file is refused.
+pub fn theme(path: &Path, no_color: bool) -> Result<(Theme, bool), String> {
     let text = match std::fs::read_to_string(path) {
         Ok(text) => text,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(choose(no_color, None)),
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok((choose(no_color, None), false)),
         Err(e) => return Err(format!("could not read {}: {e}", path.display())),
     };
     let config: Config = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
-    Ok(choose(no_color, config.theme.name))
+    Ok((choose(no_color, config.theme.name), config.theme.icons))
 }
 
 #[cfg(test)]
@@ -125,7 +127,7 @@ mod tests {
             .iter()
             .map(|flavour| {
                 let text = format!("[theme]\nname = \"catppuccin-{flavour}\"\n");
-                theme(&written(flavour, &text), false).unwrap()
+                theme(&written(flavour, &text), false).unwrap().0
             })
             .collect();
 
@@ -163,7 +165,23 @@ mod tests {
 
     #[test]
     fn an_unknown_key_is_refused() {
-        assert!(refused("unknown-key", "[theme]\nicons = true\n").contains("icons"));
+        assert!(refused("unknown-key", "[theme]\ncolour = true\n").contains("colour"));
+    }
+
+    #[test]
+    fn icons_are_read_and_default_to_false() {
+        assert!(theme(&written("icons-on", "[theme]\nicons = true\n"), false).unwrap().1);
+        assert!(!theme(&written("icons-off", "[theme]\nname = \"terminal\"\n"), false).unwrap().1);
+    }
+
+    #[test]
+    fn icons_that_are_not_a_boolean_are_refused_with_the_path_and_line() {
+        let path = written("icons-text", "[theme]\nicons = \"yes\"\n");
+
+        let message = theme(&path, false).err().unwrap();
+
+        assert!(message.starts_with(&path.display().to_string()));
+        assert!(message.contains("line 2"));
     }
 
     #[test]
@@ -196,9 +214,9 @@ mod tests {
             .join(format!("todo-config-{}-nofile", std::process::id()))
             .join("config.toml");
 
-        assert!(theme(&nameless, true).unwrap() == Theme::NONE);
-        assert!(theme(&absent, true).unwrap() == Theme::NONE);
-        assert!(theme(&named, true).unwrap() == Theme::TERMINAL);
-        assert!(theme(&nameless, false).unwrap() == Theme::TERMINAL);
+        assert!(theme(&nameless, true).unwrap().0 == Theme::NONE);
+        assert!(theme(&absent, true).unwrap().0 == Theme::NONE);
+        assert!(theme(&named, true).unwrap().0 == Theme::TERMINAL);
+        assert!(theme(&nameless, false).unwrap().0 == Theme::TERMINAL);
     }
 }

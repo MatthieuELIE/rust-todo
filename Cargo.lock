@@ -1582,7 +1582,7 @@ dependencies = [
 
 [[package]]
 name = "todo"
-version = "0.6.1"
+version = "0.6.2"
 dependencies = [
  "clap",
  "ratatui",

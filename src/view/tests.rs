@@ -817,7 +817,7 @@ fn a_due_date_is_bold_red_once_past_yellow_on_the_day_and_greyed_later_or_when_n
 fn a_late_due_date_is_bold_in_every_theme_and_one_due_today_is_not() {
     let text = "Ship due:2026-09-25 due:2026-09-26";
 
-    for theme in [Theme::LATTE, Theme::FRAPPE, Theme::MACCHIATO, Theme::MOCHA, Theme::TERMINAL] {
+    for theme in [Theme::LATTE, Theme::FRAPPE, Theme::MACCHIATO, Theme::MOCHA, Theme::TERMINAL, Theme::NONE] {
         let style_of = |token: &str| {
             let line = line(&theme, 1, &Todo::from_line(text), TODAY);
             line.iter().find(|span| span.content == token).expect(token).style
@@ -825,6 +825,17 @@ fn a_late_due_date_is_bold_in_every_theme_and_one_due_today_is_not() {
         assert_eq!(style_of("due:2026-09-25"), Style::new().bold().fg(theme.alert));
         assert_eq!(style_of("due:2026-09-26"), Style::new().fg(theme.due_today));
     }
+}
+
+#[test]
+fn the_none_theme_leaves_every_cell_without_colour() {
+    let mut app = app_of(&["(A) Ship +app @work due:2026-09-20 due:2026-09-26", "x Done thing", "Plain"]);
+    app.theme = Theme::NONE;
+
+    let buffer = render_in(&app, 75, 20);
+
+    assert!(rows(&buffer).iter().any(|row| row.contains("Ship")));
+    assert!(buffer.content.iter().all(|cell| cell.fg == Color::Reset && cell.bg == Color::Reset));
 }
 
 #[test]

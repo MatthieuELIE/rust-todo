@@ -17,6 +17,7 @@ use ratatui::backend::IntoCrossterm;
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{self, DisableBracketedPaste, EnableBracketedPaste, Event, KeyEventKind};
 use ratatui::crossterm::execute;
+use ratatui::crossterm::style::force_color_output;
 use ratatui::text::Line;
 use ratatui::widgets::ListState;
 use time::{Date, OffsetDateTime};
@@ -30,16 +31,20 @@ use view::Theme;
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
-    let theme = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir())) {
+    let no_color = config::no_color(std::env::var_os("NO_COLOR"));
+    let theme = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir()), no_color) {
         Ok(theme) => theme,
         Err(message) => {
             eprintln!("{message}");
             if cli.command.is_none() {
-                let _ = show_error(&message, &Theme::default());
+                let _ = show_error(&message, &config::choose(no_color, None));
             }
             return ExitCode::FAILURE;
         }
     };
+    if no_color && theme != Theme::NONE {
+        force_color_output(true);
+    }
     let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
         path.with_file_name("done.txt")
     } else {
@@ -238,9 +243,9 @@ fn clean(text: &str) -> String {
     text.replace(char::is_control, "\u{fffd}")
 }
 
-/// A task as `list` prints it, without its number: styled on a terminal that takes colours, its plain line otherwise.
+/// A task as `list` prints it, without its number: styled on a terminal, its plain line otherwise.
 fn shown(theme: &Theme, todo: &Todo, today: Date) -> String {
-    if std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty()) {
+    if std::io::stdout().is_terminal() {
         styled(&view::line(theme, 0, todo, today))
     } else {
         clean(&todo.to_line())

@@ -8,7 +8,7 @@ Flags go before terms: in `todo list +work --due`, `--due` is one more term, exc
 `list` shows pending tasks only: a done task still in the task file, one typed by hand, is not listed until `todo archive` moves it. The former `--all`, or `-a`, is refused when it comes first, where the flag used to go; further on it is a term like any other.
 
 Tasks with a priority come first, A to E, then the rest; ties keep the file order.
-stdout carries task lines only, coloured when it is a terminal and `NO_COLOR` is unset or empty, otherwise plain todo.txt lines.
+stdout carries task lines only, coloured when it is a terminal, otherwise plain todo.txt lines; `NO_COLOR` and the config's `name` decide the colours, see [Configuration](config.md#no_color).
 Each element of a line has its own style: the priority as a badge, ` A ` in its colour on a dark background (A pink, B green, C blue, D lavender, E sky), the creation date greyed, `+projects` mauve and `@contexts` teal.
 `key:value` words such as `wait:figma` are greyed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
 A `due:` date is red and bold once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is greyed like any `key:value`.

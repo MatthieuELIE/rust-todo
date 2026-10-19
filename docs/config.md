@@ -20,8 +20,14 @@ There is no background for the row under the cursor, which the `→` marks, nor 
 The four `catppuccin-` names paint the list in the colours of the official [Catppuccin](https://github.com/catppuccin/palette) flavours, Latte being the light one, as fixed 24-bit colours, which needs a terminal that shows them.
 Under Solarized Dark the terminal's `bright black`, used for dates, borders and the history, is almost the background: pick one of the `catppuccin-` themes there.
 
-The theme colours the interactive list, and `todo list` on a terminal that takes colours.
-`NO_COLOR` and a pipe leave `todo list` as they were.
+The theme colours the interactive list, and `todo list` on a terminal.
+A pipe leaves `todo list` as it was.
+
+## `NO_COLOR`
+
+When [`NO_COLOR`](https://no-color.org) is set and not empty, a file without a `name`, or no file, gives no colour at all: the list and `todo list` on a terminal keep the bold, the strike-through and the layout, and nothing else.
+The active zone is then read from the mode block alone, which is bold and has no background; the border of a focused card is not told apart.
+A `name` in `config.toml` wins over `NO_COLOR`, and the list takes that theme's colours.
 
 ## A refused file
 

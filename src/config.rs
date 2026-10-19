@@ -16,12 +16,11 @@ struct Config {
 #[derive(Deserialize, Default)]
 #[serde(deny_unknown_fields)]
 struct Section {
-    #[serde(default)]
-    name: Name,
+    name: Option<Name>,
 }
 
-#[derive(Deserialize, Default)]
-enum Name {
+#[derive(Deserialize)]
+pub enum Name {
     #[serde(rename = "catppuccin-latte")]
     CatppuccinLatte,
     #[serde(rename = "catppuccin-frappe")]
@@ -30,7 +29,6 @@ enum Name {
     CatppuccinMacchiato,
     #[serde(rename = "catppuccin-mocha")]
     CatppuccinMocha,
-    #[default]
     #[serde(rename = "terminal")]
     Terminal,
 }
@@ -56,15 +54,29 @@ pub fn path(xdg_config_home: Option<OsString>, home: Option<PathBuf>) -> PathBuf
     config_home.join("todo").join("config.toml")
 }
 
-/// The theme `path` asks for: the default when the file is absent, an error naming the path and the fault when it is refused.
-pub fn theme(path: &Path) -> Result<Theme, String> {
+/// Whether `NO_COLOR` asks for no colour: set and not empty.
+pub fn no_color(value: Option<OsString>) -> bool {
+    value.is_some_and(|value| !value.is_empty())
+}
+
+/// The theme to start with: the config's `name` when it gives one, else no colour when `no_color`, else the terminal's own.
+pub fn choose(no_color: bool, name: Option<Name>) -> Theme {
+    match name {
+        Some(name) => name.theme(),
+        None if no_color => Theme::NONE,
+        None => Theme::default(),
+    }
+}
+
+/// The theme `path` asks for, `no_color` deciding when it names none: an error naming the path and the fault when the file is refused.
+pub fn theme(path: &Path, no_color: bool) -> Result<Theme, String> {
     let text = match std::fs::read_to_string(path) {
         Ok(text) => text,
-        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(Theme::default()),
+        Err(e) if e.kind() == ErrorKind::NotFound => return Ok(choose(no_color, None)),
         Err(e) => return Err(format!("could not read {}: {e}", path.display())),
     };
     let config: Config = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
-    Ok(config.theme.name.theme())
+    Ok(choose(no_color, config.theme.name))
 }
 
 #[cfg(test)]
@@ -80,7 +92,7 @@ mod tests {
     }
 
     fn refused(name: &str, text: &str) -> String {
-        match theme(&written(name, text)) {
+        match theme(&written(name, text), false) {
             Ok(_) => panic!("{text:?} should be refused"),
             Err(message) => message,
         }
@@ -99,12 +111,12 @@ mod tests {
             .join(format!("todo-config-{}-absent", std::process::id()))
             .join("config.toml");
 
-        assert!(theme(&path).is_ok());
+        assert!(theme(&path, false).is_ok());
     }
 
     #[test]
     fn the_terminal_name_is_read() {
-        assert!(theme(&written("terminal", "[theme]\nname = \"terminal\"\n")).is_ok());
+        assert!(theme(&written("terminal", "[theme]\nname = \"terminal\"\n"), false).is_ok());
     }
 
     #[test]
@@ -113,7 +125,7 @@ mod tests {
             .iter()
             .map(|flavour| {
                 let text = format!("[theme]\nname = \"catppuccin-{flavour}\"\n");
-                theme(&written(flavour, &text)).unwrap()
+                theme(&written(flavour, &text), false).unwrap()
             })
             .collect();
 
@@ -126,7 +138,7 @@ mod tests {
     fn a_malformed_file_is_refused_with_its_path_and_line() {
         let path = written("malformed", "[theme\n");
 
-        let message = theme(&path).err().unwrap();
+        let message = theme(&path, false).err().unwrap();
 
         assert!(message.starts_with(&path.display().to_string()));
         assert!(message.contains("line 1"));
@@ -157,5 +169,36 @@ mod tests {
     #[test]
     fn an_unknown_section_is_refused() {
         assert!(refused("unknown-section", "[colours]\nname = \"catppuccin-mocha\"\n").contains("colours"));
+    }
+
+    #[test]
+    fn no_color_set_and_not_empty_asks_for_no_colour() {
+        assert!(!no_color(None));
+        assert!(!no_color(Some("".into())));
+        assert!(no_color(Some("1".into())));
+    }
+
+    #[test]
+    fn a_name_wins_over_no_color_and_without_one_no_color_gives_none() {
+        for no_color in [false, true] {
+            assert!(choose(no_color, Some(Name::CatppuccinMocha)) == Theme::MOCHA);
+            assert!(choose(no_color, Some(Name::Terminal)) == Theme::TERMINAL);
+        }
+        assert!(choose(true, None) == Theme::NONE);
+        assert!(choose(false, None) == Theme::TERMINAL);
+    }
+
+    #[test]
+    fn a_file_without_a_name_follows_no_color_and_one_with_a_name_does_not() {
+        let nameless = written("nameless", "[theme]\n");
+        let named = written("named", "[theme]\nname = \"terminal\"\n");
+        let absent = std::env::temp_dir()
+            .join(format!("todo-config-{}-nofile", std::process::id()))
+            .join("config.toml");
+
+        assert!(theme(&nameless, true).unwrap() == Theme::NONE);
+        assert!(theme(&absent, true).unwrap() == Theme::NONE);
+        assert!(theme(&named, true).unwrap() == Theme::TERMINAL);
+        assert!(theme(&nameless, false).unwrap() == Theme::TERMINAL);
     }
 }

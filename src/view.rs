@@ -159,6 +159,27 @@ impl Theme {
         ],
     };
 
+    /// No colour at all, for `NO_COLOR`: every role is the terminal's own.
+    pub const NONE: Theme = Theme {
+        background: Color::Reset,
+        accent: Color::Reset,
+        on_accent: Color::Reset,
+        primary: Color::Reset,
+        secondary: Color::Reset,
+        label: Color::Reset,
+        tertiary: Color::Reset,
+        structure: Color::Reset,
+        raised: Color::Reset,
+        selected: Color::Reset,
+        separator: Color::Reset,
+        badge: Color::Reset,
+        project: Color::Reset,
+        context: Color::Reset,
+        alert: Color::Reset,
+        due_today: Color::Reset,
+        priorities: [Color::Reset; 5],
+    };
+
     /// The terminal's own ANSI colours: default text and background, no fill for the selection or the badge.
     pub const TERMINAL: Theme = Theme {
         background: Color::Reset,
@@ -770,11 +791,8 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
         spans.extend([created.to_string().fg(theme.tertiary), " ".into()]);
     }
     spans.extend(words(theme, &todo.description, Some(today)).into_iter().map(|span| {
-        if span.content.starts_with(DUE) && span.style.fg == Some(theme.alert) {
-            span.bold()
-        } else {
-            span
-        }
+        let late = span.content.strip_prefix(DUE).and_then(parse_date).is_some_and(|due| due < today);
+        if late { span.bold() } else { span }
     }));
     Line::from(spans)
 }

@@ -755,7 +755,7 @@ pub fn number(number: usize) -> String {
     format!("{number:>3}  ")
 }
 
-/// A listed task: its number then its todo.txt line, the priority as a badge, due dates against `today`, struck through when done.
+/// A listed task: its number then its todo.txt line, the priority as a badge, a late due date in bold, due dates against `today`, struck through when done.
 pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'static> {
     let number = self::number(number);
     if todo.done {
@@ -769,7 +769,13 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
     if let Some(created) = todo.created {
         spans.extend([created.to_string().fg(theme.tertiary), " ".into()]);
     }
-    spans.extend(words(theme, &todo.description, Some(today)));
+    spans.extend(words(theme, &todo.description, Some(today)).into_iter().map(|span| {
+        if span.content.starts_with(DUE) && span.style.fg == Some(theme.alert) {
+            span.bold()
+        } else {
+            span
+        }
+    }));
     Line::from(spans)
 }
 

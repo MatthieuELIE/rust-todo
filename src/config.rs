@@ -22,6 +22,12 @@ struct Section {
 
 #[derive(Deserialize, Default)]
 enum Name {
+    #[serde(rename = "catppuccin-latte")]
+    CatppuccinLatte,
+    #[serde(rename = "catppuccin-frappe")]
+    CatppuccinFrappe,
+    #[serde(rename = "catppuccin-macchiato")]
+    CatppuccinMacchiato,
     #[serde(rename = "catppuccin-mocha")]
     CatppuccinMocha,
     #[default]
@@ -32,6 +38,9 @@ enum Name {
 impl Name {
     fn theme(&self) -> Theme {
         match self {
+            Name::CatppuccinLatte => Theme::LATTE,
+            Name::CatppuccinFrappe => Theme::FRAPPE,
+            Name::CatppuccinMacchiato => Theme::MACCHIATO,
             Name::CatppuccinMocha => Theme::MOCHA,
             Name::Terminal => Theme::TERMINAL,
         }
@@ -99,8 +108,18 @@ mod tests {
     }
 
     #[test]
-    fn a_name_is_read() {
-        assert!(theme(&written("name", "[theme]\nname = \"catppuccin-mocha\"\n")).is_ok());
+    fn the_four_flavours_are_read_and_differ() {
+        let flavours: Vec<Theme> = ["latte", "frappe", "macchiato", "mocha"]
+            .iter()
+            .map(|flavour| {
+                let text = format!("[theme]\nname = \"catppuccin-{flavour}\"\n");
+                theme(&written(flavour, &text)).unwrap()
+            })
+            .collect();
+
+        for (i, flavour) in flavours.iter().enumerate() {
+            assert!(flavours[i + 1..].iter().all(|other| other != flavour));
+        }
     }
 
     #[test]
@@ -119,8 +138,15 @@ mod tests {
 
         assert!(message.contains("line 2"));
         assert!(message.contains("nord"));
-        assert!(message.contains("catppuccin-mocha"));
-        assert!(message.contains("terminal"));
+        for name in [
+            "catppuccin-latte",
+            "catppuccin-frappe",
+            "catppuccin-macchiato",
+            "catppuccin-mocha",
+            "terminal",
+        ] {
+            assert!(message.contains(name), "{name} missing from {message}");
+        }
     }
 
     #[test]

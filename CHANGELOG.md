@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or `~/.config/todo/`, with a `[theme]` section whose `name` is `catppuccin-mocha`, the default and the only theme so far. A file that is malformed or holds an unknown name, key or section is refused, with its path and line, by every command and by `todo` with no command on a full-screen message. See [Configuration](docs/config.md).
+
 ## [0.6.2] - 2026-10-19
 
 ### Changed

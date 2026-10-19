@@ -1,4 +1,5 @@
 mod cli;
+mod config;
 mod editor;
 mod repository;
 mod todo;
@@ -29,7 +30,16 @@ use view::Theme;
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
-    let theme = Theme::default();
+    let theme = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir())) {
+        Ok(theme) => theme,
+        Err(message) => {
+            eprintln!("{message}");
+            if cli.command.is_none() {
+                let _ = show_error(&message, &Theme::default());
+            }
+            return ExitCode::FAILURE;
+        }
+    };
     let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
         path.with_file_name("done.txt")
     } else {

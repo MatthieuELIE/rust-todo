@@ -3,6 +3,7 @@ use std::process::{Command, Output};
 fn todo_list(terms: &[&str]) -> Output {
     let missing = std::env::temp_dir().join(format!("todo-{}-missing.txt", std::process::id()));
     Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")
         .args(terms)
         .env("TODO_FILE", missing)
@@ -34,6 +35,7 @@ fn without_todo_file_the_list_is_todo_txt_in_the_home_folder() {
     std::fs::write(home.join("todo.txt"), "Call the bank\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")
         .env_remove("TODO_FILE")
         .env("HOME", &home)
@@ -50,6 +52,7 @@ fn a_piped_listing_carries_no_colour_codes_nor_the_done_tasks() {
     std::fs::write(&file, "(A) Call the bank\nx 2026-09-03 Buy milk\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")
         .env("TODO_FILE", &file)
         .output()
@@ -65,6 +68,7 @@ fn a_listing_replaces_the_control_characters_of_the_file() {
     std::fs::write(&file, "Call \u{1b}]0;title\u{7}\u{1b}[2Jthe bank\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")
         .env("TODO_FILE", &file)
         .output()
@@ -85,6 +89,7 @@ fn due_keeps_the_pending_tasks_due_today_or_before() {
     std::fs::write(&file, lines).unwrap();
     let list = |args: &[&str]| {
         Command::new(env!("CARGO_BIN_EXE_todo"))
+            .env("XDG_CONFIG_HOME", "/nonexistent")
             .arg("list")
             .args(args)
             .env("TODO_FILE", &file)
@@ -120,6 +125,7 @@ fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
     std::fs::write(folder.join("done.txt"), history).unwrap();
     let list = |args: &[&str]| {
         Command::new(env!("CARGO_BIN_EXE_todo"))
+            .env("XDG_CONFIG_HOME", "/nonexistent")
             .arg("list")
             .args(args)
             .env("TODO_FILE", folder.join("todo.txt"))
@@ -150,6 +156,7 @@ fn done_without_a_done_txt_is_an_empty_list() {
     std::fs::write(folder.join("todo.txt"), "Buy milk\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .args(["list", "--done"])
         .env("TODO_FILE", folder.join("todo.txt"))
         .output()
@@ -170,6 +177,7 @@ fn done_reads_done_txt_only_and_fails_when_it_cannot_be_read() {
     std::fs::write(folder.join("done.txt"), "x 2026-09-01 Pay rent\n").unwrap();
     let list = || {
         Command::new(env!("CARGO_BIN_EXE_todo"))
+            .env("XDG_CONFIG_HOME", "/nonexistent")
             .args(["list", "--done"])
             .env("TODO_FILE", folder.join("todo.txt"))
             .output()
@@ -194,6 +202,7 @@ fn the_former_all_flag_is_refused_rather_than_read_as_a_term() {
     std::fs::write(&file, "Call the bank\n").unwrap();
     let list = |flag: &str| {
         Command::new(env!("CARGO_BIN_EXE_todo"))
+            .env("XDG_CONFIG_HOME", "/nonexistent")
             .args(["list", flag])
             .env("TODO_FILE", &file)
             .output()

@@ -37,6 +37,17 @@ A task file that does not exist is not an error: it is an empty list, and the fi
 
 When `todo` is run with no command and the file cannot be read, the message is also shown full screen until a key is pressed, so that a popup closing with the program does not hide it.
 
+## Configuration
+
+A `config.toml` that is refused stops every command, and `todo` with no command shows the message full screen until a key is pressed. The message starts with the path of the file; for a fault in the text, it gives the line and column, the faulty text and the reason, as the TOML reader words it. The file is described in [Configuration](config.md).
+
+| Message | When | Exit code |
+| --- | --- | --- |
+| `<path>: TOML parse error at line 2, column 8 … unknown variant `nord`, expected `catppuccin-mocha`` | `[theme]` has a `name` that is not a valid theme name; the message lists the valid ones | 1 |
+| `<path>: TOML parse error at line 2, column 1 … unknown field `icons`` | the file has a key or a section that `todo` does not know | 1 |
+| `<path>: TOML parse error at line 1, column 7 …` | the file is not valid TOML | 1 |
+| `could not read <path>: <reason>` | `config.toml` exists and cannot be read, or is not UTF-8 text | 1 |
+
 ## Interactive list
 
 Messages show on the right of the status bar until the next key.

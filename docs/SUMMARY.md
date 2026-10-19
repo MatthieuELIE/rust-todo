@@ -7,4 +7,5 @@
 - [Commands](commands.md)
 - [Listing](listing.md)
 - [Line format](line-format.md)
+- [Configuration](config.md)
 - [Messages](messages.md)

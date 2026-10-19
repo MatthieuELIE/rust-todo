@@ -3,6 +3,7 @@ use std::process::{Command, Output};
 
 fn todo(file: &Path, args: &[&str]) -> Output {
     Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
         .args(args)
         .env("TODO_FILE", file)
         .output()

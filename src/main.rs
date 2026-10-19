@@ -23,11 +23,13 @@ use time::{Date, OffsetDateTime};
 use cli::{Cli, Commands};
 use todo::Todo;
 use tui::App;
+use view::Theme;
 
 /// Entry point for the todo CLI application.
 fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
+    let theme = Theme::default();
     let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
         path.with_file_name("done.txt")
     } else {
@@ -40,14 +42,14 @@ fn main() -> ExitCode {
             let message = format!("could not read {}: {e}", path.display());
             eprintln!("{message}");
             if cli.command.is_none() {
-                let _ = show_error(&message);
+                let _ = show_error(&message, &theme);
             }
             return ExitCode::FAILURE;
         }
     };
 
     let Some(command) = cli.command else {
-        return match run(todos, text, &path) {
+        return match run(todos, text, &path, theme) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");
@@ -90,7 +92,7 @@ fn main() -> ExitCode {
                 eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
             for (number, todo) in tasks {
-                println!("{}{}", view::number(number), shown(todo, today));
+                println!("{}{}", view::number(number), shown(&theme, todo, today));
             }
             return ExitCode::SUCCESS;
         }
@@ -212,7 +214,7 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     if let Some((verb, todo)) = confirmed {
-        let _ = writeln!(io::stdout(), "{verb}: {}", shown(&todo, today()));
+        let _ = writeln!(io::stdout(), "{verb}: {}", shown(&theme, &todo, today()));
     }
     if let Some(count) = archived {
         let _ = writeln!(io::stdout(), "{count} task{} archived", if count == 1 { "" } else { "s" });
@@ -227,9 +229,9 @@ fn clean(text: &str) -> String {
 }
 
 /// A task as `list` prints it, without its number: styled on a terminal that takes colours, its plain line otherwise.
-fn shown(todo: &Todo, today: Date) -> String {
+fn shown(theme: &Theme, todo: &Todo, today: Date) -> String {
     if std::io::stdout().is_terminal() && std::env::var_os("NO_COLOR").is_none_or(|value| value.is_empty()) {
-        styled(&view::line(0, todo, today))
+        styled(&view::line(theme, 0, todo, today))
     } else {
         clean(&todo.to_line())
     }
@@ -258,8 +260,9 @@ fn todo_path() -> PathBuf {
 }
 
 /// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
-fn run(todos: Vec<Todo>, mut text: String, path: &Path) -> io::Result<()> {
+fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme) -> io::Result<()> {
     let mut app = App::new(todos);
+    app.theme = theme;
     app.today = Some(today());
     let mut scroll = ListState::default();
     on_terminal(|terminal| {
@@ -304,9 +307,9 @@ fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Re
 }
 
 /// Shows `message` full screen until a key is pressed, so a popup that closes when the program exits does not swallow it.
-fn show_error(message: &str) -> io::Result<()> {
+fn show_error(message: &str, theme: &Theme) -> io::Result<()> {
     on_terminal(|terminal| {
-        terminal.draw(|frame| view::draw_error(frame, message))?;
+        terminal.draw(|frame| view::draw_error(frame, theme, message))?;
         loop {
             if let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press
@@ -326,7 +329,7 @@ mod tests {
     fn a_styled_line_replaces_the_control_characters_of_the_task() {
         let todo = Todo::from_line("Pay \u{1b}[2Jrent");
 
-        let styled = styled(&view::line(1, &todo, date!(2026 - 09 - 26)));
+        let styled = styled(&view::line(&Theme::default(), 1, &todo, date!(2026 - 09 - 26)));
 
         assert!(styled.contains("\u{fffd}[2Jrent"));
         assert!(!styled.contains("\u{1b}[2J"));
@@ -335,7 +338,7 @@ mod tests {
     #[test]
     fn a_styled_line_leaves_its_number_out() {
         for line in ["(A) Pay rent", "x 2026-09-03 Pay rent"] {
-            let styled = styled(&view::line(7, &Todo::from_line(line), date!(2026 - 09 - 26)));
+            let styled = styled(&view::line(&Theme::default(), 7, &Todo::from_line(line), date!(2026 - 09 - 26)));
 
             assert!(!styled.contains(&view::number(7)));
             assert!(styled.contains("rent"));

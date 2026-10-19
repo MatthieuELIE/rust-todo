@@ -11,62 +11,78 @@ use crate::editor::{Editor, Mode};
 use crate::todo::{DUE, Todo, parse_date};
 use crate::tui::{App, DUE_NOW, Focus, Group, Popup, Shown, Target, WAITING};
 
-/// Catppuccin Mocha's mantle, herdr's popup colour, painted on every unset cell so the list and the popup's frame read as one.
-const BACKGROUND: Color = Color::Rgb(0x18, 0x18, 0x25);
+/// The colour of each role of the list; a role's colour is the same wherever it is drawn.
+pub struct Theme {
+    /// Painted on every unset cell so the list and the popup's frame read as one.
+    background: Color,
+    /// Where the keys go: the mode block, the border of the focused card or floating window.
+    accent: Color,
+    /// Text on the accent.
+    on_accent: Color,
+    /// Text read first, painted on every unset cell.
+    primary: Color,
+    /// Text read second: labels, section names, a message, the history.
+    secondary: Color,
+    /// Labels of the detail zone, a step greyer than the values they name.
+    label: Color,
+    /// Text read only when looked for: dates, `key:value` words, counts, key actions, done tasks.
+    tertiary: Color,
+    /// Rules and borders.
+    structure: Color,
+    /// Background of a floating window, a step above the screen's.
+    raised: Color,
+    /// Background of the row under the cursor in the zone that gets the keys.
+    selected: Color,
+    /// Separators between keys, border of a floating window without the keys.
+    separator: Color,
+    /// Background of a priority badge.
+    badge: Color,
+    /// A `+project`.
+    project: Color,
+    /// An `@context`.
+    context: Color,
+    /// A due date past, or something refused.
+    alert: Color,
+    /// A due date on the day.
+    due_today: Color,
+    /// Priorities A to E.
+    priorities: [Color; 5],
+}
 
-/// Where the keys go: the mode block, the border of the focused card or floating window (peach).
-const ACCENT: Color = Color::Rgb(0xfa, 0xb3, 0x87);
+impl Theme {
+    /// Catppuccin Mocha, the background being its mantle, herdr's popup colour.
+    pub const MOCHA: Theme = Theme {
+        background: Color::Rgb(0x18, 0x18, 0x25),
+        accent: Color::Rgb(0xfa, 0xb3, 0x87),
+        on_accent: Color::Rgb(0x11, 0x11, 0x1b),
+        primary: Color::Rgb(0xcd, 0xd6, 0xf4),
+        secondary: Color::Rgb(0xa6, 0xad, 0xc8),
+        label: Color::Rgb(0x93, 0x99, 0xb2),
+        tertiary: Color::Rgb(0x7f, 0x84, 0x9c),
+        structure: Color::Rgb(0x45, 0x47, 0x5a),
+        raised: Color::Rgb(0x1e, 0x1e, 0x2e),
+        selected: Color::Rgb(0x31, 0x32, 0x44),
+        separator: Color::Rgb(0x58, 0x5b, 0x70),
+        badge: Color::Rgb(0x45, 0x47, 0x5a),
+        project: Color::Rgb(0xcb, 0xa6, 0xf7),
+        context: Color::Rgb(0x94, 0xe2, 0xd5),
+        alert: Color::Rgb(0xf3, 0x8b, 0xa8),
+        due_today: Color::Rgb(0xf9, 0xe2, 0xaf),
+        priorities: [
+            Color::Rgb(0xf5, 0xc2, 0xe7),
+            Color::Rgb(0xa6, 0xe3, 0xa1),
+            Color::Rgb(0x89, 0xb4, 0xfa),
+            Color::Rgb(0xb4, 0xbe, 0xfe),
+            Color::Rgb(0x89, 0xdc, 0xeb),
+        ],
+    };
+}
 
-/// Text on the accent (crust).
-const ON_ACCENT: Color = Color::Rgb(0x11, 0x11, 0x1b);
-
-/// Text read first, painted on every unset cell (text).
-const PRIMARY: Color = Color::Rgb(0xcd, 0xd6, 0xf4);
-
-/// Text read second: labels, section names, a message, the history (subtext0).
-const SECONDARY: Color = Color::Rgb(0xa6, 0xad, 0xc8);
-
-/// Labels of the detail zone, a step greyer than the values they name (overlay2).
-const LABEL: Color = Color::Rgb(0x93, 0x99, 0xb2);
-
-/// Text read only when looked for: dates, `key:value` words, counts, key actions, done tasks (overlay1).
-const TERTIARY: Color = Color::Rgb(0x7f, 0x84, 0x9c);
-
-/// Rules and borders (surface1).
-const STRUCTURE: Color = Color::Rgb(0x45, 0x47, 0x5a);
-
-/// Background of a floating window, a step above the screen's (base).
-const RAISED: Color = Color::Rgb(0x1e, 0x1e, 0x2e);
-
-/// Background of the row under the cursor in the zone that gets the keys (surface0).
-const SELECTED: Color = Color::Rgb(0x31, 0x32, 0x44);
-
-/// Separators between keys, border of a floating window without the keys (surface2).
-const SEPARATOR: Color = Color::Rgb(0x58, 0x5b, 0x70);
-
-/// Background of a priority badge (surface1).
-const BADGE: Color = STRUCTURE;
-
-/// A `+project` (mauve).
-const PROJECT: Color = Color::Rgb(0xcb, 0xa6, 0xf7);
-
-/// An `@context` (teal).
-const CONTEXT: Color = Color::Rgb(0x94, 0xe2, 0xd5);
-
-/// A due date past, or something refused (red).
-const ALERT: Color = Color::Rgb(0xf3, 0x8b, 0xa8);
-
-/// A due date on the day (yellow).
-const DUE_TODAY: Color = Color::Rgb(0xf9, 0xe2, 0xaf);
-
-/// Priorities A to E: pink, green, blue, lavender, sky.
-const PRIORITIES: [Color; 5] = [
-    Color::Rgb(0xf5, 0xc2, 0xe7),
-    Color::Rgb(0xa6, 0xe3, 0xa1),
-    Color::Rgb(0x89, 0xb4, 0xfa),
-    Color::Rgb(0xb4, 0xbe, 0xfe),
-    Color::Rgb(0x89, 0xdc, 0xeb),
-];
+impl Default for Theme {
+    fn default() -> Self {
+        Theme::MOCHA
+    }
+}
 
 /// Width of the help box, its borders included.
 const HELP_WIDTH: u16 = 46;
@@ -144,6 +160,7 @@ Enter/Esc    pick, close";
 
 /// Draws the filter panel and the task list above the status bar, due dates against `today`; `scroll` keeps the list's offset between frames.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
+    let theme = &app.theme;
     let [main_area, status_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]).areas(frame.area());
     let [panel_area, list_area] = Layout::horizontal([Constraint::Length(PANEL_WIDTH), Constraint::Fill(1)])
         .spacing(1)
@@ -151,21 +168,23 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
 
     let (entries, row) = panel(app);
     let panel_focused = matches!(app.focus, Focus::Panel);
-    let panel = List::new(entries).highlight_style(highlight(panel_focused)).block(card(panel_focused));
+    let panel = List::new(entries)
+        .highlight_style(highlight(theme, panel_focused))
+        .block(card(theme, panel_focused));
     frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
 
     if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
         let spare = list_area.height - (MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT);
-        let text_width = list_area.width.saturating_sub(2 + label("Text").width() as u16);
-        let text_rows = app
-            .selected_task()
-            .map_or(1, |todo| text_of(todo, (!todo.done).then_some(today)).line_count(text_width) as u16);
+        let text_width = list_area.width.saturating_sub(2 + label(theme, "Text").width() as u16);
+        let text_rows = app.selected_task().map_or(1, |todo| {
+            text_of(theme, todo, (!todo.done).then_some(today)).line_count(text_width) as u16
+        });
         let height = DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare);
         let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(height)])
             .spacing(1)
             .areas(list_area);
         draw_list(frame, app, list_area, scroll, today);
-        draw_details(frame, app.selected_task(), details_area, today);
+        draw_details(frame, theme, app.selected_task(), details_area, today);
     } else {
         draw_list(frame, app, list_area, scroll, today);
     }
@@ -177,18 +196,19 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     }
     for cell in frame.buffer_mut().content.iter_mut() {
         if cell.bg == Color::Reset {
-            cell.bg = BACKGROUND;
+            cell.bg = theme.background;
         }
         if cell.fg == Color::Reset {
-            cell.fg = PRIMARY;
+            cell.fg = theme.primary;
         }
     }
 }
 
 /// Draws the tasks on screen under their group headers, or says there is none; `scroll` keeps the offset between frames.
 fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, today: Date) {
+    let theme = &app.theme;
     let focused = matches!(app.focus, Focus::List | Focus::Search);
-    let block = card(focused);
+    let block = card(theme, focused);
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let area = inner;
@@ -202,7 +222,7 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
             } else {
                 "nothing to do"
             })
-            .fg(TERTIARY),
+            .fg(theme.tertiary),
             area,
         );
     } else {
@@ -215,14 +235,14 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
                 rows.push(lines.len());
             }
             lines.push(match shown {
-                Shown::Header(group, count, folded) => header(group, count, folded, area.width.saturating_sub(2) as usize),
-                Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(SECONDARY),
-                Shown::Task(number, todo) => line(number, todo, today),
+                Shown::Header(group, count, folded) => header(theme, group, count, folded, area.width.saturating_sub(2) as usize),
+                Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(theme.secondary),
+                Shown::Task(number, todo) => line(theme, number, todo, today),
             });
         }
         let list = List::new(lines)
-            .highlight_symbol(arrow(focused))
-            .highlight_style(highlight(focused))
+            .highlight_symbol(arrow(theme, focused))
+            .highlight_style(highlight(theme, focused))
             .scroll_padding(1);
         scroll.select(rows.get(app.cursor).copied());
         frame.render_stateful_widget(list, area, scroll);
@@ -231,8 +251,8 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
 
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
 /// The text wraps under its value over the rows `area` leaves it, its last row ended by `…` when it is cut; the other rows are cut by `…`.
-fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date) {
-    let block = card(false).title(" DETAILS ".fg(SECONDARY).bold());
+fn draw_details(frame: &mut Frame, theme: &Theme, todo: Option<&Todo>, area: Rect, today: Date) {
+    let block = card(theme, false).title(" DETAILS ".fg(theme.secondary).bold());
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let Some(todo) = todo else {
@@ -249,57 +269,63 @@ fn draw_details(frame: &mut Frame, todo: Option<&Todo>, area: Rect, today: Date)
     let [created_area, due_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(dates_row);
     let [projects_area, contexts_area] = Layout::horizontal([Constraint::Fill(1); 2]).areas(tags_row);
     let today = (!todo.done).then_some(today);
-    let tags = |sigil: char, names: Vec<&str>| words(&names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "), today);
+    let tags = |sigil: char, names: Vec<&str>| {
+        words(
+            theme,
+            &names.iter().map(|name| format!("{sigil}{name}")).collect::<Vec<_>>().join(" "),
+            today,
+        )
+    };
     let date = |date: Option<Date>| date.map(|date| date.to_string().into()).into_iter().collect();
     let key_values: Vec<&str> = todo.description.split_whitespace().filter(|word| Todo::is_key_value(word)).collect();
     let due = key_values
         .iter()
         .find_map(|word| word.strip_prefix(DUE))
-        .map(|value| Span::styled(value.to_string(), due_style(value, today).unwrap_or_default()));
+        .map(|value| Span::styled(value.to_string(), due_style(theme, value, today).unwrap_or_default()));
     let mut others = Line::from(" ");
     for (i, word) in key_values.iter().filter(|word| !word.starts_with(DUE)).enumerate() {
         let (key, value) = word.split_once(':').unwrap_or_default();
         others.extend([
             if i > 0 { "  " } else { "" }.into(),
-            format!("{key}:").fg(TERTIARY),
+            format!("{key}:").fg(theme.tertiary),
             value.to_string().into(),
         ]);
     }
 
     if todo.done {
-        detail(frame, "Done", date(todo.completed), first_row);
+        detail(frame, theme, "Done", date(todo.completed), first_row);
     } else {
-        let priority = todo.priority.map(badge);
-        detail(frame, "Priority", priority.into_iter().collect(), first_row);
+        let priority = todo.priority.map(|letter| badge(theme, letter));
+        detail(frame, theme, "Priority", priority.into_iter().collect(), first_row);
     }
-    draw_text(frame, text_of(todo, today), text_row);
-    detail(frame, "Created", date(todo.created), created_area);
-    detail(frame, "Due", due.into_iter().collect(), due_area);
-    detail(frame, "Projects", tags('+', todo.projects()), projects_area);
-    detail(frame, "Contexts", tags('@', todo.contexts()), contexts_area);
+    draw_text(frame, theme, text_of(theme, todo, today), text_row);
+    detail(frame, theme, "Created", date(todo.created), created_area);
+    detail(frame, theme, "Due", due.into_iter().collect(), due_area);
+    detail(frame, theme, "Projects", tags('+', todo.projects()), projects_area);
+    detail(frame, theme, "Contexts", tags('@', todo.contexts()), contexts_area);
     draw_cut(frame, others, key_values_row);
 }
 
 /// Draws a row of the detail zone, its `label` dimmed then its `value`.
-fn detail(frame: &mut Frame, label: &str, value: Vec<Span<'static>>, area: Rect) {
-    let mut line = Line::from(self::label(label));
+fn detail(frame: &mut Frame, theme: &Theme, label: &str, value: Vec<Span<'static>>, area: Rect) {
+    let mut line = Line::from(self::label(theme, label));
     line.extend(value);
     draw_cut(frame, line, area);
 }
 
 /// The dimmed label of a row of the detail zone, padded to the column the values start at.
-fn label(label: &str) -> Span<'static> {
-    format!(" {label:<10}").fg(LABEL)
+fn label(theme: &Theme, label: &str) -> Span<'static> {
+    format!(" {label:<10}").fg(theme.label)
 }
 
 /// The words of the text of `todo`, wrapped like the popup's field.
-fn text_of(todo: &Todo, today: Option<Date>) -> Paragraph<'static> {
-    Paragraph::new(Line::from(words(todo.text(), today))).wrap(Wrap { trim: false })
+fn text_of(theme: &Theme, todo: &Todo, today: Option<Date>) -> Paragraph<'static> {
+    Paragraph::new(Line::from(words(theme, todo.text(), today))).wrap(Wrap { trim: false })
 }
 
 /// Draws the `Text` row: its label, then `text` beside it, the lines after the first aligned under the value; `…` ends the last row when `text` is cut.
-fn draw_text(frame: &mut Frame, text: Paragraph, area: Rect) {
-    let label = label("Text");
+fn draw_text(frame: &mut Frame, theme: &Theme, text: Paragraph, area: Rect) {
+    let label = label(theme, "Text");
     let [label_area, value_area] = Layout::horizontal([Constraint::Length(label.width() as u16), Constraint::Fill(1)]).areas(area);
     frame.render_widget(label, label_area);
     let cut = text.line_count(value_area.width) > value_area.height as usize;
@@ -320,6 +346,7 @@ fn draw_cut(frame: &mut Frame, line: Line, area: Rect) {
 
 /// Draws the status bar: mode block, active filters, then the mode's keys when they fit; on the right the message, or the keys of a command under way.
 fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
+    let theme = &app.theme;
     let (mode, keys) = match &app.focus {
         Focus::Search => ("SEARCH", "⏎ keep · esc clear"),
         Focus::Popup(popup) if popup.picker.is_some() => ("DATE", "hjkl move · H/L month · ⏎ pick · esc close"),
@@ -338,17 +365,20 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
         [app.filter.clone(), search].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
-    let mut status = Line::from_iter([mode_block(mode), " ".into()]);
+    let mut status = Line::from_iter([mode_block(theme, mode), " ".into()]);
     for (i, word) in filters.split(' ').enumerate() {
-        status.extend([if i > 0 { " " } else { "" }.into(), Span::styled(word.to_string(), tag_style(word))]);
+        status.extend([
+            if i > 0 { " " } else { "" }.into(),
+            Span::styled(word.to_string(), tag_style(theme, word)),
+        ]);
     }
     let mut hints = Line::from(if filters.is_empty() { "" } else { "  " });
     for (i, hint) in keys.split(" · ").enumerate() {
         let (key, action) = hint.split_once(' ').unwrap_or_default();
         hints.extend([
-            if i > 0 { " · " } else { "" }.fg(SEPARATOR),
+            if i > 0 { " · " } else { "" }.fg(theme.separator),
             key.bold(),
-            format!(" {action}").fg(TERTIARY),
+            format!(" {action}").fg(theme.tertiary),
         ]);
     }
     let pending = app.pending();
@@ -358,26 +388,27 @@ fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     }
     frame.render_widget(Paragraph::new(status), area);
     if let Some(right) = app.message.as_deref().or((!pending.is_empty()).then_some(&pending)) {
-        let colour = if app.refused { ALERT } else { SECONDARY };
+        let colour = if app.refused { theme.alert } else { theme.secondary };
         frame.render_widget(Paragraph::new(format!("{right} ").fg(colour)).right_aligned(), area);
     }
 }
 
 /// Draws the key help in one scrolling column in a rounded box, centred in `area`, and tells the app how many lines it shows.
 fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
+    let theme = &app.theme;
     let lines = HELP.lines().count() as u16;
     let height = (lines + 4).min(HELP_MAX_HEIGHT).min(area.height);
     let area = area.centered(Constraint::Length(HELP_WIDTH), Constraint::Length(height));
-    let block = floating(true)
+    let block = floating(theme, true)
         .title(" HELP ")
-        .title_bottom(Line::from(" j/k scroll · esc close ".fg(TERTIARY)).right_aligned())
+        .title_bottom(Line::from(" j/k scroll · esc close ".fg(theme.tertiary)).right_aligned())
         .padding(Padding::new(3, 3, 1, 1));
     let inner = block.inner(area);
     app.help_rows.set(inner.height);
     let max = lines.saturating_sub(inner.height);
     frame.render_widget(Clear, area);
     frame.render_widget(block, area);
-    frame.render_widget(Paragraph::new(help_lines(HELP)).scroll((scroll.min(max), 0)), inner);
+    frame.render_widget(Paragraph::new(help_lines(theme, HELP)).scroll((scroll.min(max), 0)), inner);
     if max > 0 {
         let bar = Rect::new(area.right() - 3, inner.y, 1, inner.height);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -385,8 +416,8 @@ fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
             .thumb_symbol("▐")
             .begin_symbol(None)
             .end_symbol(None)
-            .track_style(Style::new().fg(SEPARATOR))
-            .thumb_style(Style::new().fg(TERTIARY));
+            .track_style(Style::new().fg(theme.separator))
+            .thumb_style(Style::new().fg(theme.tertiary));
         let mut state = ScrollbarState::new(max as usize + 1)
             .viewport_content_length(inner.height as usize)
             .position(scroll.min(max) as usize);
@@ -395,44 +426,45 @@ fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
 }
 
 /// Lines of the help: a mode name bold, keys bold, the `/` between alternatives and actions greyed.
-fn help_lines(text: &'static str) -> Vec<Line<'static>> {
+fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {
             if !line.contains(' ') {
-                return Line::from(line.fg(SECONDARY).bold());
+                return Line::from(line.fg(theme.secondary).bold());
             }
             let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));
             let alternatives: Vec<&str> = if key.trim_end() == "/" { vec![key] } else { key.split('/').collect() };
             let mut spans = Vec::new();
             for (i, alternative) in alternatives.into_iter().enumerate() {
                 if i > 0 {
-                    spans.push("/".fg(SEPARATOR));
+                    spans.push("/".fg(theme.separator));
                 }
                 spans.push(alternative.bold());
             }
-            spans.push(action.fg(TERTIARY));
+            spans.push(action.fg(theme.tertiary));
             Line::from(spans)
         })
         .collect()
 }
 
 /// A mode's name in bold on the accent, as the status bar shows it.
-fn mode_block(mode: &str) -> Span<'static> {
-    format!(" {mode} ").bold().fg(ON_ACCENT).bg(ACCENT)
+fn mode_block(theme: &Theme, mode: &str) -> Span<'static> {
+    format!(" {mode} ").bold().fg(theme.on_accent).bg(theme.accent)
 }
 
 /// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions or the date picker.
 fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
+    let theme = &app.theme;
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => Line::from(format!(" EDIT {number} ")),
         (Target::Add, Some(term)) if term != WAITING => {
-            Line::from_iter([" ADD (".into(), Span::styled(term.to_string(), tag_style(term)), ") ".into()])
+            Line::from_iter([" ADD (".into(), Span::styled(term.to_string(), tag_style(theme, term)), ") ".into()])
         }
         (Target::Add, _) => Line::from(" ADD "),
     };
-    let field = Paragraph::new(field(&popup.editor, today))
+    let field = Paragraph::new(field(theme, &popup.editor, today))
         .wrap(Wrap { trim: false })
-        .block(floating(popup.picker.is_none()).title(title).padding(Padding::right(1)));
+        .block(floating(theme, popup.picker.is_none()).title(title).padding(Padding::right(1)));
     let width = bounds.width * 4 / 5;
     let height = field.line_count(width.saturating_sub(3)) as u16;
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
@@ -458,11 +490,12 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
     if let (Some(tag), Some(cursor)) = (popup.editor.tag(), cursor) {
         let (names, selected) = app.completions();
         let start = Position::new(cursor.x.saturating_sub(tag.chars().count() as u16), cursor.y);
-        draw_completions(frame, &names, selected, start, bounds);
+        draw_completions(frame, theme, &names, selected, start, bounds);
     }
     if let (Some(date), Some(cursor)) = (popup.picker, cursor) {
         draw_picker(
             frame,
+            theme,
             date,
             today,
             Position::new(cursor.x.saturating_sub(DUE.len() as u16), cursor.y),
@@ -472,16 +505,16 @@ fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: 
 }
 
 /// Draws the date picker under the word at `word`: `date`'s month from Monday, `date` in the accent, `today` yellow, past days greyed.
-fn draw_picker(frame: &mut Frame, date: Date, today: Date, word: Position, bounds: Rect) {
+fn draw_picker(frame: &mut Frame, theme: &Theme, date: Date, today: Date, word: Position, bounds: Rect) {
     let first = date.replace_day(1).expect("every month has a first day");
     let offset = first.weekday().number_days_from_monday();
-    let mut lines = vec![Line::from("Mo Tu We Th Fr Sa Su".fg(TERTIARY))];
+    let mut lines = vec![Line::from("Mo Tu We Th Fr Sa Su".fg(theme.tertiary))];
     let mut week = Line::from("   ".repeat(offset.into()));
     for day in 1..=date.month().length(date.year()) {
         let style = match first.replace_day(day).map(|shown| shown.cmp(&today)) {
-            _ if day == date.day() => Style::new().bold().fg(ACCENT).bg(SELECTED),
-            Ok(Ordering::Less) => Style::new().fg(TERTIARY),
-            Ok(Ordering::Equal) => Style::new().fg(DUE_TODAY),
+            _ if day == date.day() => Style::new().bold().fg(theme.accent).bg(theme.selected),
+            Ok(Ordering::Less) => Style::new().fg(theme.tertiary),
+            Ok(Ordering::Equal) => Style::new().fg(theme.due_today),
             _ => Style::new(),
         };
         week.push_span(Span::styled(format!("{day:>2}"), style));
@@ -497,23 +530,23 @@ fn draw_picker(frame: &mut Frame, date: Date, today: Date, word: Position, bound
     let title = format!(" {} {} ", date.month().to_string().to_uppercase(), date.year());
     let area = drop_down(word, 22, lines.len() as u16 + 2, bounds);
     frame.render_widget(Clear, area);
-    frame.render_widget(Paragraph::new(lines).block(floating(true).title(title)), area);
+    frame.render_widget(Paragraph::new(lines).block(floating(theme, true).title(title)), area);
 }
 
 /// Draws the completion `names`, five rows at most, under the tag at `tag` or above it without room, `selected` highlighted.
-fn draw_completions(frame: &mut Frame, names: &[(String, usize)], selected: usize, tag: Position, bounds: Rect) {
+fn draw_completions(frame: &mut Frame, theme: &Theme, names: &[(String, usize)], selected: usize, tag: Position, bounds: Rect) {
     if names.is_empty() {
         return;
     }
     let width = names.iter().map(|(name, _)| name.chars().count()).max().unwrap_or_default();
     let rows = names.iter().map(|(name, count)| {
         Line::from_iter([
-            Span::styled(format!("{name:<width$}"), tag_style(name)),
-            format!(" {count:>3}").fg(TERTIARY),
+            Span::styled(format!("{name:<width$}"), tag_style(theme, name)),
+            format!(" {count:>3}").fg(theme.tertiary),
         ])
     });
     let area = drop_down(tag, width as u16 + 6, names.len().min(5) as u16 + 2, bounds);
-    let list = List::new(rows).highlight_style(highlight(true)).block(floating(true));
+    let list = List::new(rows).highlight_style(highlight(theme, true)).block(floating(theme, true));
     frame.render_widget(Clear, area);
     frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
 }
@@ -529,8 +562,8 @@ fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
 }
 
 /// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, reversed, those before it hidden.
-fn field(editor: &Editor, today: Date) -> Line<'static> {
-    let mut chars: Vec<Span<'static>> = typed(&editor.text, today)
+fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
+    let mut chars: Vec<Span<'static>> = typed(theme, &editor.text, today)
         .into_iter()
         .flat_map(|span| span.content.chars().map(|c| Span::styled(c.to_string(), span.style)).collect::<Vec<_>>())
         .collect();
@@ -545,25 +578,26 @@ fn field(editor: &Editor, today: Date) -> Line<'static> {
 }
 
 /// Words of a line being typed, the priority and dates before the description styled as in the list, then its words.
-fn typed(text: &str, today: Date) -> Vec<Span<'static>> {
+fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
     let description = Todo::from_line(text).description;
     let head = &text[..text.len() - description.len()];
     let mut spans = Vec::new();
     for word in head.split_inclusive(' ') {
         let letter = word.trim_end().strip_prefix('(').and_then(|rest| rest.strip_suffix(')'));
         let style = match letter.and_then(|letter| letter.parse::<char>().ok()) {
-            Some(letter) => Style::new().bold().fg(priority(letter)),
-            None if parse_date(word.trim_end()).is_some() => Style::new().fg(TERTIARY),
+            Some(letter) => Style::new().bold().fg(priority(theme, letter)),
+            None if parse_date(word.trim_end()).is_some() => Style::new().fg(theme.tertiary),
             None => Style::new(),
         };
         spans.push(Span::styled(word.to_string(), style));
     }
-    spans.extend(words(&description, Some(today)));
+    spans.extend(words(theme, &description, Some(today)));
     spans
 }
 
 /// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.
 fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
+    let theme = &app.theme;
     let focused = matches!(app.focus, Focus::Panel);
     let filters = app.filters();
     let active = app.filter_row(&filters);
@@ -580,33 +614,33 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
                 .today
                 .and_then(Date::previous_day)
                 .is_some_and(|eve| app.todos.iter().any(|todo| todo.is_due(eve)));
-            Style::new().bold().fg(if late { ALERT } else { DUE_TODAY })
+            Style::new().bold().fg(if late { theme.alert } else { theme.due_today })
         } else if header.is_empty() {
             Style::new().bold()
         } else {
-            tag_style(term)
+            tag_style(theme, term)
         };
         if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
-            lines.extend([Line::default(), Line::from(header.fg(SECONDARY).bold())]);
+            lines.extend([Line::default(), Line::from(header.fg(theme.secondary).bold())]);
         }
         let marker = if Some(i) == active {
             row = Some(lines.len());
-            arrow(focused)
+            arrow(theme, focused)
         } else {
             "  ".into()
         };
-        let style = if app.in_history { style.fg(SECONDARY) } else { style };
+        let style = if app.in_history { style.fg(theme.secondary) } else { style };
         let name = Span::styled(format!("{term:<13.13}"), style);
-        lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(TERTIARY)]));
+        lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(theme.tertiary)]));
     }
     (lines, row)
 }
 
 /// Draws an error that stops the list from opening, and how to leave.
-pub fn draw_error(frame: &mut Frame, message: &str) {
+pub fn draw_error(frame: &mut Frame, theme: &Theme, message: &str) {
     let text = vec![
-        Line::from(format!(" {message}")).fg(ALERT),
-        Line::from(" press any key to quit").fg(TERTIARY),
+        Line::from(format!(" {message}")).fg(theme.alert),
+        Line::from(" press any key to quit").fg(theme.tertiary),
     ];
     frame.render_widget(Paragraph::new(text).wrap(Wrap { trim: false }), frame.area());
 }
@@ -617,109 +651,109 @@ pub fn number(number: usize) -> String {
 }
 
 /// A listed task: its number then its todo.txt line, the priority as a badge, due dates against `today`, struck through when done.
-pub fn line(number: usize, todo: &Todo, today: Date) -> Line<'static> {
+pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'static> {
     let number = self::number(number);
     if todo.done {
-        return Line::from_iter([number.into(), todo.to_line().fg(TERTIARY).crossed_out()]);
+        return Line::from_iter([number.into(), todo.to_line().fg(theme.tertiary).crossed_out()]);
     }
     let mut spans = vec![Span::raw(number)];
-    spans.extend(todo.priority.map(badge));
+    spans.extend(todo.priority.map(|letter| badge(theme, letter)));
     if todo.priority.is_some() {
         spans.push(" ".into());
     }
     if let Some(created) = todo.created {
-        spans.extend([created.to_string().fg(TERTIARY), " ".into()]);
+        spans.extend([created.to_string().fg(theme.tertiary), " ".into()]);
     }
-    spans.extend(words(&todo.description, Some(today)));
+    spans.extend(words(theme, &todo.description, Some(today)));
     Line::from(spans)
 }
 
 /// Words of `text`, a `due:` date styled against `today` when given, any other word by `tag_style`, with the spaces between them kept.
-fn words(text: &str, today: Option<Date>) -> Vec<Span<'static>> {
+fn words(theme: &Theme, text: &str, today: Option<Date>) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
     for (i, word) in text.split(' ').enumerate() {
         if i > 0 {
             spans.push(" ".into());
         }
-        let due = word.strip_prefix(DUE).and_then(|value| due_style(value, today));
-        spans.push(Span::styled(word.to_string(), due.unwrap_or_else(|| tag_style(word))));
+        let due = word.strip_prefix(DUE).and_then(|value| due_style(theme, value, today));
+        spans.push(Span::styled(word.to_string(), due.unwrap_or_else(|| tag_style(theme, word))));
     }
     spans
 }
 
 /// Style of a due date: red once past `today`, yellow on the day, none when later, not a date, or with no `today`.
-fn due_style(value: &str, today: Option<Date>) -> Option<Style> {
+fn due_style(theme: &Theme, value: &str, today: Option<Date>) -> Option<Style> {
     let (due, today) = (parse_date(value)?, today?);
     match due.cmp(&today) {
-        Ordering::Less => Some(Style::new().fg(ALERT)),
-        Ordering::Equal => Some(Style::new().fg(DUE_TODAY)),
+        Ordering::Less => Some(Style::new().fg(theme.alert)),
+        Ordering::Equal => Some(Style::new().fg(theme.due_today)),
         Ordering::Greater => None,
     }
 }
 
 /// Style of a word of a task: a `+project` mauve, an `@context` teal, a `key:value` greyed, anything else plain.
-fn tag_style(word: &str) -> Style {
+fn tag_style(theme: &Theme, word: &str) -> Style {
     match word.chars().next() {
-        Some('+') if word.len() > 1 => Style::new().fg(PROJECT),
-        Some('@') if word.len() > 1 => Style::new().fg(CONTEXT),
-        _ if Todo::is_key_value(word) => Style::new().fg(TERTIARY),
+        Some('+') if word.len() > 1 => Style::new().fg(theme.project),
+        Some('@') if word.len() > 1 => Style::new().fg(theme.context),
+        _ if Todo::is_key_value(word) => Style::new().fg(theme.tertiary),
         _ => Style::new(),
     }
 }
 
 /// Header of a group of the list: its count, its title, then a rule filling `width`, ended by ` ▸` when the group is folded.
-fn header(group: Group, count: usize, folded: bool, width: usize) -> Line<'static> {
+fn header(theme: &Theme, group: Group, count: usize, folded: bool, width: usize) -> Line<'static> {
     let (title, style) = match group {
-        Group::Priority(letter) => (format!("PRIORITY {letter}"), Style::new().bold().fg(priority(letter))),
-        Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().fg(SECONDARY)),
+        Group::Priority(letter) => (format!("PRIORITY {letter}"), Style::new().bold().fg(priority(theme, letter))),
+        Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().fg(theme.secondary)),
     };
     let count = format!(" ({count})");
     let end = if folded { " ▸" } else { "" };
     let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4 + end.chars().count()));
     Line::from_iter([
-        count.fg(TERTIARY),
+        count.fg(theme.tertiary),
         "  ".into(),
         Span::styled(title, style),
         "  ".into(),
-        rule.fg(STRUCTURE),
+        rule.fg(theme.structure),
         end.into(),
     ])
 }
 
 /// A zone's card: a rounded border, in the accent when the zone gets the keys.
-fn card(focused: bool) -> Block<'static> {
+fn card(theme: &Theme, focused: bool) -> Block<'static> {
     Block::bordered()
         .border_type(BorderType::Rounded)
-        .border_style(Style::new().fg(if focused { ACCENT } else { STRUCTURE }))
+        .border_style(Style::new().fg(if focused { theme.accent } else { theme.structure }))
 }
 
 /// A floating window's frame: rounded on a raised background, its border in the accent when it gets the keys, its titles bold.
-fn floating(focused: bool) -> Block<'static> {
+fn floating(theme: &Theme, focused: bool) -> Block<'static> {
     Block::bordered()
         .border_type(BorderType::Rounded)
-        .border_style(Style::new().fg(if focused { ACCENT } else { SEPARATOR }))
-        .title_style(Style::new().fg(PRIMARY).bold())
-        .style(Style::new().bg(RAISED))
+        .border_style(Style::new().fg(if focused { theme.accent } else { theme.separator }))
+        .title_style(Style::new().fg(theme.primary).bold())
+        .style(Style::new().bg(theme.raised))
 }
 
 /// The cursor's mark, in the accent when its zone gets the keys.
-fn arrow(focused: bool) -> Span<'static> {
-    "→ ".fg(if focused { ACCENT } else { TERTIARY })
+fn arrow(theme: &Theme, focused: bool) -> Span<'static> {
+    "→ ".fg(if focused { theme.accent } else { theme.tertiary })
 }
 
 /// Style of the row under the cursor: highlighted only when its zone gets the keys.
-fn highlight(focused: bool) -> Style {
-    if focused { Style::new().bg(SELECTED) } else { Style::new() }
+fn highlight(theme: &Theme, focused: bool) -> Style {
+    if focused { Style::new().bg(theme.selected) } else { Style::new() }
 }
 
 /// Colour of a priority, `A` to `E`.
-fn priority(letter: char) -> Color {
-    PRIORITIES[(letter as usize).saturating_sub('A' as usize).min(PRIORITIES.len() - 1)]
+fn priority(theme: &Theme, letter: char) -> Color {
+    theme.priorities[(letter as usize).saturating_sub('A' as usize).min(theme.priorities.len() - 1)]
 }
 
 /// A priority as a badge: its letter bold in its colour between two spaces, on a dark background.
-fn badge(letter: char) -> Span<'static> {
-    Span::styled(format!(" {letter} "), Style::new().bold().fg(priority(letter)).bg(BADGE))
+fn badge(theme: &Theme, letter: char) -> Span<'static> {
+    Span::styled(format!(" {letter} "), Style::new().bold().fg(priority(theme, letter)).bg(theme.badge))
 }
 
 #[cfg(test)]

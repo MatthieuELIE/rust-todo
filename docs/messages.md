@@ -43,7 +43,7 @@ A `config.toml` that is refused stops every command, and `todo` with no command 
 
 | Message | When | Exit code |
 | --- | --- | --- |
-| `<path>: TOML parse error at line 2, column 8 … unknown variant `nord`, expected `catppuccin-mocha` or `terminal`` | `[theme]` has a `name` that is not a valid theme name; the message lists the valid ones | 1 |
+| `<path>: TOML parse error at line 2, column 8 … unknown variant `nord`, expected one of `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`, `terminal`` | `[theme]` has a `name` that is not a valid theme name; the message lists the valid ones | 1 |
 | `<path>: TOML parse error at line 2, column 1 … unknown field `icons`` | the file has a key or a section that `todo` does not know | 1 |
 | `<path>: TOML parse error at line 1, column 7 …` | the file is not valid TOML | 1 |
 | `could not read <path>: <reason>` | `config.toml` exists and cannot be read, or is not UTF-8 text | 1 |

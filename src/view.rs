@@ -76,11 +76,32 @@ impl Theme {
             Color::Rgb(0x89, 0xdc, 0xeb),
         ],
     };
+
+    /// The terminal's own ANSI colours: default text and background, no fill for the selection or the badge.
+    pub const TERMINAL: Theme = Theme {
+        background: Color::Reset,
+        accent: Color::Blue,
+        on_accent: Color::Black,
+        primary: Color::Reset,
+        secondary: Color::Reset,
+        label: Color::Reset,
+        tertiary: Color::DarkGray,
+        structure: Color::DarkGray,
+        raised: Color::Reset,
+        selected: Color::Reset,
+        separator: Color::DarkGray,
+        badge: Color::Reset,
+        project: Color::Magenta,
+        context: Color::Cyan,
+        alert: Color::Red,
+        due_today: Color::Yellow,
+        priorities: [Color::Green; 5],
+    };
 }
 
 impl Default for Theme {
     fn default() -> Self {
-        Theme::MOCHA
+        Theme::TERMINAL
     }
 }
 
@@ -546,7 +567,9 @@ fn draw_completions(frame: &mut Frame, theme: &Theme, names: &[(String, usize)],
         ])
     });
     let area = drop_down(tag, width as u16 + 6, names.len().min(5) as u16 + 2, bounds);
-    let list = List::new(rows).highlight_style(highlight(theme, true)).block(floating(theme, true));
+    let list = List::new(rows)
+        .highlight_style(highlight(theme, true).bold())
+        .block(floating(theme, true));
     frame.render_widget(Clear, area);
     frame.render_stateful_widget(list, area, &mut ListState::default().with_selected(Some(selected)));
 }

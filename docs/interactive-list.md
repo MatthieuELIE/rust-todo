@@ -42,8 +42,8 @@ A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, t
 
 The rows are those of `todo list`: same numbers, order and colours.
 An empty list says `nothing to do`, or `no matching task` under a filter or a search.
-The screen is painted in Catppuccin Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, rather than left to the terminal's; outside herdr it stays that colour.
-Text is in Mocha's `text` colour, and greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
+The screen takes the colours of the [theme](config.md): by default the terminal's own, with its background and text colour; with `name = "catppuccin-mocha"`, Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, and Mocha's `text` colour.
+Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
 The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach; the popups float over them on a lighter background.
 The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
 The status bar shows the mode in a peach block, the active filters coloured as in the list, then the mode's main keys, bold before their greyed action, when they fit and no message is shown; a message goes on the right, red when something was refused.

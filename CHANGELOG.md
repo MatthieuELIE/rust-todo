@@ -5,9 +5,13 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The default theme is `terminal`, which follows the terminal's own ANSI colours, so the list takes its theme and needs no 24-bit colour. `name = "catppuccin-mocha"` in `config.toml` gives the previous look. The pick in the completion list is bold in every theme, since `terminal` has no background for it.
+
 ### Added
 
-- `todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or `~/.config/todo/`, with a `[theme]` section whose `name` is `catppuccin-mocha`, the default and the only theme so far. A file that is malformed or holds an unknown name, key or section is refused, with its path and line, by every command and by `todo` with no command on a full-screen message. See [Configuration](docs/config.md).
+- `todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or `~/.config/todo/`, with a `[theme]` section whose `name` is `terminal` or `catppuccin-mocha`. A file that is malformed or holds an unknown name, key or section is refused, with its path and line, by every command and by `todo` with no command on a full-screen message. See [Configuration](docs/config.md).
 
 ## [0.6.2] - 2026-10-19
 

@@ -12,6 +12,7 @@ const MOCHA: Theme = Theme::MOCHA;
 fn app_of(lines: &[&str]) -> App {
     let mut app = App::new(lines.iter().map(|l| Todo::from_line(l)).collect());
     app.today = Some(TODAY);
+    app.theme = MOCHA;
     app
 }
 
@@ -496,6 +497,55 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
     assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (MOCHA.raised, MOCHA.selected));
     assert_eq!(buffer[(9, y + 1)].fg, MOCHA.accent);
     assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
+}
+
+#[test]
+fn the_completion_pick_is_bold_and_the_others_are_not() {
+    let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
+    add_popup(&mut app, "Buy +b", 1);
+
+    let buffer = render_in(&app, 50, 12);
+    let y = rows(&buffer).iter().position(|row| row.contains("Buy +b")).expect("popup line") as u16;
+
+    assert!(buffer[(10, y + 3)].modifier.contains(Modifier::BOLD));
+    assert!(!buffer[(10, y + 2)].modifier.contains(Modifier::BOLD));
+}
+
+#[test]
+fn the_terminal_theme_is_the_default_and_paints_no_rgb_cell_on_any_screen() {
+    let mut app = app_of(&["(A) Pay +bank @home due:2026-09-20", "(C) Call due:2026-09-26", "x Read +books"]);
+    app.theme = Theme::default();
+    add_popup(&mut app, "Buy +b", 1);
+    let mut screens = vec![render_in(&app, 80, 30)];
+    app.focus = Focus::Help(0);
+    screens.push(render_in(&app, 80, 30));
+
+    assert_eq!(app.theme.accent, Color::Blue);
+    for buffer in screens {
+        assert!(
+            buffer
+                .content
+                .iter()
+                .all(|cell| !matches!(cell.fg, Color::Rgb(..)) && !matches!(cell.bg, Color::Rgb(..)))
+        );
+    }
+}
+
+#[test]
+fn the_terminal_theme_leaves_the_background_and_the_text_to_the_terminal_on_the_cursor_row_too() {
+    let mut app = app_of(&["Pay the rent", "Call the bank"]);
+    app.theme = Theme::default();
+
+    let buffer = render_in(&app, 80, 30);
+    let rows = rows(&buffer);
+
+    for word in ["Pay", "Call"] {
+        let y = rows.iter().position(|row| row.contains(word)).expect(word);
+        let x = rows[y][..rows[y].find(word).unwrap()].chars().count() as u16;
+        let cell = &buffer[(x, y as u16)];
+        assert_eq!((cell.fg, cell.bg), (Color::Reset, Color::Reset), "{word}");
+    }
+    assert_eq!(buffer[(60, 20)].bg, Color::Reset);
 }
 
 #[test]

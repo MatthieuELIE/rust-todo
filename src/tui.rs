@@ -11,7 +11,7 @@ use time::{Date, Month};
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
 use crate::todo::{DUE, Todo, WAIT, list};
-use crate::view::HELP;
+use crate::view::{HELP, Theme};
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
 pub const WAITING: &str = "Waiting";
@@ -144,6 +144,8 @@ pub struct App {
     history_read: bool,
     /// Whether the list shows `done.txt` in place of the task file.
     pub in_history: bool,
+    /// Colours the list is drawn in.
+    pub theme: Theme,
 }
 
 impl App {

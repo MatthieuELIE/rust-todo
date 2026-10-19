@@ -22,15 +22,18 @@ struct Section {
 
 #[derive(Deserialize, Default)]
 enum Name {
-    #[default]
     #[serde(rename = "catppuccin-mocha")]
     CatppuccinMocha,
+    #[default]
+    #[serde(rename = "terminal")]
+    Terminal,
 }
 
 impl Name {
     fn theme(&self) -> Theme {
         match self {
             Name::CatppuccinMocha => Theme::MOCHA,
+            Name::Terminal => Theme::TERMINAL,
         }
     }
 }
@@ -91,6 +94,11 @@ mod tests {
     }
 
     #[test]
+    fn the_terminal_name_is_read() {
+        assert!(theme(&written("terminal", "[theme]\nname = \"terminal\"\n")).is_ok());
+    }
+
+    #[test]
     fn a_name_is_read() {
         assert!(theme(&written("name", "[theme]\nname = \"catppuccin-mocha\"\n")).is_ok());
     }
@@ -112,6 +120,7 @@ mod tests {
         assert!(message.contains("line 2"));
         assert!(message.contains("nord"));
         assert!(message.contains("catppuccin-mocha"));
+        assert!(message.contains("terminal"));
     }
 
     #[test]

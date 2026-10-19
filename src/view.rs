@@ -11,6 +11,18 @@ use crate::editor::{Editor, Mode};
 use crate::todo::{DUE, Todo, parse_date};
 use crate::tui::{App, DUE_NOW, Focus, Group, Popup, Shown, Target, WAITING};
 
+const PROJECTS_ICON: char = '\u{f07b}';
+const CONTEXTS_ICON: char = '\u{f1fa}';
+const DETAILS_ICON: char = '\u{f05a}';
+const ALL_TASKS_ICON: char = '\u{f0ca}';
+const DUE_ICON: char = '\u{f073}';
+const WAITING_ICON: char = '\u{f252}';
+
+/// The glyph and the space after it when `icons` is on, else nothing.
+fn icon(icons: bool, glyph: char) -> String {
+    if icons { format!("{glyph} ") } else { String::new() }
+}
+
 /// The colour of each role of the list; a role's colour is the same wherever it is drawn.
 #[derive(PartialEq)]
 pub struct Theme {
@@ -308,7 +320,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
             .spacing(1)
             .areas(list_area);
         draw_list(frame, app, list_area, scroll, today);
-        draw_details(frame, theme, app.selected_task(), details_area, today);
+        draw_details(frame, theme, app.icons, app.selected_task(), details_area, today);
     } else {
         draw_list(frame, app, list_area, scroll, today);
     }
@@ -375,8 +387,8 @@ fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut ListState, t
 
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
 /// The text wraps under its value over the rows `area` leaves it, its last row ended by `…` when it is cut; the other rows are cut by `…`.
-fn draw_details(frame: &mut Frame, theme: &Theme, todo: Option<&Todo>, area: Rect, today: Date) {
-    let block = card(theme, false).title(" DETAILS ".fg(theme.secondary).bold());
+fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: Option<&Todo>, area: Rect, today: Date) {
+    let block = card(theme, false).title(format!(" {}DETAILS ", icon(icons, DETAILS_ICON)).fg(theme.secondary).bold());
     let inner = block.inner(area);
     frame.render_widget(block, area);
     let Some(todo) = todo else {
@@ -730,10 +742,10 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let (mut lines, mut row) = (Vec::new(), None);
     for (i, (term, count)) in filters.iter().enumerate() {
         let sigil = term.chars().next();
-        let header = match sigil {
-            Some('+') => " PROJECTS",
-            Some('@') => " CONTEXTS",
-            _ => "",
+        let (header, header_icon) = match sigil {
+            Some('+') => ("PROJECTS", PROJECTS_ICON),
+            Some('@') => ("CONTEXTS", CONTEXTS_ICON),
+            _ => ("", ' '),
         };
         let style = if term == DUE_NOW {
             let late = app
@@ -747,7 +759,11 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
             tag_style(theme, term)
         };
         if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
-            lines.extend([Line::default(), Line::from(header.fg(theme.secondary).bold())]);
+            let indent = if app.icons { "  " } else { " " };
+            lines.extend([
+                Line::default(),
+                Line::from(format!("{indent}{}{header}", icon(app.icons, header_icon)).fg(theme.secondary).bold()),
+            ]);
         }
         let marker = if Some(i) == active {
             row = Some(lines.len());
@@ -756,7 +772,13 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
             "  ".into()
         };
         let style = if app.in_history { style.fg(theme.secondary) } else { style };
-        let name = Span::styled(format!("{term:<13.13}"), style);
+        let entry_icon = match term.as_str() {
+            "All tasks" => icon(app.icons, ALL_TASKS_ICON),
+            DUE_NOW => icon(app.icons, DUE_ICON),
+            WAITING => icon(app.icons, WAITING_ICON),
+            _ => String::new(),
+        };
+        let name = Span::styled(format!("{:<13.13}", format!("{entry_icon}{term}")), style);
         lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(theme.tertiary)]));
     }
     (lines, row)

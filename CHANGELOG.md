@@ -11,6 +11,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- `icons = true` in `[theme]` shows Nerd Font icons in the panel and the details. See [Configuration](docs/config.md).
 - The list and `todo list` on a terminal respect `NO_COLOR`: with no `name` in `config.toml`, no colour is shown, only bold and strike-through. A `name` in the config wins. See [Configuration](docs/config.md#no_color).
 - A late `due:` date is bold in the list and in `todo list`, in every theme, besides its colour.
 - `name` in `config.toml` also takes `catppuccin-latte`, `catppuccin-frappe` and `catppuccin-macchiato`, the other Catppuccin flavours. See [Configuration](docs/config.md).

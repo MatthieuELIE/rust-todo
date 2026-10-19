@@ -32,7 +32,7 @@ jobs:
           echo "$MDBOOK_SHA256  mdbook.tar.gz" | sha256sum -c -
           tar -xzf mdbook.tar.gz
       - run: ./mdbook build
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: book
 

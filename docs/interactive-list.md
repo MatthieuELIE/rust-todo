@@ -40,7 +40,7 @@ A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, t
 
 ## Screen
 
-The rows are those of `todo list`: same numbers, order and colours.
+The rows are those of `todo list`: same numbers, order and colours; a late `due:` date is red and bold, one due today yellow only.
 An empty list says `nothing to do`, or `no matching task` under a filter or a search.
 The screen takes the colours of the [theme](config.md): by default the terminal's own, with its background and text colour; with `name = "catppuccin-mocha"`, Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, and Mocha's `text` colour.
 Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.

@@ -11,7 +11,7 @@ Tasks with a priority come first, A to E, then the rest; ties keep the file orde
 stdout carries task lines only, coloured when it is a terminal and `NO_COLOR` is unset or empty, otherwise plain todo.txt lines.
 Each element of a line has its own style: the priority as a badge, ` A ` in its colour on a dark background (A pink, B green, C blue, D lavender, E sky), the creation date greyed, `+projects` mauve and `@contexts` teal.
 `key:value` words such as `wait:figma` are greyed too: a key starting with a letter, then a value, so that URLs and times like `10:30` keep their plain style.
-A `due:` date is red once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is greyed like any `key:value`.
+A `due:` date is red and bold once past and yellow on the day; later, or when it is not a `YYYY-MM-DD` date, it is greyed like any `key:value`.
 A done task is greyed and struck through as a whole, whatever its due date.
 A control character found in a line of the file, such as a terminal escape sequence, is printed as `�`, so that a line cannot drive the terminal.
 An empty listing says so on stderr and still exits 0.

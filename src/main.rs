@@ -2,6 +2,7 @@ mod cli;
 mod config;
 mod editor;
 mod repository;
+mod theme;
 mod todo;
 mod tui;
 mod view;
@@ -23,9 +24,9 @@ use ratatui::widgets::ListState;
 use time::{Date, OffsetDateTime};
 
 use cli::{Cli, Commands};
+use theme::Theme;
 use todo::Todo;
 use tui::App;
-use view::Theme;
 
 /// Entry point for the todo CLI application.
 fn main() -> ExitCode {

@@ -10,8 +10,9 @@ use time::{Date, Month};
 
 use crate::editor::{Editor, Mode, Outcome};
 use crate::repository;
+use crate::theme::Theme;
 use crate::todo::{DUE, Todo, WAIT, list};
-use crate::view::{HELP, Theme};
+use crate::view::HELP;
 
 /// Panel entry of the tasks waiting for something, right under `All tasks`.
 pub const WAITING: &str = "Waiting";

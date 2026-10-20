@@ -4,7 +4,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::view::Theme;
+use crate::theme::Theme;
 
 #[derive(Deserialize, Default)]
 #[serde(deny_unknown_fields)]

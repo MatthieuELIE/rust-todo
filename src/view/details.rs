@@ -14,6 +14,15 @@ const DETAILS_ICON: char = '\u{f05a}';
 /// Height of the detail card under the list when its text fits one line: its borders and five rows; `Text` wraps and the card grows with it.
 pub(super) const DETAILS_HEIGHT: u16 = 7;
 
+/// Height of the detail card for `todo` in a list `width` wide: `DETAILS_HEIGHT` plus the rows its text wraps onto, at most `spare`.
+pub(super) fn details_height(theme: &Theme, todo: Option<&Todo>, width: u16, spare: u16, today: Date) -> u16 {
+    let text_width = width.saturating_sub(2 + label(theme, "Text").width() as u16);
+    let text_rows = todo.map_or(1, |todo| {
+        text_of(theme, todo, (!todo.done).then_some(today)).line_count(text_width) as u16
+    });
+    DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare)
+}
+
 /// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
 /// The text wraps under its value over the rows `area` leaves it, its last row ended by `…` when it is cut; the other rows are cut by `…`.
 pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: Option<&Todo>, area: Rect, today: Date) {
@@ -80,12 +89,12 @@ fn detail(frame: &mut Frame, theme: &Theme, label: &str, value: Vec<Span<'static
 }
 
 /// The dimmed label of a row of the detail zone, padded to the column the values start at.
-pub(super) fn label(theme: &Theme, label: &str) -> Span<'static> {
+fn label(theme: &Theme, label: &str) -> Span<'static> {
     format!(" {label:<10}").fg(theme.label)
 }
 
 /// The words of the text of `todo`, wrapped like the popup's field.
-pub(super) fn text_of(theme: &Theme, todo: &Todo, today: Option<Date>) -> Paragraph<'static> {
+fn text_of(theme: &Theme, todo: &Todo, today: Option<Date>) -> Paragraph<'static> {
     Paragraph::new(Line::from(words(theme, todo.text(), today))).wrap(Wrap { trim: false })
 }
 

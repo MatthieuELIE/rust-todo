@@ -1,8 +1,11 @@
+use ratatui::Frame;
+use ratatui::layout::Rect;
 use ratatui::style::{Style, Stylize};
 use ratatui::text::{Line, Span};
+use ratatui::widgets::{List, ListState};
 use time::Date;
 
-use super::style::{arrow, icon, tag_style};
+use super::style::{arrow, card, highlight, icon, tag_style};
 use crate::tui::{App, DUE_NOW, Focus, WAITING};
 
 const PROJECTS_ICON: char = '\u{f07b}';
@@ -14,8 +17,17 @@ const WAITING_ICON: char = '\u{f252}';
 /// Width of the filter panel's card, its borders included.
 pub(super) const PANEL_WIDTH: u16 = 22;
 
+/// Draws the filter panel's card in `area`, the active filter's row highlighted.
+pub(super) fn draw_panel(frame: &mut Frame, app: &App, area: Rect) {
+    let theme = &app.theme;
+    let (entries, row) = panel(app);
+    let focused = matches!(app.focus, Focus::Panel);
+    let panel = List::new(entries).highlight_style(highlight(theme, focused)).block(card(theme, focused));
+    frame.render_stateful_widget(panel, area, &mut ListState::default().with_selected(row));
+}
+
 /// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.
-pub(super) fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
+fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let theme = &app.theme;
     let focused = matches!(app.focus, Focus::Panel);
     let filters = app.filters();

@@ -10,17 +10,13 @@ use time::Date;
 use crate::editor::Editor;
 use crate::theme::Theme;
 use crate::todo::{DUE, Todo, parse_date};
-use crate::tui::{App, DUE_NOW, Focus, Popup, Target, WAITING};
+use crate::tui::{App, Focus, Popup, Target, WAITING};
 use list::draw_list;
+use panel::{PANEL_WIDTH, panel};
 use status::draw_status;
-use style::{arrow, badge, card, due_style, floating, highlight, icon, priority, tag_style, words};
+use style::{badge, card, due_style, floating, highlight, icon, priority, tag_style, words};
 
-const PROJECTS_ICON: char = '\u{f07b}';
-const CONTEXTS_ICON: char = '\u{f1fa}';
 const DETAILS_ICON: char = '\u{f05a}';
-const ALL_TASKS_ICON: char = '\u{f0ca}';
-const DUE_ICON: char = '\u{f073}';
-const WAITING_ICON: char = '\u{f252}';
 
 /// Width of the help box, its borders included.
 const HELP_WIDTH: u16 = 46;
@@ -30,9 +26,6 @@ const HELP_MAX_HEIGHT: u16 = 30;
 
 /// Height of the detail card under the list when its text fits one line: its borders and five rows; `Text` wraps and the card grows with it.
 const DETAILS_HEIGHT: u16 = 7;
-
-/// Width of the filter panel's card, its borders included.
-const PANEL_WIDTH: u16 = 22;
 
 /// Fewest rows the list keeps inside its card; on a screen too low for them and the detail card, that card is hidden.
 const MIN_LIST_ROWS: u16 = 5;
@@ -437,57 +430,6 @@ fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
     spans
 }
 
-/// Rows of the filter panel, entries under their section headers, and the row of the active filter when it is among them.
-fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
-    let theme = &app.theme;
-    let focused = matches!(app.focus, Focus::Panel);
-    let filters = app.filters();
-    let active = app.filter_row(&filters);
-    let (mut lines, mut row) = (Vec::new(), None);
-    for (i, (term, count)) in filters.iter().enumerate() {
-        let sigil = term.chars().next();
-        let (header, header_icon) = match sigil {
-            Some('+') => ("PROJECTS", PROJECTS_ICON),
-            Some('@') => ("CONTEXTS", CONTEXTS_ICON),
-            _ => ("", ' '),
-        };
-        let style = if term == DUE_NOW {
-            let late = app
-                .today
-                .and_then(Date::previous_day)
-                .is_some_and(|eve| app.todos.iter().any(|todo| todo.is_due(eve)));
-            Style::new().bold().fg(if late { theme.alert } else { theme.due_today })
-        } else if header.is_empty() {
-            Style::new().bold()
-        } else {
-            tag_style(theme, term)
-        };
-        if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
-            let indent = if app.icons { "  " } else { " " };
-            lines.extend([
-                Line::default(),
-                Line::from(format!("{indent}{}{header}", icon(app.icons, header_icon)).fg(theme.secondary).bold()),
-            ]);
-        }
-        let marker = if Some(i) == active {
-            row = Some(lines.len());
-            arrow(theme, focused)
-        } else {
-            "  ".into()
-        };
-        let style = if app.in_history { style.fg(theme.secondary) } else { style };
-        let entry_icon = match term.as_str() {
-            "All tasks" => icon(app.icons, ALL_TASKS_ICON),
-            DUE_NOW => icon(app.icons, DUE_ICON),
-            WAITING => icon(app.icons, WAITING_ICON),
-            _ => String::new(),
-        };
-        let name = Span::styled(format!("{:<13.13}", format!("{entry_icon}{term}")), style);
-        lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(theme.tertiary)]));
-    }
-    (lines, row)
-}
-
 /// Draws an error that stops the list from opening, and how to leave.
 pub fn draw_error(frame: &mut Frame, theme: &Theme, message: &str) {
     let text = vec![
@@ -498,6 +440,7 @@ pub fn draw_error(frame: &mut Frame, theme: &Theme, message: &str) {
 }
 
 mod list;
+mod panel;
 mod status;
 mod style;
 

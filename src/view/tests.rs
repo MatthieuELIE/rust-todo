@@ -6,8 +6,8 @@ use ratatui::buffer::Buffer;
 use ratatui::style::Modifier;
 use time::macros::date;
 
-const TODAY: Date = date!(2026 - 09 - 26);
-const MOCHA: Theme = Theme::MOCHA;
+pub(super) const TODAY: Date = date!(2026 - 09 - 26);
+pub(super) const MOCHA: Theme = Theme::MOCHA;
 
 fn app_of(lines: &[&str]) -> App {
     let mut app = App::new(lines.iter().map(|l| Todo::from_line(l)).collect());
@@ -576,7 +576,7 @@ fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
     );
 }
 
-fn style_of(line_text: &str, token: &str) -> Style {
+pub(super) fn style_of(line_text: &str, token: &str) -> Style {
     let line = line(&MOCHA, 1, &Todo::from_line(line_text), TODAY);
     line.iter().find(|span| span.content == token).expect(token).style
 }
@@ -600,18 +600,6 @@ fn a_pending_line_keeps_its_text_but_shows_its_priority_as_a_badge_and_colours_d
     }
     for (i, letter) in ['B', 'C', 'D', 'E'].into_iter().enumerate() {
         assert_eq!(style_of(&format!("({letter}) x"), &format!(" {letter} ")), badge(i + 1), "{letter}");
-    }
-}
-
-#[test]
-fn key_values_are_greyed_but_not_urls_times_or_labels_in_mocha() {
-    let text = "Call wait:figma rec:1w a:b:c é-t_2:x https://herdr.dev 10:30 Note: wait: :x _a:b a/b:c";
-
-    for greyed in ["wait:figma", "rec:1w", "a:b:c", "é-t_2:x"] {
-        assert_eq!(style_of(text, greyed), Style::new().fg(MOCHA.tertiary), "{greyed}");
-    }
-    for plain in ["https://herdr.dev", "10:30", "Note:", "wait:", ":x", "_a:b", "a/b:c"] {
-        assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }
 }
 
@@ -801,30 +789,6 @@ fn the_history_shows_its_lines_and_the_panel_in_light_grey_not_struck_through_an
         (MOCHA.primary, MOCHA.project, MOCHA.context)
     );
     assert!(!rows(&buffer)[17].contains("+done"));
-}
-
-#[test]
-fn a_due_date_is_bold_red_once_past_yellow_on_the_day_and_greyed_later_or_when_not_a_date_in_mocha() {
-    let text = "Ship due:2026-09-25 due:2026-09-26 due:2026-09-27 due:someday";
-
-    assert_eq!(style_of(text, "due:2026-09-25"), Style::new().bold().fg(MOCHA.alert));
-    assert_eq!(style_of(text, "due:2026-09-26"), Style::new().fg(MOCHA.due_today));
-    assert_eq!(style_of(text, "due:2026-09-27"), Style::new().fg(MOCHA.tertiary));
-    assert_eq!(style_of(text, "due:someday"), Style::new().fg(MOCHA.tertiary));
-}
-
-#[test]
-fn a_late_due_date_is_bold_in_every_theme_and_one_due_today_is_not() {
-    let text = "Ship due:2026-09-25 due:2026-09-26";
-
-    for theme in [Theme::LATTE, Theme::FRAPPE, Theme::MACCHIATO, Theme::MOCHA, Theme::TERMINAL, Theme::NONE] {
-        let style_of = |token: &str| {
-            let line = line(&theme, 1, &Todo::from_line(text), TODAY);
-            line.iter().find(|span| span.content == token).expect(token).style
-        };
-        assert_eq!(style_of("due:2026-09-25"), Style::new().bold().fg(theme.alert));
-        assert_eq!(style_of("due:2026-09-26"), Style::new().fg(theme.due_today));
-    }
 }
 
 #[test]

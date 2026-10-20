@@ -414,10 +414,11 @@ fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: Option<&Tod
     };
     let date = |date: Option<Date>| date.map(|date| date.to_string().into()).into_iter().collect();
     let key_values: Vec<&str> = todo.description.split_whitespace().filter(|word| Todo::is_key_value(word)).collect();
-    let due = key_values
-        .iter()
-        .find_map(|word| word.strip_prefix(DUE))
-        .map(|value| Span::styled(value.to_string(), due_style(theme, value, today).unwrap_or_default()));
+    let due = key_values.iter().find_map(|word| word.strip_prefix(DUE)).map(|value| {
+        let span = Span::styled(value.to_string(), due_style(theme, value, today).unwrap_or_default());
+        let late = parse_date(value).zip(today).is_some_and(|(due, today)| due < today);
+        if late { span.bold() } else { span }
+    });
     let mut others = Line::from(" ");
     for (i, word) in key_values.iter().filter(|word| !word.starts_with(DUE)).enumerate() {
         let (key, value) = word.split_once(':').unwrap_or_default();

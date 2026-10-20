@@ -13,7 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `icons = true` in `[theme]` shows Nerd Font icons in the panel and the details. See [Configuration](docs/config.md).
 - The list and `todo list` on a terminal respect `NO_COLOR`: with no `name` in `config.toml`, no colour is shown, only bold and strike-through. A `name` in the config wins. See [Configuration](docs/config.md#no_color).
-- A late `due:` date is bold in the list and in `todo list`, in every theme, besides its colour.
+- A late `due:` date is bold in the list, its details and `todo list`, in every theme, besides its colour.
 - `todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or `~/.config/todo/`, with a `[theme]` section whose `name` is `terminal`, `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato` or `catppuccin-mocha`. A file that is malformed or holds an unknown name, key or section is refused, with its path and line, by every command and by `todo` with no command on a full-screen message. See [Configuration](docs/config.md).
 
 ## [0.6.2] - 2026-10-19

@@ -839,11 +839,20 @@ fn the_none_theme_leaves_every_cell_without_colour() {
 }
 
 #[test]
-fn the_due_date_in_the_details_is_red_once_past_in_mocha() {
+fn the_due_date_in_the_details_is_bold_red_once_past_in_mocha() {
     let buffer = render_in(&app_of(&["Ship it due:2026-09-20 due:2026-10-30"]), 75, 18);
 
     assert_eq!(list_rows(&buffer)[13], format!("{:<25} Due       2026-09-20", " Created"));
     assert_eq!(buffer[(60, 13)].fg, MOCHA.alert);
+    assert!(buffer[(60, 13)].modifier.contains(Modifier::BOLD));
+}
+
+#[test]
+fn the_due_date_in_the_details_is_not_bold_on_the_day() {
+    let buffer = render_in(&app_of(&["Ship it due:2026-09-26"]), 75, 18);
+
+    assert_eq!(buffer[(60, 13)].fg, MOCHA.due_today);
+    assert!(!buffer[(60, 13)].modifier.contains(Modifier::BOLD));
 }
 
 #[test]

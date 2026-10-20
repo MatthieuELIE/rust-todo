@@ -79,7 +79,7 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 
 ## Details
 
-Under the list, a `DETAILS` card shows the task under the cursor: its priority, its text without the `key:value` words ending it, its creation date and `due:` value, coloured as in the list, its projects and contexts, and its other `key:value` words.
+Under the list, a `DETAILS` card shows the task under the cursor: its priority, its text without the `key:value` words ending it, its creation date and `due:` value, coloured and, once late, bold as in the list, its projects and contexts, and its other `key:value` words.
 A task of the history shows its completion date in place of the priority, and its `due:` date is not coloured.
 A long text wraps, the lines after the first aligned under the value, and the card grows with it by taking rows from the list, which keeps 5 rows; a text still too long ends with `…` on its last line. Any other value too long for its place ends with `…`.
 The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows with the text on one line.

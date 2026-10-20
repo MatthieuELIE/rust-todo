@@ -2,7 +2,7 @@ use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
 use ratatui::style::{Color, Stylize};
 use ratatui::text::Line;
-use ratatui::widgets::{List, ListState, Paragraph, Wrap};
+use ratatui::widgets::{ListState, Paragraph, Wrap};
 use time::Date;
 
 use crate::theme::Theme;
@@ -10,10 +10,9 @@ use crate::tui::{App, Focus};
 use details::{DETAILS_HEIGHT, draw_details, label, text_of};
 use help::draw_help;
 use list::draw_list;
-use panel::{PANEL_WIDTH, panel};
+use panel::{PANEL_WIDTH, draw_panel};
 use popup::draw_popup;
 use status::draw_status;
-use style::{card, highlight};
 
 /// Fewest rows the list keeps inside its card; on a screen too low for them and the detail card, that card is hidden.
 const MIN_LIST_ROWS: u16 = 5;
@@ -26,12 +25,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
         .spacing(1)
         .areas(main_area);
 
-    let (entries, row) = panel(app);
-    let panel_focused = matches!(app.focus, Focus::Panel);
-    let panel = List::new(entries)
-        .highlight_style(highlight(theme, panel_focused))
-        .block(card(theme, panel_focused));
-    frame.render_stateful_widget(panel, panel_area, &mut ListState::default().with_selected(row));
+    draw_panel(frame, app, panel_area);
 
     if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
         let spare = list_area.height - (MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT);

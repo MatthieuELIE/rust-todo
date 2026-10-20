@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The code of the list's screen is split into one file per area; nothing in the commands or the list changes.
+
 ## [0.7.0] - 2026-10-20
 
 ### Changed

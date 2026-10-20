@@ -7,7 +7,7 @@ use time::Date;
 
 use crate::theme::Theme;
 use crate::tui::{App, Focus};
-use details::{DETAILS_HEIGHT, draw_details, label, text_of};
+use details::{DETAILS_HEIGHT, details_height, draw_details};
 use help::draw_help;
 use list::draw_list;
 use panel::{PANEL_WIDTH, draw_panel};
@@ -29,11 +29,7 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
 
     if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
         let spare = list_area.height - (MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT);
-        let text_width = list_area.width.saturating_sub(2 + label(theme, "Text").width() as u16);
-        let text_rows = app.selected_task().map_or(1, |todo| {
-            text_of(theme, todo, (!todo.done).then_some(today)).line_count(text_width) as u16
-        });
-        let height = DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare);
+        let height = details_height(theme, app.selected_task(), list_area.width, spare, today);
         let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(height)])
             .spacing(1)
             .areas(list_area);

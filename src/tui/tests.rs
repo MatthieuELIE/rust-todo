@@ -27,7 +27,7 @@ pub(super) fn moved(app: &App) -> Vec<String> {
     app.moves.iter().map(line).collect()
 }
 
-fn popup(app: &App) -> &Popup {
+pub(super) fn popup(app: &App) -> &Popup {
     match &app.focus {
         Focus::Popup(popup) => popup,
         _ => panic!("the popup is closed"),
@@ -66,104 +66,6 @@ pub(super) fn folder(name: &str) -> std::path::PathBuf {
 }
 
 #[test]
-fn o_types_a_task_that_enter_adds_with_the_cursor_on_it() {
-    let mut app = app();
-
-    assert!(!press(&mut app, "jjo(A) Ask for a quote"));
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(shown(&app), ["(A) 2026-09-26 Ask for a quote", "one", "two", "three"]);
-    assert_eq!(app.cursor, 0);
-    assert!(!app.quit);
-    assert!(!matches!(app.focus, Focus::Popup(_)));
-}
-
-#[test]
-fn backspace_edits_the_input_and_esc_twice_drops_it() {
-    let mut app = app();
-    let esc = KeyEvent::from(KeyCode::Esc);
-
-    press(&mut app, "oab");
-    app.handle_key(KeyEvent::from(KeyCode::Backspace), TODAY);
-    press(&mut app, "c");
-    assert_eq!(popup(&app).editor.text, "ac");
-
-    assert!(!app.handle_key(esc, TODAY));
-    assert_eq!(popup(&app).editor.mode, Mode::Normal);
-    assert!(!app.handle_key(esc, TODAY));
-    assert!(!matches!(app.focus, Focus::Popup(_)));
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-}
-
-#[test]
-fn enter_in_normal_mode_adds_the_task_too() {
-    let mut app = app();
-
-    press(&mut app, "oCall bank");
-    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-    press(&mut app, "bithe ");
-    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-    assert_eq!(app.todos[3].to_line(), "2026-09-26 Call the bank");
-}
-
-#[test]
-fn list_keys_typed_in_the_popup_are_text() {
-    let mut app = app();
-
-    assert!(!press(&mut app, "oqxdd"));
-    assert!(!app.quit);
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(app.todos[3].to_line(), "2026-09-26 qxdd");
-}
-
-#[test]
-fn enter_opens_the_task_line_in_normal_mode_and_the_cursor_follows_the_edited_task() {
-    let mut app = app_of(&["one", "two", "three"]);
-    let enter = KeyEvent::from(KeyCode::Enter);
-
-    assert!(!press(&mut app, "jj"));
-    app.handle_key(enter, TODAY);
-    let editor = &popup(&app).editor;
-    assert_eq!((editor.text.as_str(), editor.cursor, editor.mode), ("three", 0, Mode::Normal));
-
-    press(&mut app, "i(A) ");
-    assert!(app.handle_key(enter, TODAY));
-
-    assert_eq!(shown(&app), ["(A) three", "one", "two"]);
-    assert_eq!(app.cursor, 0);
-    assert!(!matches!(app.focus, Focus::Popup(_)));
-}
-
-#[test]
-fn a_completion_date_typed_with_the_x_is_the_one_the_task_moves_to_done_txt_with() {
-    let mut app = app_of(&["one", "two"]);
-    let enter = KeyEvent::from(KeyCode::Enter);
-
-    press(&mut app, "j");
-    app.handle_key(enter, TODAY);
-    press(&mut app, "ix 2026-09-20 ");
-    assert!(app.handle_key(enter, TODAY));
-
-    assert_eq!(lines(&app), ["one"]);
-    assert_eq!(moved(&app), ["+x 2026-09-20 two"]);
-    assert_eq!(app.cursor, 0);
-}
-
-#[test]
-fn a_line_holding_a_control_character_opens_for_edit_with_a_space_in_its_place() {
-    let mut app = app_of(&["Call\tthe bank"]);
-    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(app.todos[0].to_line(), "Call the bank");
-}
-
-#[test]
 fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
     let mut app = app_of(&["one", "two", "three"]);
     let enter = KeyEvent::from(KeyCode::Enter);
@@ -179,43 +81,6 @@ fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
     assert_eq!(app.cursor, 0);
     assert_eq!(app.todos[2].to_line(), "free");
     assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
-}
-
-#[test]
-fn an_edit_emptied_or_left_unchanged_writes_nothing() {
-    let mut app = app_of(&["(A) one"]);
-    let enter = KeyEvent::from(KeyCode::Enter);
-
-    app.handle_key(enter, TODAY);
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message, None);
-
-    app.handle_key(enter, TODAY);
-    press(&mut app, "WD");
-    assert_eq!(popup(&app).editor.text, "(A) ");
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
-    assert_eq!(popup(&app).editor.text, "(A) ");
-    assert_eq!(shown(&app), ["(A) one"]);
-}
-
-#[test]
-fn a_trailing_space_is_dropped_on_add_and_edit() {
-    let mut app = app_of(&["one"]);
-    let enter = KeyEvent::from(KeyCode::Enter);
-
-    press(&mut app, "oShip ");
-    assert!(app.handle_key(enter, TODAY));
-    assert_eq!(shown(&app), ["one", "2026-09-26 Ship"]);
-
-    app.handle_key(enter, TODAY);
-    press(&mut app, "A ");
-    assert!(!app.handle_key(enter, TODAY));
-
-    app.handle_key(enter, TODAY);
-    press(&mut app, "A it ");
-    assert!(app.handle_key(enter, TODAY));
-    assert_eq!(shown(&app), ["one", "2026-09-26 Ship it"]);
 }
 
 #[test]
@@ -264,49 +129,6 @@ fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
     app.reload(reread());
     assert_eq!(popup(&app).editor.text, "new");
     assert_eq!(app.message.as_deref(), Some("reloaded"));
-}
-
-#[test]
-fn a_rejected_input_adds_nothing_and_says_why() {
-    let mut app = app();
-
-    press(&mut app, "o");
-    assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-}
-
-#[test]
-fn a_refused_line_keeps_the_popup_open_with_its_text_and_esc_closes_it_writing_nothing() {
-    let mut app = app();
-    let enter = KeyEvent::from(KeyCode::Enter);
-    let esc = KeyEvent::from(KeyCode::Esc);
-
-    press(&mut app, "o");
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
-    assert_eq!(popup(&app).editor.text, "");
-
-    press(&mut app, "x Lorem");
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("cannot add a task that is already done"));
-    assert_eq!(popup(&app).editor.text, "x Lorem");
-
-    app.handle_key(esc, TODAY);
-    assert!(!app.handle_key(esc, TODAY));
-    assert!(!matches!(app.focus, Focus::Popup(_)));
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-}
-
-#[test]
-fn an_accepted_add_closes_the_popup() {
-    let mut app = app();
-
-    press(&mut app, "oLorem");
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-    assert!(!matches!(app.focus, Focus::Popup(_)));
 }
 
 #[test]
@@ -640,140 +462,6 @@ pub(super) fn names(app: &App) -> Vec<String> {
     app.completions().0.iter().map(|(name, count)| format!("{name} {count}")).collect()
 }
 
-#[test]
-fn a_tag_typed_in_the_popup_lists_the_names_of_the_file_starting_like_it_most_used_first() {
-    let mut app = app_of(&[
-        "Pay +bank",
-        "Call +Bank @phone",
-        "x 2026-09-20 Old +bank",
-        "Read +books +bank",
-        "Sell +rent",
-    ]);
-
-    press(&mut app, "oBuy +b");
-    assert_eq!(names(&app), ["+bank 3", "+Bank 1", "+books 1"]);
-    press(&mut app, "O");
-    assert_eq!(names(&app), ["+books 1"]);
-    press(&mut app, " @");
-    assert_eq!(names(&app), ["@phone 1"]);
-    press(&mut app, " ");
-    assert!(names(&app).is_empty());
-
-    press(&mut app, "+r");
-    key(&mut app, KeyCode::Left, KeyModifiers::NONE);
-    assert_eq!(names(&app), ["+bank 3", "+Bank 1", "+books 1", "+rent 1"]);
-    key(&mut app, KeyCode::Left, KeyModifiers::NONE);
-    assert!(names(&app).is_empty());
-    key(&mut app, KeyCode::Right, KeyModifiers::NONE);
-    assert_eq!(names(&app).len(), 4);
-    key(&mut app, KeyCode::Esc, KeyModifiers::NONE);
-    assert!(names(&app).is_empty());
-}
-
-#[test]
-fn wait_colon_typed_in_the_popup_lists_the_wait_values_of_the_file_most_used_first() {
-    let mut app = app_of(&[
-        "Design wait:figma",
-        "x 2026-09-20 Mock wait:figma",
-        "Mail wait:designer",
-        "Note wait: later",
-        "Pay +rent",
-    ]);
-
-    press(&mut app, "oDraw wait:");
-    assert_eq!(names(&app), ["wait:figma 2", "wait:designer 1"]);
-    press(&mut app, "d");
-    assert_eq!(names(&app), ["wait:designer 1"]);
-    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
-    assert_eq!(popup(&app).editor.text, "Draw wait:designer ");
-}
-
-#[test]
-fn the_names_of_done_txt_complete_a_tag_after_those_of_the_task_file_with_a_count_of_zero() {
-    let mut app = history_of(
-        &["Pay +bank", "Call +bank @phone", "Read +books"],
-        &["x 2026-09-20 Old +bank +archive @Home wait:bob", "x 2026-09-21 Older +Attic +archive"],
-    );
-
-    press(&mut app, "o+");
-    assert_eq!(names(&app), ["+bank 2", "+books 1", "+archive 0", "+Attic 0"]);
-    press(&mut app, " @");
-    assert_eq!(names(&app), ["@phone 1", "@Home 0"]);
-    press(&mut app, " wait:");
-    assert_eq!(names(&app), ["wait:bob 0"]);
-    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
-    assert_eq!(popup(&app).editor.text, "+ @ wait:bob ");
-}
-
-#[test]
-fn arrows_and_ctrl_n_p_pick_a_name_that_tab_writes_in_place_of_the_tag() {
-    let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
-    let pick = |app: &mut App, code: KeyCode, modifiers: KeyModifiers| {
-        key(app, code, modifiers);
-        app.completions().1
-    };
-
-    press(&mut app, "oCall +B");
-    assert_eq!(app.completions().1, 0);
-    assert_eq!(pick(&mut app, KeyCode::Down, KeyModifiers::NONE), 1);
-    assert_eq!(pick(&mut app, KeyCode::Down, KeyModifiers::NONE), 1);
-    assert_eq!(pick(&mut app, KeyCode::Char('p'), KeyModifiers::CONTROL), 0);
-    assert_eq!(pick(&mut app, KeyCode::Char('n'), KeyModifiers::CONTROL), 1);
-    assert_eq!(pick(&mut app, KeyCode::Up, KeyModifiers::NONE), 0);
-    assert_eq!(pick(&mut app, KeyCode::Char('n'), KeyModifiers::CONTROL), 1);
-    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
-    assert_eq!((popup(&app).editor.text.as_str(), popup(&app).editor.cursor), ("Call +books ", 12));
-    assert!(names(&app).is_empty());
-
-    press(&mut app, "+b now");
-    (0..5).for_each(|_| key(&mut app, KeyCode::Left, KeyModifiers::NONE));
-    assert_eq!(names(&app), ["+bank 2", "+books 1"]);
-    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
-    assert_eq!(
-        (popup(&app).editor.text.as_str(), popup(&app).editor.cursor),
-        ("Call +books +bank now", 18)
-    );
-
-    press(&mut app, "+");
-    key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
-    assert_eq!(shown(&app).last().unwrap(), "2026-09-26 Call +books +bank +now");
-}
-
-#[test]
-fn the_pick_goes_back_to_the_first_name_after_a_typed_key_and_after_tab() {
-    let mut app = app_of(&["Pay +bank", "Call +bank", "Wash +bath"]);
-
-    press(&mut app, "o+b");
-    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
-    assert_eq!(app.completions().1, 1);
-    press(&mut app, "a");
-    assert_eq!(
-        (names(&app), app.completions().1),
-        (vec!["+bank 2".to_string(), "+bath 1".to_string()], 0)
-    );
-
-    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
-    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
-    app.paste("+b");
-    assert_eq!((popup(&app).editor.text.as_str(), app.completions().1), ("+bath +b", 0));
-}
-
-#[test]
-fn names_used_as_often_are_listed_alphabetically_whatever_their_case() {
-    let mut app = app_of(&["Pay +Bank", "Eat +apple"]);
-
-    press(&mut app, "o+");
-
-    assert_eq!(names(&app), ["+apple 1", "+Bank 1"]);
-}
-
-#[test]
-fn a_month_step_in_the_date_picker_crosses_the_year_and_keeps_to_the_month_length() {
-    assert_eq!(shift(date!(2026 - 12 - 15), KeyCode::Char('L')), date!(2027 - 01 - 15));
-    assert_eq!(shift(date!(2027 - 01 - 15), KeyCode::Char('H')), date!(2026 - 12 - 15));
-    assert_eq!(shift(date!(2028 - 01 - 31), KeyCode::Char('L')), date!(2028 - 02 - 29));
-}
-
 pub(super) fn redo(app: &mut App) -> bool {
     app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY)
 }
@@ -831,71 +519,6 @@ fn q_and_ctrl_c_quit() {
 }
 
 #[test]
-fn a_paste_types_its_lines_as_one_into_the_popup_or_the_search_and_does_nothing_in_the_list() {
-    let mut app = app();
-
-    app.paste("dd");
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-
-    press(&mut app, "oCall ");
-    app.paste("the\r\nbank\n");
-    assert_eq!(popup(&app).editor.text, "Call the bank");
-    assert_eq!(popup(&app).editor.cursor, 13);
-    app.paste(" on\rMonday");
-    assert_eq!(popup(&app).editor.text, "Call the bank on Monday");
-    app.paste(" at\tnoon\u{1b}");
-    assert_eq!(popup(&app).editor.text, "Call the bank on Monday at noon");
-
-    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-    press(&mut app, "/");
-    app.paste("tw\no");
-    assert_eq!(app.search, "tw o");
-}
-
-#[test]
-fn an_x_typed_in_front_of_a_task_moves_it_to_done_txt_completed_today_and_u_brings_it_back() {
-    let mut app = app_of(&["(A) 2026-08-01 one", "two"]);
-    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-    press(&mut app, "ix ");
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(lines(&app), ["two"]);
-    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
-    assert_eq!(app.message, None);
-    assert!(press(&mut app, "u"));
-    assert_eq!(lines(&app), ["(A) 2026-08-01 one", "two"]);
-    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one", "-x 2026-09-26 2026-08-01 one"]);
-}
-
-#[test]
-fn an_x_typed_in_front_of_a_dated_task_keeps_its_creation_date() {
-    let mut app = app_of(&["2026-08-01 one"]);
-    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-    press(&mut app, "ix ");
-
-    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
-
-    assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
-}
-
-#[test]
-fn u_in_the_popup_undoes_the_typed_text_and_says_so_without_touching_the_list() {
-    let mut app = app();
-    press(&mut app, "ofour");
-    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
-
-    assert!(!press(&mut app, "u"));
-    assert_eq!(popup(&app).editor.text, "");
-    assert_eq!((app.message.as_deref(), app.refused), (Some("undone"), false));
-
-    press(&mut app, "u");
-    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
-    assert_eq!(shown(&app), ["one", "two", "three"]);
-}
-
-#[test]
 fn a_control_key_in_the_list_is_not_its_letter() {
     let mut app = app();
     let control = |c| KeyEvent::new(KeyCode::Char(c), KeyModifiers::CONTROL);
@@ -926,57 +549,6 @@ fn a_control_key_in_the_search_types_nothing() {
     app.handle_key(KeyEvent::new(KeyCode::Char('w'), KeyModifiers::CONTROL), TODAY);
 
     assert_eq!(app.search, "t");
-}
-
-#[test]
-fn due_colon_typed_in_the_popup_opens_a_date_picker_on_today_whose_keys_move_the_date_and_enter_writes_it() {
-    let mut app = app();
-    let picked = |app: &App| popup(app).picker;
-
-    press(&mut app, "oShip due:");
-    assert_eq!(picked(&app), Some(TODAY));
-    press(&mut app, "lj");
-    assert_eq!(picked(&app), Some(date!(2026 - 10 - 04)));
-    press(&mut app, "hk");
-    assert_eq!(picked(&app), Some(TODAY));
-    key(&mut app, KeyCode::Right, KeyModifiers::NONE);
-    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
-    key(&mut app, KeyCode::Left, KeyModifiers::NONE);
-    key(&mut app, KeyCode::Up, KeyModifiers::NONE);
-    assert_eq!(picked(&app), Some(TODAY));
-    press(&mut app, "L");
-    assert_eq!(picked(&app), Some(date!(2026 - 10 - 26)));
-    press(&mut app, "HHlllll");
-    assert_eq!(picked(&app), Some(date!(2026 - 08 - 31)));
-    press(&mut app, "Lx?");
-    app.paste("2026-01-01");
-    assert_eq!(
-        (picked(&app), popup(&app).editor.text.as_str()),
-        (Some(date!(2026 - 09 - 30)), "Ship due:")
-    );
-
-    key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
-
-    assert_eq!(picked(&app), None);
-    assert_eq!(
-        (popup(&app).editor.text.as_str(), popup(&app).editor.mode),
-        ("Ship due:2026-09-30 ", Mode::Insert)
-    );
-}
-
-#[test]
-fn esc_closes_the_date_picker_on_due_colon_and_a_key_leaving_due_colon_again_reopens_it() {
-    let mut app = app();
-
-    press(&mut app, "oShip due:");
-    key(&mut app, KeyCode::Esc, KeyModifiers::NONE);
-    assert_eq!((popup(&app).picker, popup(&app).editor.text.as_str()), (None, "Ship due:"));
-    assert_eq!(popup(&app).editor.mode, Mode::Insert);
-
-    press(&mut app, "2");
-    assert_eq!(popup(&app).picker, None);
-    key(&mut app, KeyCode::Backspace, KeyModifiers::NONE);
-    assert_eq!(popup(&app).picker, Some(TODAY));
 }
 
 #[test]
@@ -1092,41 +664,4 @@ fn y_then_another_key_copies_nothing() {
     let mut app = app();
     press(&mut app, "yjyg");
     assert_eq!((app.copy, app.message), (None, None));
-}
-
-#[test]
-fn a_line_of_only_tags_is_refused_unchanged_ignored_and_ended_by_a_typed_x() {
-    let enter = KeyEvent::from(KeyCode::Enter);
-    let mut app = app_of(&["+work"]);
-
-    app.handle_key(enter, TODAY);
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message, None);
-
-    app.handle_key(enter, TODAY);
-    press(&mut app, "A wait:a");
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
-    assert_eq!(shown(&app), ["+work"]);
-
-    let mut app = app_of(&["+work"]);
-    app.handle_key(enter, TODAY);
-    press(&mut app, "Ix ");
-    assert_eq!(popup(&app).editor.text, "x +work");
-    assert!(app.handle_key(enter, TODAY));
-    assert_eq!(moved(&app), ["+x 2026-09-26 +work"]);
-}
-
-#[test]
-fn a_line_replaced_by_a_lone_x_is_refused() {
-    let enter = KeyEvent::from(KeyCode::Enter);
-    let mut app = app_of(&["one"]);
-    app.handle_key(enter, TODAY);
-    press(&mut app, "0Dix ");
-    assert_eq!(popup(&app).editor.text, "x ");
-
-    assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
-    assert_eq!(shown(&app), ["one"]);
-    assert!(moved(&app).is_empty());
 }

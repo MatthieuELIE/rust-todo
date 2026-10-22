@@ -14,12 +14,6 @@ use crate::theme::Theme;
 use crate::todo::{DUE, Todo, WAIT, list};
 use crate::view::HELP;
 
-/// Panel entry of the tasks waiting for something, right under `All tasks`.
-pub const WAITING: &str = "Waiting";
-
-/// Name of the panel entry listing the tasks due today or before.
-pub const DUE_NOW: &str = "Due";
-
 /// Said when the key after `p` is not a priority.
 const NOT_PRIORITY: &str = "priority is a to e, or space";
 
@@ -157,12 +151,6 @@ impl App {
         App { todos, ..App::default() }
     }
 
-    /// Whether a task due is left by the search, whatever the filter.
-    fn tasks_due_in_search(&self) -> bool {
-        let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-        self.listed(&terms).iter().any(|(_, todo)| shows(todo, DUE_NOW, self.today))
-    }
-
     /// Keys typed so far of a command still waiting for its end, in the popup or the list.
     pub fn pending(&self) -> String {
         match &self.focus {
@@ -177,35 +165,6 @@ impl App {
             Focus::Popup(popup) if popup.editor.mode == Mode::Insert => SetCursorStyle::SteadyBar,
             _ => SetCursorStyle::SteadyBlock,
         }
-    }
-
-    /// Panel entries with their counts, search left out: `All tasks`, `Due` and `Waiting` if any task is and not in the history, then `+projects` and `@contexts`.
-    pub fn filters(&self) -> Vec<(String, usize)> {
-        let shown = self.listed(&[]);
-        let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
-            let mut terms: Vec<String> = shown
-                .iter()
-                .flat_map(|(_, todo)| names(todo))
-                .map(|name| format!("{sigil}{name}"))
-                .collect();
-            terms.sort_by_key(|term| (term.to_lowercase(), term.clone()));
-            terms.dedup();
-            terms
-        };
-        let mut filters = vec![("All tasks".to_string(), shown.len())];
-        let due = shown.iter().filter(|(_, todo)| shows(todo, DUE_NOW, self.today)).count();
-        if due > 0 && !self.in_history {
-            filters.push((DUE_NOW.to_string(), due));
-        }
-        let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
-        if waiting > 0 && !self.in_history {
-            filters.push((WAITING.to_string(), waiting));
-        }
-        for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
-            let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
-            filters.push((term, count));
-        }
-        filters
     }
 
     /// Names completing the popup's tag, from the task file and `done.txt`, with their counts in the task file, most used first; and the row picked.
@@ -233,14 +192,6 @@ impl App {
         names.sort_by_key(|(name, count)| (Reverse(*count), name.to_lowercase(), name.clone()));
         let selected = popup.selected.min(names.len().saturating_sub(1));
         (names, selected)
-    }
-
-    /// Row of the active filter among the panel `filters`, `None` when it is not among them.
-    pub fn filter_row(&self, filters: &[(String, usize)]) -> Option<usize> {
-        match &self.filter {
-            None => Some(0),
-            Some(filter) => filters.iter().position(|(term, _)| term == filter),
-        }
     }
 
     /// Applies one key dated `today`, keeping the tasks before a change for `u`; tells whether the file must be rewritten.
@@ -408,25 +359,6 @@ impl App {
             _ => {}
         }
         self.cursor = 0;
-    }
-
-    /// Applies a key typed in the panel, the list back on its first row when the filter changes.
-    fn panel_key(&mut self, key: KeyEvent) {
-        let filters = self.filters();
-        let row = self.filter_row(&filters).unwrap_or(0);
-        let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
-        let before = self.filter.clone();
-        match key.code {
-            KeyCode::Char('q') => self.quit = true,
-            KeyCode::Char('j') | KeyCode::Down => self.filter = pick((row + 1).min(filters.len() - 1)),
-            KeyCode::Char('k') | KeyCode::Up => self.filter = pick(row.saturating_sub(1)),
-            KeyCode::Esc => self.filter = None,
-            KeyCode::Tab | KeyCode::Enter => self.focus = Focus::List,
-            _ => {}
-        }
-        if self.filter != before {
-            self.cursor = 0;
-        }
     }
 
     /// Applies a key typed in the list, `pending` being the first key of a two-key command; tells whether to write.
@@ -804,21 +736,11 @@ fn add_months(date: Date, months: i32) -> Date {
     Date::from_calendar_date(year, month, date.day().min(month.length(year))).unwrap_or(date)
 }
 
-/// Whether the panel entry `term` keeps `todo` on screen.
-fn shows(todo: &Todo, term: &str, today: Option<Date>) -> bool {
-    match term {
-        WAITING => todo.is_waiting(),
-        DUE_NOW => today.is_some_and(|today| todo.is_due(today)),
-        _ => has_word(todo, term),
-    }
-}
-
-/// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.
-fn has_word(todo: &Todo, term: &str) -> bool {
-    todo.description.split_whitespace().any(|word| word == term)
-}
-
+mod panel;
 mod rows;
+
+pub use panel::{DUE_NOW, WAITING};
+use panel::{has_word, shows};
 
 #[cfg(test)]
 mod tests;

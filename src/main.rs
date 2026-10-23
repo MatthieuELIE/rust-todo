@@ -1,4 +1,5 @@
 mod cli;
+mod commands;
 mod config;
 mod editor;
 mod filter;
@@ -9,14 +10,12 @@ mod todo;
 mod tui;
 mod view;
 
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, Write};
 use std::path::PathBuf;
 use std::process::ExitCode;
 
 use clap::Parser;
-use ratatui::backend::IntoCrossterm;
 use ratatui::crossterm::style::force_color_output;
-use ratatui::text::Line;
 use time::{Date, OffsetDateTime};
 
 use cli::{Cli, Commands};
@@ -103,7 +102,7 @@ fn main() -> ExitCode {
                 eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
             for (number, todo) in tasks {
-                println!("{}{}", view::number(number), shown(&theme, todo, today));
+                println!("{}{}", view::number(number), commands::shown(&theme, todo, today));
             }
             return ExitCode::SUCCESS;
         }
@@ -225,35 +224,13 @@ fn main() -> ExitCode {
         return ExitCode::FAILURE;
     }
     if let Some((verb, todo)) = confirmed {
-        let _ = writeln!(io::stdout(), "{verb}: {}", shown(&theme, &todo, today()));
+        let _ = writeln!(io::stdout(), "{verb}: {}", commands::shown(&theme, &todo, today()));
     }
     if let Some(count) = archived {
         let _ = writeln!(io::stdout(), "{count} task{} archived", if count == 1 { "" } else { "s" });
     }
 
     ExitCode::SUCCESS
-}
-
-/// `text` with each control character replaced, so that a line of the file cannot drive the terminal.
-fn clean(text: &str) -> String {
-    text.replace(char::is_control, "\u{fffd}")
-}
-
-/// A task as `list` prints it, without its number: styled on a terminal, its plain line otherwise.
-fn shown(theme: &Theme, todo: &Todo, today: Date) -> String {
-    if std::io::stdout().is_terminal() {
-        styled(&view::line(theme, 0, todo, today))
-    } else {
-        clean(&todo.to_line())
-    }
-}
-
-/// A listed line, without its number, as text carrying its styles for a terminal.
-fn styled(line: &Line) -> String {
-    line.iter()
-        .skip(1)
-        .map(|span| span.style.into_crossterm().apply(clean(&span.content)).to_string())
-        .collect()
 }
 
 /// Returns the current date in the local timezone, or UTC if local time is unavailable.
@@ -268,30 +245,4 @@ fn todo_path() -> PathBuf {
     }
 
     std::env::home_dir().unwrap_or_default().join("todo.txt")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use time::macros::date;
-
-    #[test]
-    fn a_styled_line_replaces_the_control_characters_of_the_task() {
-        let todo = Todo::from_line("Pay \u{1b}[2Jrent");
-
-        let styled = styled(&view::line(&Theme::default(), 1, &todo, date!(2026 - 09 - 26)));
-
-        assert!(styled.contains("\u{fffd}[2Jrent"));
-        assert!(!styled.contains("\u{1b}[2J"));
-    }
-
-    #[test]
-    fn a_styled_line_leaves_its_number_out() {
-        for line in ["(A) Pay rent", "x 2026-09-03 Pay rent"] {
-            let styled = styled(&view::line(&Theme::default(), 7, &Todo::from_line(line), date!(2026 - 09 - 26)));
-
-            assert!(!styled.contains(&view::number(7)));
-            assert!(styled.contains("rent"));
-        }
-    }
 }

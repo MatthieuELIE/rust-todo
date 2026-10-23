@@ -1,6 +1,7 @@
 mod cli;
 mod config;
 mod editor;
+mod filter;
 mod repository;
 mod theme;
 mod todo;
@@ -92,7 +93,7 @@ fn main() -> ExitCode {
 
         Commands::List { due, done, terms } => {
             let today = today();
-            let mut tasks = todo::list(&todos, &terms);
+            let mut tasks = filter::list(&todos, &terms);
             tasks.retain(|(_, todo)| done || (!todo.done && (!due || todo.is_due(today))));
             if done {
                 tasks.sort_by_key(|(number, _)| *number);

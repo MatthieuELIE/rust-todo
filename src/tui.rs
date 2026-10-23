@@ -9,9 +9,10 @@ use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModif
 use time::{Date, Month};
 
 use crate::editor::{Editor, Mode, Outcome};
+use crate::filter::list;
 use crate::repository;
 use crate::theme::Theme;
-use crate::todo::{DUE, Todo, WAIT, list};
+use crate::todo::{DUE, Todo, WAIT};
 use crate::view::HELP;
 
 /// Said when the key after `p` is not a priority.

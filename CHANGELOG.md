@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The code of the task line's editor is split into one file per area; nothing in the commands or the list changes.
+- The code of a task line and of the filter of `todo list` is split into one file per area; nothing in the commands or the list changes.
 
 ## [0.7.2] - 2026-10-23
 

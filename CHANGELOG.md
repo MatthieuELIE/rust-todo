@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- The code of the task line's editor is split into one file per area; nothing in the commands or the list changes.
+
 ## [0.7.2] - 2026-10-23
 
 ### Changed

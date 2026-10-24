@@ -211,21 +211,6 @@ impl App {
         write
     }
 
-    /// Applies a key typed in the search line, the list back on its first row.
-    fn search_key(&mut self, key: KeyEvent) {
-        match key.code {
-            KeyCode::Char(c) if !key.modifiers.contains(KeyModifiers::CONTROL) => self.search.push(c),
-            KeyCode::Backspace => _ = self.search.pop(),
-            KeyCode::Esc => {
-                self.search.clear();
-                self.focus = Focus::List;
-            }
-            KeyCode::Enter => self.focus = Focus::List,
-            _ => {}
-        }
-        self.cursor = 0;
-    }
-
     /// Leaves `message` in the status bar as a refusal.
     pub fn refuse(&mut self, message: &str) {
         self.message = Some(message.to_string());
@@ -240,6 +225,7 @@ mod list;
 mod panel;
 mod popup;
 mod rows;
+mod search;
 
 pub use panel::{DUE_NOW, WAITING};
 use panel::{has_word, shows};

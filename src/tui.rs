@@ -1,6 +1,5 @@
 use std::cell::Cell;
 use std::cmp::Reverse;
-use std::collections::HashMap;
 use std::io;
 use std::path::Path;
 
@@ -12,7 +11,7 @@ use crate::editor::{Editor, Mode, Outcome};
 use crate::filter::list;
 use crate::repository;
 use crate::theme::Theme;
-use crate::todo::{DUE, Todo, WAIT};
+use crate::todo::{DUE, Todo};
 use crate::view::HELP;
 
 /// Said when the key after `p` is not a priority.
@@ -219,6 +218,7 @@ impl App {
 }
 
 mod changes;
+mod completions;
 mod files;
 mod help;
 mod list;

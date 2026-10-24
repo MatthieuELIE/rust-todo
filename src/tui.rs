@@ -5,7 +5,7 @@ use std::path::Path;
 
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
-use time::{Date, Month};
+use time::Date;
 
 use crate::editor::{Editor, Mode, Outcome};
 use crate::filter::list;
@@ -223,6 +223,7 @@ mod files;
 mod help;
 mod list;
 mod panel;
+mod picker;
 mod popup;
 mod rows;
 mod search;

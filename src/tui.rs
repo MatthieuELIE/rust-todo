@@ -12,7 +12,6 @@ use crate::filter::list;
 use crate::repository;
 use crate::theme::Theme;
 use crate::todo::{DUE, Todo};
-use crate::view::HELP;
 
 /// Said when the key after `p` is not a priority.
 const NOT_PRIORITY: &str = "priority is a to e, or space";

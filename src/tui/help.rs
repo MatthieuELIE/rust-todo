@@ -1,4 +1,5 @@
 use super::*;
+use crate::view::HELP;
 
 impl App {
     /// Applies a key typed in the help: `j`/`k` and `gg`/`G` scroll within the lines the last drawing showed, `Esc`, `Enter`, `?` and `q` close.

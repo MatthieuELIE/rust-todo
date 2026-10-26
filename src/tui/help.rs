@@ -1,5 +1,4 @@
 use super::*;
-use crate::view::HELP;
 
 impl App {
     /// Opens the help from the focus it covers, kept in `under_help` for the help to give back.
@@ -8,12 +7,12 @@ impl App {
         self.focus = Focus::Help(0);
     }
 
-    /// Applies a key typed in the help: `j`/`k` and `gg`/`G` scroll within the lines the last drawing showed, `Esc`, `Enter`, `?` and `q` close it, back to the focus it covered.
+    /// Applies a key typed in the help: `j`/`k` and `gg`/`G` scroll within the lines the last drawing left out, `Esc`, `Enter`, `?` and `q` close it, back to the focus it covered.
     pub(super) fn help_key(&mut self, key: KeyEvent, pending: Option<char>) {
         let Focus::Help(scroll) = &mut self.focus else {
             unreachable!("the help is open");
         };
-        let max = (HELP.lines().count() as u16).saturating_sub(self.help_rows.get());
+        let max = self.help_max.get();
         match key.code {
             _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => {}
             KeyCode::Esc | KeyCode::Enter | KeyCode::Char('?' | 'q') => self.focus = std::mem::take(&mut self.under_help),

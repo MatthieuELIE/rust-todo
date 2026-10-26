@@ -8,16 +8,18 @@ fn scroll(app: &App) -> u16 {
     }
 }
 
+const MAX: u16 = 8;
+
 fn help_app() -> App {
     let app = app();
-    app.help_rows.set(26);
+    app.help_max.set(MAX);
     app
 }
 
 #[test]
 fn j_and_k_scroll_the_help_a_line_and_stop_at_the_top_and_the_bottom() {
     let mut app = help_app();
-    let max = crate::view::HELP.lines().count() as u16 - 26;
+    let max = MAX;
 
     press(&mut app, "?");
     assert_eq!(scroll(&app), 0);
@@ -38,7 +40,7 @@ fn j_and_k_scroll_the_help_a_line_and_stop_at_the_top_and_the_bottom() {
 #[test]
 fn capital_g_scrolls_the_help_to_the_bottom_and_gg_back_to_the_top() {
     let mut app = help_app();
-    let max = crate::view::HELP.lines().count() as u16 - 26;
+    let max = MAX;
 
     press(&mut app, "?G");
     assert_eq!(scroll(&app), max);

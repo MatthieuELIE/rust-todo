@@ -4,9 +4,8 @@ use ratatui::style::Stylize;
 use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
-use super::style::tag_style;
+use super::style::{mode_block, tag_style};
 use crate::editor::Mode;
-use crate::theme::Theme;
 use crate::tui::{App, Focus};
 
 /// Draws the status bar: mode block, active filters, then the mode's keys when they fit; on the right the message, or the keys of a command under way.
@@ -30,7 +29,7 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
         [app.filter.clone(), search].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
-    let mut status = Line::from_iter([mode_block(theme, mode), " ".into()]);
+    let mut status = Line::from_iter([mode_block(theme, mode, true), " ".into()]);
     for (i, word) in filters.split(' ').enumerate() {
         status.extend([
             if i > 0 { " " } else { "" }.into(),
@@ -56,11 +55,6 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         let colour = if app.refused { theme.alert } else { theme.secondary };
         frame.render_widget(Paragraph::new(format!("{right} ").fg(colour)).right_aligned(), area);
     }
-}
-
-/// A mode's name in bold on the accent, as the status bar shows it.
-fn mode_block(theme: &Theme, mode: &str) -> Span<'static> {
-    format!(" {mode} ").bold().fg(theme.on_accent).bg(theme.accent)
 }
 
 #[cfg(test)]

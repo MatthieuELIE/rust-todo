@@ -18,6 +18,7 @@ A task's number is its position in its file, blank lines not counted: `list` sho
 `do`, `edit` and `remove` take a number of the task file, `reopen` one of `done.txt`, the one `list --done` shows.
 `ls`, `a` and `rm` are aliases for `list`, `add` and `remove`, as in `todo.sh`, and `done` is the former name of `do`.
 How `list` filters, sorts and colours is described in [Listing](listing.md).
+`todo --help` and `todo <command> --help` print the help, and `todo --version` or `-V` the version, all with exit code 0.
 
 ## Adding and editing
 
@@ -46,6 +47,8 @@ The task comes back without a priority, even a `done.txt` line written by hand w
 
 Every command but `list` writes the task file, as the interactive list does, and the write is atomic: a temporary file takes the place of the task file once it is complete.
 `done.txt` is created when it is missing, readable and writable by its owner only, and `do` and `archive` only add to its end, which is not an atomic write.
+A rewrite keeps one task per line: blank lines are dropped, line endings become `\n`, and the last line ends with one.
+A task file that does not exist yet is created readable and writable by its owner only; an existing one keeps its permissions.
 The file a task goes to is written first, so an interruption leaves the task in both files rather than in neither.
 When the task file is a symbolic link, the file it points to is written, and `done.txt` is the one in the folder of the link.
 

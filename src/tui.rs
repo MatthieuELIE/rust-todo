@@ -98,6 +98,8 @@ pub struct App {
     pub copy: Option<String>,
     /// Where the keys go.
     pub focus: Focus,
+    /// Where the keys go back to when the help closes: what the help covers while it is open.
+    pub under_help: Focus,
     /// Lines of the help the last drawing showed, which bound its scrolling.
     pub help_rows: Cell<u16>,
     /// Search terms, separated by whitespace, as `todo list` takes them.

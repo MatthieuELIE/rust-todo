@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- `?` shows the keys from the filter panel, the popup's normal mode and its calendar as well as from the list, and closing them goes back to where they were opened; the key help gains a `SEARCH` section and the `Enter` save line of the popup's normal mode.
+
 ## [0.7.3] - 2026-10-24
 
 ### Changed

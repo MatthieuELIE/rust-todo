@@ -29,7 +29,7 @@ fn the_help_shows_one_column_of_modes_under_their_names_keys_bold_actions_and_sl
     assert!(rows[y + 21].chars().skip(33).take(44).all(|c| c == ' ' || c == '▐'), "{}", rows[y + 21]);
     assert!(rows[y + 22].contains(" PANEL "), "{}", rows[y + 22]);
     assert!(rows[y + 25].contains("Tab/Enter    back to the list"), "{}", rows[y + 25]);
-    assert!(!rows.iter().any(|row| row.contains(" DATE ")));
+    assert!(!rows.iter().any(|row| row.contains("Enter/Esc    pick, close")));
     assert!(rows.iter().any(|row| row.contains("▐")));
 
     let y = y as u16;
@@ -84,7 +84,7 @@ fn the_help_has_a_scrollbar_in_its_right_margin_when_its_lines_overflow_the_box_
 #[test]
 fn the_help_says_tab_completes_wait_values_too() {
     let mut app = app_of(&["Pay +rent"]);
-    app.focus = Focus::Help(10);
+    app.focus = Focus::Help(20);
 
     assert!(
         rows(&render_in(&app, 109, 36))

@@ -29,6 +29,7 @@ The line is coloured as you type, as in the list, and the terminal's cursor is a
 | normal | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |
 | normal | `Esc` | cancel |
 | both | `Enter` | save |
+| normal, calendar | `?` | show the keys; closing them goes back to the popup as it was |
 | calendar | `h` `l`, `k` `j`, `H` `L` | move by a day, a week, a month |
 | calendar | `Enter`, `Esc` | write the date, close |
 

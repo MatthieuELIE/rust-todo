@@ -101,7 +101,7 @@ impl App {
                 }
             }
             KeyCode::Tab => self.focus = Focus::Panel,
-            KeyCode::Char('?') => self.focus = Focus::Help(0),
+            KeyCode::Char('?') => self.open_help(),
             KeyCode::Char('H') => {
                 self.in_history = !self.in_history;
                 if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {

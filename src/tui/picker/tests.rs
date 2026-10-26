@@ -30,7 +30,7 @@ fn due_colon_typed_in_the_popup_opens_a_date_picker_on_today_whose_keys_move_the
     assert_eq!(picked(&app), Some(date!(2026 - 10 - 26)));
     press(&mut app, "HHlllll");
     assert_eq!(picked(&app), Some(date!(2026 - 08 - 31)));
-    press(&mut app, "Lx?");
+    press(&mut app, "Lx");
     app.paste("2026-01-01");
     assert_eq!(
         (picked(&app), popup(&app).editor.text.as_str()),

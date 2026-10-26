@@ -58,6 +58,7 @@ impl App {
         let before = self.filter.clone();
         match key.code {
             KeyCode::Char('q') => self.quit = true,
+            KeyCode::Char('?') => self.open_help(),
             KeyCode::Char('j') | KeyCode::Down => self.filter = pick((row + 1).min(filters.len() - 1)),
             KeyCode::Char('k') | KeyCode::Up => self.filter = pick(row.saturating_sub(1)),
             KeyCode::Esc => self.filter = None,

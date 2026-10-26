@@ -28,6 +28,13 @@ impl App {
         let Focus::Popup(popup) = &mut self.focus else {
             unreachable!("the popup is open");
         };
+        let opens_help = key.code == KeyCode::Char('?')
+            && !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
+            && (popup.picker.is_some() || (popup.editor.mode == Mode::Normal && popup.editor.pending().is_empty()));
+        if opens_help {
+            self.open_help();
+            return false;
+        }
         if let Some(date) = popup.picker {
             popup.picker = match key.code {
                 _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => Some(date),

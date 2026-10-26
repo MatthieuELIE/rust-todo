@@ -1,4 +1,4 @@
-use super::super::tests::{app, key, press, shown};
+use super::super::tests::{app, app_of, key, popup, press, shown};
 use super::super::*;
 
 fn scroll(app: &App) -> u16 {
@@ -88,4 +88,89 @@ fn the_help_opened_again_starts_at_the_top() {
     assert_eq!(scroll(&app), 3);
     press(&mut app, "q?");
     assert_eq!(scroll(&app), 0);
+}
+
+fn esc(app: &mut App) {
+    key(app, KeyCode::Esc, KeyModifiers::NONE);
+}
+
+#[test]
+fn question_mark_in_the_list_opens_the_help_and_closing_it_keeps_the_cursor() {
+    let mut app = app();
+
+    press(&mut app, "j?");
+    assert!(matches!(app.focus, Focus::Help(0)));
+    esc(&mut app);
+
+    assert!(matches!(app.focus, Focus::List));
+    assert_eq!(app.cursor, 1);
+}
+
+#[test]
+fn question_mark_in_the_panel_opens_the_help_and_closing_it_keeps_the_panel_and_its_selection() {
+    let mut app = app_of(&["Pay +rent", "Call @phone"]);
+
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    press(&mut app, "j");
+    let filter = app.filter.clone();
+    assert!(filter.is_some());
+    press(&mut app, "?");
+    assert!(matches!(app.focus, Focus::Help(0)));
+    press(&mut app, "q");
+
+    assert!(matches!(app.focus, Focus::Panel));
+    assert_eq!(app.filter, filter);
+}
+
+#[test]
+fn question_mark_in_the_popups_normal_mode_opens_the_help_and_closing_it_keeps_the_text_and_the_mode() {
+    let mut app = app();
+
+    press(&mut app, "oBuy milk");
+    esc(&mut app);
+    press(&mut app, "0?");
+    assert!(matches!(app.focus, Focus::Help(0)));
+    esc(&mut app);
+
+    assert_eq!((popup(&app).editor.text.as_str(), popup(&app).editor.mode), ("Buy milk", Mode::Normal));
+    assert_eq!(popup(&app).editor.cursor, 0);
+    assert_eq!(shown(&app), ["one", "two", "three"]);
+}
+
+#[test]
+fn question_mark_in_the_date_picker_opens_the_help_and_closing_it_keeps_the_picker_and_its_date() {
+    let mut app = app();
+
+    press(&mut app, "oShip due:l");
+    let picked = popup(&app).picker;
+    assert!(picked.is_some());
+    press(&mut app, "?");
+    assert!(matches!(app.focus, Focus::Help(0)));
+    press(&mut app, "?");
+
+    assert_eq!(popup(&app).picker, picked);
+    assert_eq!(popup(&app).editor.text, "Ship due:");
+}
+
+#[test]
+fn question_mark_is_typed_in_the_popups_insert_mode_and_in_the_search() {
+    let mut app = app();
+
+    press(&mut app, "oWhy?");
+    assert_eq!(popup(&app).editor.text, "Why?");
+    assert!(!matches!(app.focus, Focus::Help(_)));
+
+    let mut app = app_of(&["Why?", "other"]);
+    press(&mut app, "/Why?");
+    assert!(matches!(app.focus, Focus::Search));
+    assert_eq!(app.search, "Why?");
+}
+
+#[test]
+fn the_help_search_section_and_the_normal_save_line_are_listed() {
+    let lines: Vec<&str> = crate::view::HELP.lines().collect();
+    let at = |name: &str| lines.iter().position(|line| *line == name).expect("a section");
+
+    assert!(lines[at("SEARCH")..].starts_with(&["SEARCH", "Enter        keep the search", "Esc          clear the search"]));
+    assert!(lines[at("NORMAL")..at("DATE")].contains(&"Enter        save"));
 }

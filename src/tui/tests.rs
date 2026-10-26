@@ -103,6 +103,21 @@ fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
 }
 
 #[test]
+fn a_reload_under_the_help_cancels_the_edit_it_covers() {
+    let mut app = app();
+
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "?");
+    assert!(matches!(app.under_help, Focus::Popup(_)));
+    app.reload(vec![Todo::from_line("one"), Todo::from_line("two")]);
+
+    assert!(matches!(app.focus, Focus::Help(_)));
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    assert!(matches!(app.focus, Focus::List));
+    assert_eq!(app.message, None);
+}
+
+#[test]
 fn a_task_added_under_a_search_it_does_not_match_is_saved_but_said_hidden() {
     let mut app = app();
     let enter = KeyEvent::from(KeyCode::Enter);

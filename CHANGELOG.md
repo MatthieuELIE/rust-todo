@@ -9,7 +9,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 - `?` shows the keys from the filter panel, the popup's normal mode and its calendar as well as from the list, and closing them goes back to where they were opened; the key help gains a `SEARCH` section and the `Enter` save line of the popup's normal mode.
 - The key help is laid out in two columns when the terminal is wide enough, with each mode's name in a block like the status bar's and the one it was opened from lit; it keeps one scrolling column on a narrow terminal.
-- The status bar no longer lists the keys of each mode: the mode and filters stay on the left, the message or the keys of a command under way sit in the middle (peach, red for a refusal), and `? help` sits on the right, except in `INSERT`, `SEARCH` and in the help, which shows a `HELP` block.
+- The status bar no longer lists the keys of each mode: the mode and filters stay on the left, the message sits in the middle (peach, red for a refusal), and the keys of a command under way then `? help` sit on the right, except in `INSERT`, `SEARCH` and in the help, which shows a `HELP` block.
 
 ## [0.7.3] - 2026-10-24
 

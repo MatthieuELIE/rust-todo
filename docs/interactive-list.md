@@ -51,7 +51,7 @@ The panel, the list and the details sit each in its own rounded card, a column o
 The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
 The status bar shows the mode in a peach block and the active filters coloured as in the list on the left, `? help` on the right, except in `INSERT` and `SEARCH` and while the help is open, which shows a `HELP` block and nothing on the right.
 A message shows in the middle in peach, red when something was refused.
-While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show there in place of a message.
+While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show in peach on the right, just left of `? help`.
 
 ## Undo
 

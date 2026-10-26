@@ -92,16 +92,15 @@ fn the_mode_and_filters_stay_on_the_left_with_no_mode_keys_in_mocha() {
 }
 
 #[test]
-fn the_keys_of_a_command_waiting_for_its_end_show_in_the_middle_of_the_status_bar_in_mocha() {
+fn the_keys_of_a_command_waiting_for_its_end_show_just_left_of_the_help_hint_in_mocha() {
     let key = |app: &mut App, code: KeyCode| app.handle_key(KeyEvent::from(code), TODAY);
     let mut app = app_of(&["Pay +rent"]);
 
     key(&mut app, KeyCode::Char('d'));
     let buffer = render_in(&app, WIDTH, 5);
     let status = rows(&buffer)[4].clone();
-    assert_eq!(status.find('d').unwrap(), (WIDTH as usize - 1) / 2, "{status}");
-    assert!(status.ends_with("? help"), "{status}");
-    assert_eq!(buffer[((WIDTH - 1) / 2, 4)].fg, MOCHA.accent);
+    assert!(status.ends_with(" d ? help"), "{status}");
+    assert_eq!(buffer[(WIDTH - 9, 4)].fg, MOCHA.accent);
 
     key(&mut app, KeyCode::Char('j'));
     assert!(!status_of(&app).contains(" d "));

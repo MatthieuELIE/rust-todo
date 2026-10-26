@@ -78,7 +78,7 @@ A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or
 ## Priority groups
 
 When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`, each header with how many tasks it holds and a blank row before each group but the first.
-`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `yy`, `p` and `Enter` do nothing.
+`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing and `yy` says `no task under the cursor`.
 Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
 
 ## Details
@@ -93,7 +93,7 @@ The zone stays empty when the cursor is on a folded group, and it is hidden when
 ![The filter panel on its Due entry, in red: the list holds an overdue task, its date in red, and one due today, in yellow](images/due.png)
 
 The panel on the left lists `All tasks`, `Due` when a task is due, `Waiting` when a task shown waits, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
-Moving through it with `j` and `k` filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
+Moving through it with `j` and `k`, or the arrows, filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list. `?` shows the keys and `q` quits, as in the list.
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
 `Due` shows the pending tasks whose `due:` date is today or past, as `todo list --due` does; its name is red when one of them is overdue and yellow when they are all for today, and it keeps that colour while selected. A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
 From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`; with no task due it says `nothing due`, and when the search hides every task due it says `nothing due matches the search`, and changes nothing.
@@ -101,6 +101,6 @@ From the list, `D` goes straight to `Due` whatever the filter in use, the search
 
 ## Search
 
-`/` opens the search line in the status bar, and the list filters at each letter.
+`/` opens the search line in the status bar, empty even when a search was kept, and the list filters at each letter; `Backspace` erases the last one.
 The search is terms as for `todo list`, and it applies on top of a panel filter.
 `Enter` keeps it and goes back to the list, and `Esc` clears it.

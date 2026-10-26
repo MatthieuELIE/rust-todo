@@ -1,6 +1,6 @@
 # Configuration
 
-`todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or in `~/.config/todo/` when that variable is not set, on macOS as on Linux.
+`todo` reads `config.toml` in `$XDG_CONFIG_HOME/todo/`, or in `~/.config/todo/` when that variable is not set or is empty, on macOS as on Linux.
 There is no variable to point at another file.
 A file that does not exist is not an error: every setting takes its default.
 

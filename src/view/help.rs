@@ -1,18 +1,31 @@
 use ratatui::Frame;
-use ratatui::layout::{Constraint, Rect};
+use ratatui::layout::{Constraint, Layout, Rect};
 use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
 use ratatui::widgets::{Clear, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 
-use super::style::floating;
+use super::style::{floating, mode_block};
+use crate::editor::Mode;
 use crate::theme::Theme;
-use crate::tui::App;
+use crate::tui::{App, Focus};
 
-/// Width of the help box, its borders included.
-const HELP_WIDTH: u16 = 46;
+/// Width of a column of keys: the longest line of `HELP`.
+const COLUMN_WIDTH: u16 = 40;
+
+/// Columns left between the two columns.
+const COLUMN_GAP: u16 = 4;
+
+/// Borders and padding on both sides of the box.
+const BOX_MARGIN: u16 = 8;
+
+/// Narrowest area that holds the two columns.
+const TWO_COLUMNS_WIDTH: u16 = 2 * COLUMN_WIDTH + COLUMN_GAP + BOX_MARGIN;
+
+/// Sections `LIST`, `PANEL` and `SEARCH` in the left column.
+const LEFT_SECTIONS: usize = 3;
 
 /// Tallest the help box grows, its borders and padding included.
-const HELP_MAX_HEIGHT: u16 = 30;
+const HELP_MAX_HEIGHT: u16 = 36;
 
 /// Keys of every screen `?` can show, one section per mode under its name, one key per line, a key's alternatives separated by `/`.
 pub const HELP: &str = "\
@@ -78,22 +91,37 @@ k/j/↑/↓      week
 H/L          month
 Enter/Esc    pick, close";
 
-/// Draws the key help in one scrolling column in a rounded box, centred in `area`, and tells the app how many lines it shows.
+/// Draws the key help in a rounded box, centred in `area`: two columns of sections when the width allows, else one, scrolling when the height falls short, and tells the app how far it can scroll.
 pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     let theme = &app.theme;
-    let lines = HELP.lines().count() as u16;
+    let lit = opened_from(&app.under_help);
+    let sections = sections();
+    let columns: Vec<Vec<Line<'static>>> = if area.width >= TWO_COLUMNS_WIDTH {
+        let (left, right) = sections.split_at(LEFT_SECTIONS);
+        vec![column_lines(theme, left, lit), column_lines(theme, right, lit)]
+    } else {
+        vec![column_lines(theme, &sections, lit)]
+    };
+    let lines = columns.iter().map(Vec::len).max().unwrap_or_default() as u16;
+    let width = columns.len() as u16 * COLUMN_WIDTH + (columns.len() as u16 - 1) * COLUMN_GAP + BOX_MARGIN;
     let height = (lines + 4).min(HELP_MAX_HEIGHT).min(area.height);
-    let area = area.centered(Constraint::Length(HELP_WIDTH), Constraint::Length(height));
+    let area = area.centered(Constraint::Length(width), Constraint::Length(height));
+    let max = lines.saturating_sub(height.saturating_sub(4));
+    let hint = if max > 0 { " j/k scroll · esc close " } else { " esc close " };
     let block = floating(theme, true)
         .title(" HELP ")
-        .title_bottom(Line::from(" j/k scroll · esc close ".fg(theme.tertiary)).right_aligned())
+        .title_bottom(Line::from(hint.fg(theme.tertiary)).right_aligned())
         .padding(Padding::new(3, 3, 1, 1));
     let inner = block.inner(area);
-    app.help_rows.set(inner.height);
-    let max = lines.saturating_sub(inner.height);
+    app.help_max.set(max);
     frame.render_widget(Clear, area);
     frame.render_widget(block, area);
-    frame.render_widget(Paragraph::new(help_lines(theme, HELP)).scroll((scroll.min(max), 0)), inner);
+    let slots = Layout::horizontal(vec![Constraint::Length(COLUMN_WIDTH); columns.len()])
+        .spacing(COLUMN_GAP)
+        .split(inner);
+    for (column, slot) in columns.into_iter().zip(slots.iter()) {
+        frame.render_widget(Paragraph::new(column).scroll((scroll.min(max), 0)), *slot);
+    }
     if max > 0 {
         let bar = Rect::new(area.right() - 3, inner.y, 1, inner.height);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -110,13 +138,41 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     }
 }
 
-/// Lines of the help: a mode name bold, keys bold, the `/` between alternatives and actions greyed.
+/// The name of the mode the status bar shows for `focus`, which the help lights.
+fn opened_from(focus: &Focus) -> &'static str {
+    match focus {
+        Focus::Search => "SEARCH",
+        Focus::Panel => "PANEL",
+        Focus::Popup(popup) if popup.picker.is_some() => "DATE",
+        Focus::Popup(popup) if popup.editor.mode == Mode::Insert => "INSERT",
+        Focus::Popup(_) => "NORMAL",
+        Focus::List | Focus::Help(_) => "LIST",
+    }
+}
+
+/// `HELP` cut into its sections, in order, each a name line then its key lines.
+fn sections() -> Vec<&'static str> {
+    HELP.split("\n\n").collect()
+}
+
+/// The lines of `sections` one under the other, a blank line between two sections, the one named `lit` lit.
+fn column_lines(theme: &Theme, sections: &[&'static str], lit: &str) -> Vec<Line<'static>> {
+    let mut lines = Vec::new();
+    for (i, section) in sections.iter().enumerate() {
+        if i > 0 {
+            lines.push(Line::default());
+        }
+        let (name, keys) = section.split_once('\n').unwrap_or((section, ""));
+        lines.push(Line::from(mode_block(theme, name, name == lit)));
+        lines.extend(help_lines(theme, keys));
+    }
+    lines
+}
+
+/// Key lines of the help: keys bold, the `/` between alternatives and actions greyed.
 fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
     text.lines()
         .map(|line| {
-            if !line.contains(' ') {
-                return Line::from(line.fg(theme.secondary).bold());
-            }
             let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));
             let alternatives: Vec<&str> = if key.trim_end() == "/" { vec![key] } else { key.split('/').collect() };
             let mut spans = Vec::new();

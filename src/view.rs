@@ -76,6 +76,7 @@ mod popup;
 mod status;
 mod style;
 
+#[cfg(test)]
 pub use help::HELP;
 pub use list::{line, number};
 

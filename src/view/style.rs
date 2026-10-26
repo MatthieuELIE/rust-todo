@@ -82,5 +82,13 @@ pub(super) fn badge(theme: &Theme, letter: char) -> Span<'static> {
     Span::styled(format!(" {letter} "), Style::new().bold().fg(priority(theme, letter)).bg(theme.badge))
 }
 
+/// A mode's name in bold on the accent, as the status bar shows it, or on the structure colour when `lit` is false.
+pub(super) fn mode_block(theme: &Theme, mode: &str, lit: bool) -> Span<'static> {
+    if lit {
+        return format!(" {mode} ").bold().fg(theme.on_accent).bg(theme.accent);
+    }
+    format!(" {mode} ").bold().fg(theme.primary).bg(theme.structure)
+}
+
 #[cfg(test)]
 mod tests;

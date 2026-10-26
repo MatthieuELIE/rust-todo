@@ -72,7 +72,7 @@ The panel lists the `+projects` and `@contexts` of the history, without `Due` an
 The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` and `D` are refused there with `history is read-only`.
 `r` reopens the task under the cursor, as `todo reopen` does with its number: the task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`. A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words, a task with no text word included. Outside the history `r` does nothing.
 A reopen is undone from the list, not from the history: after `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.
-`done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it; it is not watched, so a change made to it alone elsewhere shows at the next `H`.
+`done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it.
 A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or an empty one, the list says `nothing done`.
 
 ## Priority groups

@@ -35,13 +35,17 @@ H            show, hide history
 r            reopen, in the history
 Tab          panel
 Esc          drop filter and search
-?            these keys
+?            help; PANEL NORMAL DATE too
 q            quit
 
 PANEL
 j/k          pick a filter
 Esc          all tasks
 Tab/Enter    back to the list
+
+SEARCH
+Enter        keep the search
+Esc          clear the search
 
 INSERT
 Enter        save
@@ -65,6 +69,7 @@ i/a/I/A      insert
 u/Ctrl-r     undo, redo
 p a…e        priority
 p Space      no priority
+Enter        save
 Esc          cancel
 
 DATE

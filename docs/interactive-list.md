@@ -24,7 +24,7 @@ Adding and editing a task happen in [the popup](popup.md).
 | `r` | in the history, reopen the task: it moves back to the task file |
 | `Tab` | move to the filter panel |
 | `Esc` | drop the filter and the search |
-| `?` | show the keys |
+| `?` | show the keys, also from the filter panel, the popup's normal mode and its calendar |
 | `q`, `Ctrl-C` | quit |
 
 `gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
@@ -32,7 +32,8 @@ After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` i
 `x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
 A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
 `?` shows every key, grouped by mode, in one column that scrolls: `j` and `k` (or the arrows) move a line, `gg` and `G` jump to the top and the bottom, and a scroll bar on the right shows where you stand.
-`Esc`, `Enter`, `?` and `q` close it; any other key does nothing, and `Ctrl-C` quits.
+`Esc`, `Enter`, `?` and `q` close it, back to where it was opened, with the popup, its text, its mode and its calendar's date as they were; any other key does nothing, and `Ctrl-C` quits.
+`?` is a character typed in the popup's insert mode and in the search, so it opens nothing there.
 Opened again, it starts from the top.
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 

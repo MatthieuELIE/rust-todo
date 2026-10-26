@@ -40,7 +40,12 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
     }
     draw_status(frame, app, status_area);
     match &app.focus {
-        Focus::Help(scroll) => draw_help(frame, app, *scroll, main_area),
+        Focus::Help(scroll) => {
+            if let Focus::Popup(popup) = &app.under_help {
+                draw_popup(frame, app, popup, main_area, today);
+            }
+            draw_help(frame, app, *scroll, main_area)
+        }
         Focus::Popup(popup) => draw_popup(frame, app, popup, main_area, today),
         _ => {}
     }

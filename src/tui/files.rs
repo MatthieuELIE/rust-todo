@@ -122,8 +122,13 @@ impl App {
         self.forget_gone_folds();
         self.clamp_cursor();
         self.message = Some("reloaded".to_string());
-        if let Focus::Popup(Popup { target: Target::Edit(_), .. }) = self.focus {
-            self.focus = Focus::List;
+        let focus = if matches!(self.focus, Focus::Help(_)) {
+            &mut self.under_help
+        } else {
+            &mut self.focus
+        };
+        if let Focus::Popup(Popup { target: Target::Edit(_), .. }) = focus {
+            *focus = Focus::List;
             self.message = Some("reloaded, edit cancelled".to_string());
         }
     }

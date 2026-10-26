@@ -49,8 +49,9 @@ The screen takes the colours of the [theme](config.md): by default the terminal'
 Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
 The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach; the popups float over them on a lighter background.
 The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
-The status bar shows the mode in a peach block, the active filters coloured as in the list, then the mode's main keys, bold before their greyed action, when they fit and no message is shown; a message goes on the right, red when something was refused.
-While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show on the right in place of a message.
+The status bar shows the mode in a peach block and the active filters coloured as in the list on the left, `? help` on the right, except in `INSERT` and `SEARCH` and while the help is open, which shows a `HELP` block and nothing on the right.
+A message shows in the middle in peach, red when something was refused.
+While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show there in place of a message.
 
 ## Undo
 

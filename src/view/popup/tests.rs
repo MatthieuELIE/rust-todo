@@ -34,14 +34,17 @@ fn the_popup_wraps_its_text_under_its_title_with_the_terminal_cursor_on_its_cell
     assert_eq!(cursor, Some(Position::new(11, 1)));
     assert!(buffer.content.iter().all(|cell| !cell.modifier.contains(Modifier::REVERSED)));
     assert_eq!(render_with_cursor(&app_of(&["Pay +rent"]), 50, 5).1, None);
-    assert_eq!(rows[4], " INSERT  +rent  esc normal · ⏎ save");
+    assert_eq!(rows[4], " INSERT  +rent");
     assert_eq!(buffer[(1, 4)].bg, MOCHA.accent);
 
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = Mode::Normal;
     }
     let buffer = render_in(&app, 70, 5);
-    assert_eq!(self::rows(&buffer)[4], " NORMAL  +rent  i insert · p priority · ⏎ save · esc cancel");
+    assert_eq!(
+        self::rows(&buffer)[4],
+        " NORMAL  +rent                                                 ? help"
+    );
     assert_eq!(buffer[(1, 4)].bg, MOCHA.accent);
 }
 
@@ -124,7 +127,7 @@ fn the_completions_drop_down_under_the_tag_with_their_counts_and_the_pick_highli
     assert_eq!((buffer[(10, y + 2)].fg, buffer[(19, y + 2)].fg), (MOCHA.project, MOCHA.tertiary));
     assert_eq!((buffer[(10, y + 2)].bg, buffer[(10, y + 3)].bg), (MOCHA.raised, MOCHA.selected));
     assert_eq!(buffer[(9, y + 1)].fg, MOCHA.accent);
-    assert_eq!(rows[11], " INSERT  esc normal · ⏎ save · tab complete");
+    assert_eq!(rows[11], " INSERT");
 }
 
 #[test]
@@ -209,7 +212,7 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
         (buffer[(x + 16, y + 4)].fg, buffer[(x + 13, y + 4)].fg),
         (MOCHA.due_today, MOCHA.tertiary)
     );
-    assert_eq!(rows[19], " DATE  hjkl move · H/L month · ⏎ pick · esc close");
+    assert_eq!(rows[19], " DATE                                                ? help");
     assert_eq!(buffer[(1, 19)].bg, MOCHA.accent);
 }
 
@@ -223,7 +226,7 @@ fn the_date_picker_stays_above_the_status_bar_on_a_small_screen() {
     }
     let rows = rows(&render_in(&app, 30, 8));
     assert!(rows.iter().any(|row| row.contains("SEPTEMBER")));
-    assert_eq!(rows[7], " DATE");
+    assert_eq!(rows[7], " DATE                  ? help");
 }
 
 #[test]

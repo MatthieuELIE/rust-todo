@@ -2,8 +2,11 @@
 
 `todo` with no command opens the list full screen, meant for a terminal popup kept open a few seconds.
 Every change is written at once, and `q` quits without asking.
-When the file changes on disk while the list is open, the list is reloaded, the key pressed at that moment is ignored and a command under way, such as a first `d`, is dropped.
 Adding and editing a task happen in [the popup](popup.md).
+
+![The list: the filter panel on the left, tasks grouped by priority, and the details of the task under the cursor](images/list.png)
+
+The screenshots use the `catppuccin-mocha` theme; the default theme follows the terminal, see [config](config.md).
 
 ## Keys
 
@@ -29,84 +32,6 @@ Adding and editing a task happen in [the popup](popup.md).
 | `?` | show the keys, also from the filter panel, the popup's normal mode and its calendar |
 | `q`, `Ctrl-C` | quit |
 
-`gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
-After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored and the status bar says `priority is a to e, or space`.
-`x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does; `u` is the way back.
-A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
-`?` shows every key, grouped by mode, each mode's name in a block like the status bar's: the mode you opened it from in peach, the others greyed.
-The list, the filter panel and the search are in the left column, the popup's insert and normal modes and the calendar in the right one; a terminal too narrow for two columns gets one.
-When the box does not fit the height, it scrolls: `j` and `k` (or the arrows) move a line, `gg` and `G` jump to the top and the bottom, a scroll bar on the right shows where you stand, and the bottom border says `j/k scroll`.
-`Esc`, `Enter`, `?` and `q` close it, back to where it was opened, with the popup, its text, its mode and its calendar's date as they were; any other key does nothing, and `Ctrl-C` quits.
-`?` is a character typed in the popup's insert mode and in the search, so it opens nothing there.
-Opened again, it starts from the top.
-A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed: `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
-
-![The key help over the list: the keys of the list, the filter panel, the popup's insert and normal modes, and the calendar](images/help.png)
-
-## Screen
-
-The rows are those of `todo list`: same numbers, order and colours; a late `due:` date is red and bold, one due today yellow only.
-An empty list says `nothing to do`, or `no matching task` under a filter or a search.
-The screen takes the colours of the [theme](config.md): by default the terminal's own, with its background and text colour; with `name = "catppuccin-mocha"`, Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, and Mocha's `text` colour.
-Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
-The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach; the popups float over them on a lighter background.
-The row under the cursor is marked `→`, peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
-The status bar shows the mode in a peach block and the active filters coloured as in the list on the left, `? help` on the right, except in `INSERT` and `SEARCH` and while the help is open, which shows a `HELP` block and nothing on the right.
-A message shows in the middle in peach, red when something was refused.
-While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show in peach on the right, just left of `? help`.
-
-## Undo
-
-`u` steps back through the changes made since the list was opened, and `Ctrl-R` steps forward again.
-Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
-Undoing `x` also reads `done.txt` again and takes out its last line equal to the task; when the line is no longer there the task comes back all the same and the status bar says so. `Ctrl-R` sends it to `done.txt` again.
-`done.txt` is not watched: a change made to it elsewhere shows at the next read.
-These steps are not saved: they are lost when the list closes or the file is reloaded, and when a task brought back by `u` or `r` could not leave `done.txt`.
-
-## History
-
-![The history view: the lines of done.txt in light grey, the last completed first, and the names of the filter panel in the same grey](images/history.png)
-
-`H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
-The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first; there are no groups.
-Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen. The details keep their colours.
-The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`, `/` searches it, and the search in use is kept when `H` is pressed, either way, with a `+project` or `@context` filter. `H` pressed under `Due` or `Waiting`, which the history panel does not have, switches to `All tasks`, and the list stays on it when `H` is pressed back.
-The history is read-only but for one key: `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` and `D` are refused there with `history is read-only`.
-`r` reopens the task under the cursor, as `todo reopen` does with its number: the task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`. A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words, a task with no text word included. Outside the history `r` does nothing.
-A reopen is undone from the list, not from the history: after `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.
-`done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it.
-A line of `done.txt` without its `x` is shown as written. With no `done.txt`, or an empty one, the list says `nothing done`.
-
-## Priority groups
-
-When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`, each header with how many tasks it holds and a blank row before each group but the first.
-`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one; the cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing and `yy` says `no task under the cursor`.
-Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
-
-## Details
-
-Under the list, a `DETAILS` card shows the task under the cursor: its priority, its text without the `key:value` words ending it, its creation date and `due:` value, coloured and, once late, bold as in the list, its projects and contexts, and its other `key:value` words.
-A task of the history shows its completion date in place of the priority, and its `due:` date is not coloured.
-A long text wraps, the lines after the first aligned under the value, and the card grows with it by taking rows from the list, which keeps 5 rows; a text still too long ends with `…` on its last line. Any other value too long for its place ends with `…`.
-The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows with the text on one line.
-
-## Filter panel
-
-![The filter panel on its Due entry, in red: the list holds an overdue task, its date in red, and one due today, in yellow](images/due.png)
-
-The panel on the left lists `All tasks`, `Due` when a task is due, `Waiting` when a task shown waits, then every `+project` and `@context` of the tasks shown under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows.
-Moving through it with `j` and `k`, or the arrows, filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list. `?` shows the keys and `q` quits, as in the list.
-A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
-`Due` shows the pending tasks whose `due:` date is today or past, as `todo list --due` does; its name is red when one of them is overdue and yellow when they are all for today, and it keeps that colour while selected. A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
-From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`; with no task due it says `nothing due`, and when the search hides every task due it says `nothing due matches the search`, and changes nothing.
-`Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`; `/wait:figma` narrows it to one.
-
-## Search
-
-`/` opens the search line in the status bar, empty even when a search was kept, and the list filters at each letter; `Backspace` erases the last one.
-The search is terms as for `todo list`, and it applies on top of a panel filter.
-`Enter` keeps it and goes back to the list, and `Esc` clears it.
-
 ## Use it in a herdr popup
 
 In [herdr](https://herdr.dev), a key opens the list in a popup from `~/.config/herdr/config.toml`:
@@ -120,3 +45,166 @@ description = "todo list"
 width = "80%"
 height = "75%"
 ```
+
+## Details
+
+### Reload
+
+When the file changes on disk while the list is open, the list is reloaded.
+The key pressed at that moment is ignored.
+A command under way, such as a first `d`, is dropped.
+
+### Two-key commands
+
+`gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
+After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored.
+The status bar then says `priority is a to e, or space`.
+
+A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed.
+`Ctrl-D` is not `d`, and it drops a command waiting for its second key.
+
+### Completing a task
+
+`x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does.
+`u` is the way back.
+A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
+
+### Help
+
+![The key help over the list: the keys of the list, the filter panel, the popup's insert and normal modes, and the calendar](images/help.png)
+
+`?` shows every key, grouped by mode, each mode's name in a block like the status bar's.
+The mode you opened it from is in peach, the others greyed.
+The list, the filter panel and the search are in the left column, the popup's insert and normal modes and the calendar in the right one; a terminal too narrow for two columns gets one.
+
+When the box does not fit the height, it scrolls.
+`j` and `k` (or the arrows) move a line, and `gg` and `G` jump to the top and the bottom.
+A scroll bar on the right shows where you stand, and the bottom border says `j/k scroll`.
+
+`Esc`, `Enter`, `?` and `q` close it, back to where it was opened, with the popup, its text, its mode and its calendar's date as they were.
+Any other key does nothing, and `Ctrl-C` quits.
+Opened again, it starts from the top.
+
+`?` is a character typed in the popup's insert mode and in the search, so it opens nothing there.
+
+### Screen
+
+The rows are those of `todo list`: same numbers, order and colours; a late `due:` date is red and bold, one due today yellow only.
+An empty list says `nothing to do`, or `no matching task` under a filter or a search.
+The screen takes the colours of the [theme](config.md): by default the terminal's own, with its background and text colour.
+
+With the `catppuccin-mocha` theme, it takes Mocha's mantle (`#181825`), the background herdr gives its popups with its `catppuccin` theme, and Mocha's `text` colour.
+
+Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
+The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach.
+The popups float over them on a lighter background.
+
+The row under the cursor is marked `→`.
+It is peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
+
+The status bar shows the mode in a peach block and the active filters coloured as in the list on the left, `? help` on the right.
+In `INSERT` and `SEARCH` and while the help is open, which shows a `HELP` block, there is nothing on the right.
+A message shows in the middle in peach, red when something was refused.
+
+While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show in peach on the right, just left of `? help`.
+
+### Undo
+
+`u` steps back through the changes made since the list was opened, and `Ctrl-R` steps forward again.
+Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
+
+Undoing `x` also reads `done.txt` again and takes out its last line equal to the task.
+When the line is no longer there the task comes back all the same and the status bar says so.
+`Ctrl-R` sends it to `done.txt` again.
+
+`done.txt` is not watched: a change made to it elsewhere shows at the next read.
+These steps are not saved: they are lost when the list closes or the file is reloaded, and when a task brought back by `u` or `r` could not leave `done.txt`.
+
+### History
+
+![The history view: the lines of done.txt in light grey, the last completed first, and the names of the filter panel in the same grey](images/history.png)
+
+`H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
+The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first.
+There are no groups.
+
+Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen.
+The details keep their colours.
+
+The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`.
+`/` searches it, and the search in use is kept when `H` is pressed, either way, with a `+project` or `@context` filter.
+`H` pressed under `Due` or `Waiting`, which the history panel does not have, switches to `All tasks`, and the list stays on it when `H` is pressed back.
+
+The history is read-only but for one key.
+These keys are refused there with `history is read-only`:
+
+- `x`, `dd`, `o`, `Enter`
+- `p`, `u`, `Ctrl-R`, `D`
+
+`r` reopens the task under the cursor, as `todo reopen` does with its number.
+The task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`.
+A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words, a task with no text word included.
+
+Outside the history `r` does nothing.
+
+A reopen is undone from the list, not from the history.
+After `H`, `u` takes the task off the task file and adds its line to the end of `done.txt`, not where it was, and `Ctrl-R` reopens it again.
+
+`done.txt` is read when the list opens, at each `H`, when the task file is reloaded and after the list itself moves a task to or from it.
+A line of `done.txt` without its `x` is shown as written.
+With no `done.txt`, or an empty one, the list says `nothing done`.
+
+### Priority groups
+
+![PRIORITY B folded into its header, the cursor on it, so the details card is empty](images/groups.png)
+
+When a task on screen has a priority, the list is grouped under `PRIORITY A` to `PRIORITY E`, `NO PRIORITY`.
+Each header shows how many tasks it holds, with a blank row before each group but the first.
+
+`zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one.
+The cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing and `yy` says `no task under the cursor`.
+Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
+
+### Details card
+
+Under the list, a `DETAILS` card shows the task under the cursor.
+It holds its priority, its text without the `key:value` words ending it, its creation date and `due:` value, coloured and, once late, bold as in the list, its projects and contexts, and its other `key:value` words.
+A task of the history shows its completion date in place of the priority, and its `due:` date is not coloured.
+
+A long text wraps, the lines after the first aligned under the value, and the card grows with it by taking rows from the list, which keeps 5 rows.
+A text still too long ends with `…` on its last line, and any other value too long for its place ends with `…`.
+The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows with the text on one line.
+
+### Filter panel
+
+![The filter panel on its Due entry, in red: the list holds an overdue task, its date in red, and one due today, in yellow](images/due.png)
+
+The panel on the left lists these entries:
+
+- `All tasks`
+- `Due` when a task is due
+- `Waiting` when a task shown waits
+- every `+project` and `@context` of the tasks shown, under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows
+
+Moving through it with `j` and `k`, or the arrows, filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
+`?` shows the keys and `q` quits, as in the list.
+
+A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.
+
+`Due` shows the pending tasks whose `due:` date is today or past, as `todo list --due` does.
+Its name is red when one of them is overdue and yellow when they are all for today, and it keeps that colour while selected.
+A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
+
+From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`.
+With no task due it says `nothing due`, and when the search hides every task due it says `nothing due matches the search`, and changes nothing.
+
+`Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`.
+`/wait:figma` narrows it to one.
+
+### Search
+
+![The search line in the status bar, SEARCH /of, and the list filtered to the two offsite tasks](images/search.png)
+
+`/` opens the search line in the status bar, empty even when a search was kept, and the list filters at each letter; `Backspace` erases the last one.
+The search is terms as for `todo list`, and it applies on top of a panel filter.
+`Enter` keeps it and goes back to the list, and `Esc` clears it.

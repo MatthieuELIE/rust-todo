@@ -1,5 +1,7 @@
 # todo documentation
 
+![The interactive list: filter panel on the left, tasks in priority groups, the details card of the first task and the status bar](images/list.png)
+
 Reference for [todo](https://github.com/MatthieuELIE/rust-todo), a small editor for a todo.txt file.
 
 - [Interactive list](interactive-list.md): keys, screen, undo, history, priority groups, details, filter panel, search.

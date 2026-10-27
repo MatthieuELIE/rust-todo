@@ -1,8 +1,22 @@
 # Messages
 
-What `todo` says when something is refused or fails, on the command line and in the interactive list.
+`todo` writes its messages on stderr.
+Exit code 0 means it worked or had nothing to do, 1 a refusal or a failure, and 2 a command line it could not read.
+A refused command leaves the files as they were; a save that fails partway is covered under Details.
 
-## Command line
+The messages you meet most:
+
+- `nothing to do`: `list` has no pending task to show (exit code 0).
+- `no task numbered 9`: `do`, `edit` or `remove` was given a number that is not in the task file, or `reopen` one that is not in `done.txt` (exit code 1).
+- `could not save <path>: <reason> (file left unchanged)`: the task file or its folder cannot be written (exit code 1).
+- `nothing due`: `list --due` has no pending task due today or before (exit code 0).
+- `error: ...`, as clap words it: the command line itself is wrong (exit code 2).
+
+## Details
+
+The tables below are complete: the command line first, then the configuration, then the interactive list.
+
+### Command line
 
 Messages go to stderr; what the commands print on stdout is described in [Commands](commands.md#what-is-printed). A confirmation that cannot be printed, into a closed pipe for instance, does not change the exit code: the files are written.
 
@@ -37,7 +51,7 @@ A task file that does not exist is not an error: it is an empty list, and the fi
 
 When `todo` is run with no command and the file cannot be read, the message is also shown full screen until a key is pressed, so that a popup closing with the program does not hide it.
 
-## Configuration
+### Configuration
 
 A `config.toml` that is refused stops every command, and `todo` with no command shows the message full screen until a key is pressed. The message starts with the path of the file; for a fault in the text, it gives the line and column, the faulty text and the reason, as the TOML reader words it. The file is described in [Configuration](config.md).
 
@@ -49,7 +63,7 @@ A `config.toml` that is refused stops every command, and `todo` with no command 
 | `<path>: TOML parse error at line 1, column 7 …` | the file is not valid TOML | 1 |
 | `could not read <path>: <reason>` | `config.toml` exists and cannot be read, or is not UTF-8 text | 1 |
 
-## Interactive list
+### Interactive list
 
 Messages show in the middle of the status bar until the next key.
 A red one says that something was refused or failed; a peach one only says what happened.

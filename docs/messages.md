@@ -1,6 +1,6 @@
 # Messages
 
-`todo` writes its messages on stderr.
+On the command line, `todo` writes its messages on stderr; the interactive list shows them in its status bar.
 Exit code 0 means it worked or had nothing to do, 1 a refusal or a failure, and 2 a command line it could not read.
 A refused command leaves the files as they were; a save that fails partway is covered under Details.
 

@@ -1,6 +1,8 @@
 # Interactive list
 
-`todo` with no command opens the list full screen.
+`todo` with no command opens the list full screen, meant for a terminal popup kept open a few seconds.
+Every change is written at once, and `q` quits without asking.
+When the file changes on disk while the list is open, the list is reloaded, the key pressed at that moment is ignored and a command under way, such as a first `d`, is dropped.
 Adding and editing a task happen in [the popup](popup.md).
 
 ## Keys
@@ -104,3 +106,17 @@ From the list, `D` goes straight to `Due` whatever the filter in use, the search
 `/` opens the search line in the status bar, empty even when a search was kept, and the list filters at each letter; `Backspace` erases the last one.
 The search is terms as for `todo list`, and it applies on top of a panel filter.
 `Enter` keeps it and goes back to the list, and `Esc` clears it.
+
+## Use it in a herdr popup
+
+In [herdr](https://herdr.dev), a key opens the list in a popup from `~/.config/herdr/config.toml`:
+
+```toml
+[[keys.command]]
+key = "prefix+t"
+type = "popup"
+command = "todo"
+description = "todo list"
+width = "80%"
+height = "75%"
+```

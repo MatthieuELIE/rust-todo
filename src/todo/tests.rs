@@ -250,3 +250,11 @@ fn a_wait_word_whose_value_starts_like_a_url_is_not_waited_for() {
     assert_eq!(Todo::from_line("Open wait://figma wait:designer").waits(), ["designer"]);
     assert!(!Todo::from_line("Open wait://figma").is_waiting());
 }
+
+#[test]
+fn a_typed_line_holding_a_bidi_or_zero_width_character_is_refused() {
+    for c in ['\u{200b}', '\u{200f}', '\u{202a}', '\u{202e}', '\u{2066}', '\u{2069}'] {
+        assert!(Todo::from_input(&format!("Lorem {c}ipsum")).is_err());
+    }
+    assert!(Todo::from_input("Café 🏠 ipsum").is_ok());
+}

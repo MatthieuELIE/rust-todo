@@ -16,7 +16,7 @@ use crate::view;
 
 /// `text` with each control character replaced, so that a line of the file cannot drive the terminal.
 fn clean(text: &str) -> String {
-    text.replace(char::is_control, "\u{fffd}")
+    text.replace(crate::todo::is_control, "\u{fffd}")
 }
 
 /// A task as `list` prints it, without its number: styled on a terminal, its plain line otherwise.

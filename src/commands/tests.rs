@@ -20,3 +20,12 @@ fn a_styled_line_leaves_its_number_out() {
         assert!(styled.contains("rent"));
     }
 }
+
+#[test]
+fn a_styled_line_replaces_the_bidi_and_zero_width_characters_but_keeps_accents_and_emoji() {
+    let todo = Todo::from_line("Pay\u{202e} re\u{200b}nt é 🏠");
+
+    let styled = styled(&view::line(&Theme::default(), 1, &todo, date!(2026 - 09 - 26)));
+
+    assert!(styled.contains("Pay\u{fffd} re\u{fffd}nt é 🏠"));
+}

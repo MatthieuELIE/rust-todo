@@ -280,3 +280,15 @@ fn a_line_replaced_by_a_lone_x_is_refused() {
     assert_eq!(shown(&app), ["one"]);
     assert!(moved(&app).is_empty());
 }
+
+#[test]
+fn a_paste_and_an_edit_treat_a_bidi_character_like_a_control_character() {
+    let mut app = app_of(&["Call\u{202e}the\u{200b}bank"]);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert_eq!(app.todos[0].to_line(), "Call the bank");
+
+    press(&mut app, "/");
+    app.paste("a\u{202e}b");
+    assert_eq!(app.search, "a b");
+}

@@ -70,6 +70,11 @@ pub fn choose(no_color: bool, name: Option<Name>) -> Theme {
     }
 }
 
+/// `message` with each control character but the line breaks replaced, so that a line of the file cannot drive the terminal.
+fn cleaned(message: &str) -> String {
+    message.split('\n').map(crate::commands::clean).collect::<Vec<_>>().join("\n")
+}
+
 /// The theme `path` asks for, `no_color` deciding when it names none, and whether it asks for icons: an error naming the path and the fault when the file is refused.
 pub fn theme(path: &Path, no_color: bool) -> Result<(Theme, bool), String> {
     let text = match std::fs::read_to_string(path) {
@@ -77,7 +82,7 @@ pub fn theme(path: &Path, no_color: bool) -> Result<(Theme, bool), String> {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok((choose(no_color, None), false)),
         Err(e) => return Err(format!("could not read {}: {e}", path.display())),
     };
-    let config: Config = toml::from_str(&text).map_err(|e| format!("{}: {e}", path.display()))?;
+    let config: Config = toml::from_str(&text).map_err(|e| cleaned(&format!("{}: {e}", path.display())))?;
     Ok((choose(no_color, config.theme.name), config.theme.icons))
 }
 
@@ -182,6 +187,27 @@ mod tests {
 
         assert!(message.starts_with(&path.display().to_string()));
         assert!(message.contains("line 2"));
+    }
+
+    #[test]
+    fn a_refusal_quoting_an_escape_is_cleaned() {
+        for (name, text) in [
+            ("esc-value", "[theme]\nname = \"\\u001b[31mEVIL\"\n"),
+            ("esc-key", "[theme]\n\"\\u001b[31mkey\" = 1\n"),
+            ("esc-comment", "[theme]\n# \u{1b}[31m\nname = 1\n"),
+        ] {
+            let message = refused(name, text);
+
+            assert!(!message.contains('\u{1b}'), "{text:?} gave {message:?}");
+            assert!(message.contains('\u{fffd}'), "{text:?} gave {message:?}");
+        }
+    }
+
+    #[test]
+    fn a_cleaned_refusal_keeps_its_lines() {
+        let message = refused("lines", "[theme\n");
+
+        assert!(message.contains("\n  |\n1 | [theme\n"), "{message:?}");
     }
 
     #[test]

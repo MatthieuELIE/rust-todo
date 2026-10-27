@@ -73,7 +73,7 @@ A red one says that something was refused or failed; a peach one only says what 
 | `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
 | `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving; the change stays on screen and is saved with the next one, once the file reads again |
 | `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
-| `reloaded` | peach | the file changed on disk; the key pressed at that moment was ignored |
+| `reloaded` | peach | the file changed on disk; the key pressed at that moment was ignored and a command under way was dropped |
 | `reloaded, edit cancelled` | peach | the file changed on disk while a task was being edited |
 | `added, hidden by the filter` | peach | the task added does not match the search |
 | `edited, hidden by the filter` | peach | the task edited no longer matches the search or the panel filter |

@@ -103,6 +103,31 @@ fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
 }
 
 #[test]
+fn a_reload_drops_the_first_key_of_a_command_so_the_next_d_deletes_nothing() {
+    let mut app = app();
+
+    press(&mut app, "d");
+    app.reload(vec![Todo::from_line("one"), Todo::from_line("two")]);
+
+    assert_eq!(app.pending(), "");
+    press(&mut app, "d");
+    assert_eq!(shown(&app), ["one", "two"]);
+}
+
+#[test]
+fn a_reload_under_the_help_drops_the_first_g_so_the_next_g_scrolls_nothing() {
+    let mut app = app();
+    app.help_max.set(8);
+
+    press(&mut app, "?Gg");
+    app.reload(vec![Todo::from_line("one"), Todo::from_line("two")]);
+
+    assert_eq!(app.pending(), "");
+    press(&mut app, "g");
+    assert!(matches!(app.focus, Focus::Help(8)));
+}
+
+#[test]
 fn a_reload_under_the_help_cancels_the_edit_it_covers() {
     let mut app = app();
 

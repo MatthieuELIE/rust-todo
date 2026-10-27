@@ -1,7 +1,7 @@
 use crate::todo::Todo;
 use std::fs;
 use std::io::{self, Write};
-use std::os::unix::fs::OpenOptionsExt;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
 /// Read the raw text of the todo file, empty if the file is missing.
@@ -50,7 +50,7 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
     let written = (|| {
         let mut file = fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp)?;
         if let Some(permissions) = permissions {
-            file.set_permissions(permissions)?;
+            file.set_permissions(fs::Permissions::from_mode(permissions.mode() & 0o700))?;
         }
         file.write_all(body.as_bytes())?;
         file.sync_all()?;
@@ -69,6 +69,10 @@ pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
         body.insert(0, '\n');
     }
     let mut file = fs::OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
+    let mode = file.metadata()?.permissions().mode();
+    if mode & 0o077 != 0 {
+        file.set_permissions(fs::Permissions::from_mode(mode & 0o700))?;
+    }
     file.write_all(body.as_bytes())?;
     file.sync_all()
 }
@@ -116,7 +120,6 @@ mod tests {
 
     #[test]
     fn save_writes_through_a_symlink_and_keeps_the_file_mode() {
-        use std::os::unix::fs::PermissionsExt;
         let (target, link) = (temp_path("target"), temp_path("link"));
         std::fs::write(&target, "Lorem ipsum\n").unwrap();
         std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
@@ -127,7 +130,29 @@ mod tests {
 
         assert!(std::fs::symlink_metadata(&link).unwrap().is_symlink());
         assert_eq!(std::fs::read_to_string(&target).unwrap(), "Consectetur adipiscing\n");
-        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o640);
+        assert_eq!(std::fs::metadata(&target).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn save_drops_the_group_and_other_bits_of_an_open_file() {
+        let path = temp_path("open-save");
+        std::fs::write(&path, "Lorem ipsum\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        save(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn append_drops_the_group_and_other_bits_of_an_open_file() {
+        let path = temp_path("open-append");
+        std::fs::write(&path, "Lorem ipsum\n").unwrap();
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
+
+        append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
     }
 
     #[test]
@@ -145,7 +170,6 @@ mod tests {
 
     #[test]
     fn save_refuses_a_file_that_is_read_only() {
-        use std::os::unix::fs::PermissionsExt;
         let path = temp_path("readonly");
         let _ = std::fs::remove_file(&path);
         std::fs::write(&path, "Lorem ipsum\n").unwrap();
@@ -159,7 +183,6 @@ mod tests {
 
     #[test]
     fn save_creates_a_new_file_readable_by_its_owner_only() {
-        use std::os::unix::fs::PermissionsExt;
         let path = temp_path("new");
         let _ = std::fs::remove_file(&path);
 

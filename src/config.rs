@@ -70,9 +70,9 @@ pub fn choose(no_color: bool, name: Option<Name>) -> Theme {
     }
 }
 
-/// `message` with each control character but the line breaks replaced, so that a line of the file cannot drive the terminal.
+/// `message` with each control character but the line breaks and tabs replaced, so that a line of the file cannot drive the terminal.
 fn cleaned(message: &str) -> String {
-    message.split('\n').map(crate::commands::clean).collect::<Vec<_>>().join("\n")
+    message.replace(|c| crate::todo::is_control(c) && !matches!(c, '\n' | '\t'), "\u{fffd}")
 }
 
 /// The theme `path` asks for, `no_color` deciding when it names none, and whether it asks for icons: an error naming the path and the fault when the file is refused.
@@ -208,6 +208,13 @@ mod tests {
         let message = refused("lines", "[theme\n");
 
         assert!(message.contains("\n  |\n1 | [theme\n"), "{message:?}");
+    }
+
+    #[test]
+    fn a_cleaned_refusal_keeps_its_tabs() {
+        let message = refused("tabs", "[theme]\n\tname = 1\n");
+
+        assert!(message.contains("2 | \tname = 1\n"), "{message:?}");
     }
 
     #[test]

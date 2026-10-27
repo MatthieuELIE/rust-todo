@@ -15,7 +15,7 @@ use crate::todo::Todo;
 use crate::view;
 
 /// `text` with each control character replaced, so that a line of the file cannot drive the terminal.
-pub fn clean(text: &str) -> String {
+fn clean(text: &str) -> String {
     text.replace(crate::todo::is_control, "\u{fffd}")
 }
 

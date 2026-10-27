@@ -42,7 +42,7 @@ What each command takes, writes and prints is described in [the documentation](h
 
 `todo` with no command opens the list full screen, meant for a terminal popup kept open a few seconds.
 Every change is written at once, and `q` quits without asking.
-When the file changes on disk while the list is open, the list is reloaded and the key pressed at that moment is ignored.
+When the file changes on disk while the list is open, the list is reloaded, the key pressed at that moment is ignored and a command under way, such as a first `d`, is dropped.
 
 In herdr, a key opens it in a popup from `~/.config/herdr/config.toml`:
 

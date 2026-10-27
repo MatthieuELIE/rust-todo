@@ -111,9 +111,10 @@ impl App {
         }));
     }
 
-    /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit is cancelled as its number may shift.
+    /// Replaces the tasks with a fresh read, cursor on its row, history dropped; an edit and a command under way are cancelled as their task may shift.
     pub fn reload(&mut self, todos: Vec<Todo>) {
         self.todos = todos;
+        self.pending = None;
         self.undo.clear();
         self.redo.clear();
         self.moves.clear();

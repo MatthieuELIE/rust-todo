@@ -20,8 +20,8 @@ dir=$(mktemp -d)
 mkdir "$dir/todo"
 
 cat > "$dir/todo.txt" <<TODO
-(A) $created Send the quarterly invoices +finance +finance-tax @desk due:$late
-(A) $created Call the accountant about the VAT return +finance-tax @phone due:$today
+(A) $created Send the invoices +finance +finance-tax @desk due:$late
+(A) $created Call the accountant +finance-tax @phone due:$today
 (B) $created Book the venue for the team offsite +offsite @phone due:$soon
 (B) $created Review the pull request for the export command +work @computer
 (C) $created Draft the agenda for the offsite +offsite @desk due:$later

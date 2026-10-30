@@ -134,3 +134,20 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
         "(A) 2026-09-01 Call the @bank due:2026-10-09\nx 2026-09-03 2026-09-02 Pay rent\nBuy milk\n2026-10-01 Water the plants\n"
     );
 }
+
+#[test]
+fn add_refuses_a_line_separator() {
+    let folder = folder("separator");
+    let file = folder.join("todo.txt");
+
+    let output = todo(&file, &["add", "Pay\u{2028}rent"]);
+    let text = std::fs::read_to_string(&file).unwrap_or_default();
+    std::fs::remove_dir_all(&folder).unwrap();
+
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "a task is one line, without control characters\n"
+    );
+    assert_eq!(text, "");
+}

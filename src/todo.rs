@@ -16,7 +16,7 @@ pub const NO_TEXT: &str = "a task needs more than +projects, @contexts and key: 
 
 /// Whether `c` is a control character or a bidi or zero-width formatting character, none of which a task may hold.
 pub fn is_control(c: char) -> bool {
-    c.is_control() || matches!(c, '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+    c.is_control() || matches!(c, '\u{200b}'..='\u{200f}' | '\u{2028}'..='\u{2029}' | '\u{202a}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
 }
 
 /// A todo item, with optional priority and dates.

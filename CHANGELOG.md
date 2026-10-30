@@ -13,6 +13,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The line and paragraph separators (U+2028, U+2029) are control characters like the bidi and zero-width ones: `add` and `edit` refuse them, `list` and the list show `�` in their place, and a paste turns them into a space.
 - A reload of the file drops a command under way, in the list or the help: `d`, a change to the file on disk, then `d` no longer deletes the task under the cursor, which may not be the one the first `d` was pressed on.
 
 ## [0.7.3] - 2026-10-24

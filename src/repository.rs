@@ -1,15 +1,23 @@
 use crate::todo::Todo;
 use std::fs;
-use std::io::{self, Write};
+use std::io::{self, Read, Write};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
-/// Read the raw text of the todo file, empty if the file is missing.
+const MAX_BYTES: u64 = 10 * 1024 * 1024;
+
+/// Read the raw text of the todo file, empty if the file is missing, refused beyond 10 MiB.
 pub fn read(path: &Path) -> io::Result<String> {
-    match fs::read_to_string(path) {
-        Err(e) if e.kind() == io::ErrorKind::NotFound => Ok(String::new()),
-        read => read,
+    let file = match fs::File::open(path) {
+        Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(String::new()),
+        file => file?,
+    };
+    let mut bytes = Vec::new();
+    file.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > MAX_BYTES {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "larger than 10 MiB"));
     }
+    String::from_utf8(bytes).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "stream did not contain valid UTF-8"))
 }
 
 /// Parse the tasks of a todo file's text, its blank lines dropped.
@@ -103,6 +111,16 @@ mod tests {
 
     fn temp_path(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("todo-{}-{name}.txt", std::process::id()))
+    }
+
+    #[test]
+    fn read_refuses_a_file_over_ten_mebibytes_and_accepts_one_of_exactly_ten() {
+        let path = temp_path("limit");
+        std::fs::write(&path, vec![b'a'; MAX_BYTES as usize]).unwrap();
+        assert_eq!(read(&path).unwrap().len(), MAX_BYTES as usize);
+
+        std::fs::write(&path, vec![b'a'; MAX_BYTES as usize + 1]).unwrap();
+        assert_eq!(read(&path).unwrap_err().to_string(), "larger than 10 MiB");
     }
 
     #[test]

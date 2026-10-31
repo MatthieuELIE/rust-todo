@@ -14,6 +14,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - The line and paragraph separators (U+2028, U+2029) are treated like the bidi and zero-width characters: `todo add` and `todo edit` refuse them, `todo list` and the TUI show `�`, and a paste in the popup or the search turns them into a space.
+- `todo.txt` and `done.txt` are refused above 10 MiB (`could not read <path>: larger than 10 MiB`) instead of being read whole, and the list's undo history keeps the last 100 changes.
 - A reload of the file drops a command under way, in the list or the help: `d`, a change to the file on disk, then `d` no longer deletes the task under the cursor, which may not be the one the first `d` was pressed on.
 
 ## [0.7.3] - 2026-10-24

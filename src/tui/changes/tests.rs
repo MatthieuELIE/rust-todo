@@ -26,6 +26,24 @@ fn undoing_another_change_asks_nothing_of_done_txt_even_with_a_move_still_waitin
 }
 
 #[test]
+fn u_undoes_the_last_hundred_changes_then_has_nothing_to_undo() {
+    let tasks: Vec<String> = (0..101).map(|n| format!("task {n}")).collect();
+    let mut app = app_of(&tasks.iter().map(String::as_str).collect::<Vec<_>>());
+
+    for _ in 0..101 {
+        press(&mut app, "dd");
+    }
+    for _ in 0..100 {
+        press(&mut app, "u");
+        assert_eq!(app.message.as_deref(), Some("undone"));
+    }
+    press(&mut app, "u");
+
+    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!((lines(&app).len(), lines(&app)[0].as_str()), (100, "task 1"));
+}
+
+#[test]
 fn u_brings_back_a_completed_task_with_its_priority() {
     let mut app = app_of(&["(A) one", "two"]);
 

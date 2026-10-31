@@ -106,7 +106,7 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
 
     app.handle_key(enter, TODAY);
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(told(&app), None);
+    assert_eq!(told(&app), Some(Notice::NoChanges));
 
     app.handle_key(enter, TODAY);
     press(&mut app, "WD");
@@ -200,18 +200,90 @@ fn an_add_fixed_after_a_refusal_does_not_bring_the_refusal_back() {
     press(&mut app, "Lorem");
     assert!(app.handle_key(enter, TODAY));
     assert!(!matches!(app.focus, Focus::Popup(_)));
-    assert_eq!(told(&app), None);
+    assert_eq!(told(&app), Some(Notice::Added { hidden: false }));
 }
 
 #[test]
-fn a_toast_shown_before_an_accepted_add_is_still_there_after_it() {
+fn a_toast_shown_before_an_accepted_add_is_replaced_by_the_add_s() {
     let mut app = app();
     app.notify(Notice::Copied);
 
     press(&mut app, "oLorem");
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
+    assert_eq!(told(&app), Some(Notice::Added { hidden: false }));
+}
+
+#[test]
+fn a_toast_shown_before_a_popup_closed_with_nothing_to_say_is_still_there_after_it() {
+    let mut app = app();
+    app.notify(Notice::Copied);
+
+    press(&mut app, "o");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+
     assert_eq!(told(&app), Some(Notice::Copied));
+}
+
+#[test]
+fn esc_on_an_add_or_an_edit_whose_text_changed_says_the_changes_are_discarded() {
+    let mut app = app_of(&["one"]);
+    let esc = KeyEvent::from(KeyCode::Esc);
+
+    press(&mut app, "oLorem");
+    app.handle_key(esc, TODAY);
+    assert!(!app.handle_key(esc, TODAY));
+    assert_eq!(told(&app), Some(Notice::Discarded));
+    assert_eq!(Notice::Discarded.kind(), Kind::Info);
+
+    app.toast = None;
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "ix");
+    app.handle_key(esc, TODAY);
+    assert!(!app.handle_key(esc, TODAY));
+    assert_eq!(told(&app), Some(Notice::Discarded));
+}
+
+#[test]
+fn esc_on_an_empty_add_or_an_edit_without_change_leaves_no_toast() {
+    let mut app = app_of(&["one"]);
+    let esc = KeyEvent::from(KeyCode::Esc);
+
+    press(&mut app, "o");
+    assert!(!app.handle_key(esc, TODAY));
+    assert_eq!(told(&app), None);
+
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert!(!app.handle_key(esc, TODAY));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
+fn enter_on_an_unchanged_line_says_there_is_nothing_to_save() {
+    let mut app = app_of(&["one"]);
+
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(told(&app), Some(Notice::NoChanges));
+    assert_eq!(Notice::NoChanges.kind(), Kind::Info);
+}
+
+#[test]
+fn a_saved_edit_says_updated_and_a_line_starting_with_x_says_done() {
+    let mut app = app_of(&["one", "two"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "Atwo");
+    assert!(app.handle_key(enter, TODAY));
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: false }));
+    assert_eq!(Notice::Updated { hidden: false }.kind(), Kind::Success);
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "ix ");
+    assert!(app.handle_key(enter, TODAY));
+    assert_eq!(told(&app), Some(Notice::Done));
 }
 
 #[test]
@@ -247,7 +319,6 @@ fn an_x_typed_in_front_of_a_task_moves_it_to_done_txt_completed_today_and_u_brin
 
     assert_eq!(lines(&app), ["two"]);
     assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
-    assert_eq!(told(&app), None);
     assert!(press(&mut app, "u"));
     assert_eq!(lines(&app), ["(A) 2026-08-01 one", "two"]);
     assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one", "-x 2026-09-26 2026-08-01 one"]);
@@ -286,7 +357,7 @@ fn a_line_of_only_tags_is_refused_unchanged_ignored_and_ended_by_a_typed_x() {
 
     app.handle_key(enter, TODAY);
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(told(&app), None);
+    assert_eq!(told(&app), Some(Notice::NoChanges));
 
     app.handle_key(enter, TODAY);
     press(&mut app, "A wait:a");

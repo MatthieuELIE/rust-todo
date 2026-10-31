@@ -45,6 +45,14 @@ pub enum Notice {
     Added { hidden: bool },
     /// A task was edited, `hidden` when the filter does not show it.
     Updated { hidden: bool },
+    /// A task was marked done.
+    Done,
+    /// A task was deleted.
+    Deleted,
+    /// The popup was closed with `Esc` on a text that had changed.
+    Discarded,
+    /// `Enter` in the popup found the line as it was.
+    NoChanges,
     /// A task got `priority`, or none, `hidden` when the filter does not show it.
     PrioritySet { priority: Option<char>, hidden: bool },
     /// `u` or `r` brought a task back and its line was no longer in `done.txt`; `reopened` tells which.
@@ -77,6 +85,10 @@ impl Notice {
             Notice::NothingDueMatchesSearch => "No due task matches the search".to_string(),
             Notice::Added { hidden } => undoable("Task added".to_string(), *hidden),
             Notice::Updated { hidden } => undoable("Task updated".to_string(), *hidden),
+            Notice::Done => "Task done, press u to undo".to_string(),
+            Notice::Deleted => "Task deleted, press u to undo".to_string(),
+            Notice::Discarded => "Changes discarded".to_string(),
+            Notice::NoChanges => "No changes to save".to_string(),
             Notice::PrioritySet {
                 priority: Some(letter),
                 hidden,
@@ -99,7 +111,9 @@ impl Notice {
             | Notice::Reloaded
             | Notice::ReloadedEditCancelled
             | Notice::NothingDue
-            | Notice::NothingDueMatchesSearch => Kind::Info,
+            | Notice::NothingDueMatchesSearch
+            | Notice::Discarded
+            | Notice::NoChanges => Kind::Info,
             Notice::NotPriority | Notice::HistoryReadOnly | Notice::NoTaskUnderCursor | Notice::Refused(_) => Kind::Refusal,
             _ => Kind::Success,
         }

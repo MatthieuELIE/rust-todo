@@ -83,6 +83,13 @@ With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes fi
 | `History is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
 | `Could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, is not UTF-8 text, or is larger than 10 MiB, when the list opens or at `H`; the history is then empty |
 | `Task 2 is not done`, `Task 2 cannot be reopened: its text starts with x`, `Task 2 cannot be reopened: it is only +projects, @contexts and key: words` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
+| `Task added, press u to undo` | green | `o` saved a task |
+| `Task done, press u to undo` | green | `x` completed a task, or a line starting with `x ` was saved in the popup |
+| `Task deleted, press u to undo` | green | `dd` deleted a task |
+| `Task updated, press u to undo` | green | `Enter` saved an edited task |
+| `Priority set to B, press u to undo`, `Priority removed, press u to undo` | green | `p` and a letter `a` to `e` gave the task that priority, `p Space` removed it |
+| `Changes discarded` | grey | `Esc` in the popup's normal mode closed it on a text different from the one it opened with; an empty add or an edit left as it was closes with no toast |
+| `No changes to save` | grey | `Enter` in the popup found the line as it was; nothing is written |
 | `Task reopened, press u to undo` | green | `r` brought a task of the history back to the task file |
 | `Undone, the task was no longer in done.txt`, `Reopened, the task was no longer in done.txt` | green | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
 | `Undone, but done.txt still holds the task: <reason>`, `Reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files, and the `u` and `Ctrl-R` history is cleared; when one save brings back several tasks, only the first refusal is shown, and others may be in both files too |

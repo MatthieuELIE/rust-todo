@@ -292,3 +292,41 @@ fn y_then_another_key_copies_nothing() {
     press(&mut app, "yjyg");
     assert_eq!((told(&app), app.copy), (None, None));
 }
+
+#[test]
+fn x_dd_o_and_p_each_toast_what_they_did() {
+    let mut app = app();
+    let enter = KeyEvent::from(KeyCode::Enter);
+
+    press(&mut app, "x");
+    assert_eq!(told(&app), Some(Notice::Done));
+
+    app.toast = None;
+    press(&mut app, "dd");
+    assert_eq!(told(&app), Some(Notice::Deleted));
+
+    app.toast = None;
+    press(&mut app, "ofour");
+    app.handle_key(enter, TODAY);
+    assert_eq!(told(&app), Some(Notice::Added { hidden: false }));
+
+    app.toast = None;
+    press(&mut app, "pb");
+    assert_eq!(
+        told(&app),
+        Some(Notice::PrioritySet {
+            priority: Some('B'),
+            hidden: false
+        })
+    );
+
+    app.toast = None;
+    press(&mut app, "p ");
+    assert_eq!(
+        told(&app),
+        Some(Notice::PrioritySet {
+            priority: None,
+            hidden: false
+        })
+    );
+}

@@ -33,6 +33,36 @@ fn undone_and_redone_in_the_popup_are_one_word() {
 }
 
 #[test]
+fn done_deleted_and_priority_say_how_to_undo() {
+    says(Notice::Added { hidden: false }, "Task added, press u to undo", Kind::Success);
+    says(Notice::Done, "Task done, press u to undo", Kind::Success);
+    says(Notice::Deleted, "Task deleted, press u to undo", Kind::Success);
+    says(Notice::Updated { hidden: false }, "Task updated, press u to undo", Kind::Success);
+    says(
+        Notice::PrioritySet {
+            priority: Some('B'),
+            hidden: false,
+        },
+        "Priority set to B, press u to undo",
+        Kind::Success,
+    );
+    says(
+        Notice::PrioritySet {
+            priority: None,
+            hidden: false,
+        },
+        "Priority removed, press u to undo",
+        Kind::Success,
+    );
+}
+
+#[test]
+fn discarded_and_no_changes_are_information() {
+    says(Notice::Discarded, "Changes discarded", Kind::Info);
+    says(Notice::NoChanges, "No changes to save", Kind::Info);
+}
+
+#[test]
 fn nothing_to_undo_and_nothing_to_redo_are_information() {
     says(Notice::NothingToUndo, "Nothing to undo", Kind::Info);
     says(Notice::NothingToRedo, "Nothing to redo", Kind::Info);

@@ -100,7 +100,7 @@ A done line is left alone.
 
 ### Pending keys
 
-![The popup in normal mode with a pending ci shown at the right of the status bar, left of the help hint](images/pending-keys.png)
+![The edit popup of task 1 in normal mode with a pending ci shown at the right of the status bar, left of the help hint](images/pending-keys.png)
 
 After `f` `F` `t` `T`, a key that is not a character cancels the search without keeping it.
 `Esc` then leaves the popup open, and `Enter` does not save.
@@ -121,7 +121,7 @@ Only the task file is counted, and a name found in `done.txt` alone comes last, 
 
 ### Date picker
 
-![The popup adding a task, with the calendar of October 2026 under due:, the picked day in peach and today in yellow](images/calendar.png)
+![The popup adding a task, with the calendar of October 2026 under due:, the 31st, today, picked in peach](images/calendar.png)
 
 When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it.
 Weeks start on Monday, and the calendar opens on today: the picked date peach, today yellow, past days greyed.

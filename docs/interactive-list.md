@@ -71,7 +71,7 @@ A done task still in the task file, one typed by hand, is not listed: `todo arch
 
 ### Help
 
-![The key help over the list: the keys of the list, the filter panel, the popup's insert and normal modes, and the calendar](images/help.png)
+![The key help over the list: the keys of the list, the filter panel, the search, the popup's insert and normal modes, and the calendar](images/help.png)
 
 `?` shows every key, grouped by mode, each mode's name in a block like the status bar's.
 The mode you opened it from is in peach, the others greyed.

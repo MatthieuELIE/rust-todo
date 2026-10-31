@@ -250,11 +250,16 @@ fn esc_on_an_empty_add_or_an_edit_without_change_leaves_no_toast() {
     let esc = KeyEvent::from(KeyCode::Esc);
 
     press(&mut app, "o");
+    app.handle_key(esc, TODAY);
+    assert!(matches!(app.focus, Focus::Popup(_)));
     assert!(!app.handle_key(esc, TODAY));
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(told(&app), None);
 
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert!(matches!(popup(&app).target, Target::Edit(1)));
     assert!(!app.handle_key(esc, TODAY));
+    assert!(!matches!(app.focus, Focus::Popup(_)));
     assert_eq!(told(&app), None);
 }
 

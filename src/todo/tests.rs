@@ -258,3 +258,9 @@ fn a_typed_line_holding_a_bidi_or_zero_width_character_is_refused() {
     }
     assert!(Todo::from_input("Café 🏠 ipsum").is_ok());
 }
+
+#[test]
+fn the_line_and_paragraph_separators_are_control_characters() {
+    assert!(is_control('\u{2028}'));
+    assert!(is_control('\u{2029}'));
+}

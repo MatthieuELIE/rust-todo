@@ -48,6 +48,23 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
 }
 
 #[test]
+fn add_refuses_a_text_holding_a_line_separator() {
+    let folder = folder("separator");
+    let file = folder.join("todo.txt");
+
+    let output = todo(&file, &["add", "Pay\u{2028}rent"]);
+
+    let exists = file.exists();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "a task is one line, without control characters\n"
+    );
+    assert!(!exists);
+}
+
+#[test]
 fn a_file_that_cannot_be_read_is_left_as_it_is() {
     let file = std::env::temp_dir().join(format!("todo-{}-unreadable.txt", std::process::id()));
     std::fs::write(&file, b"Pay rent\n\xff\n").unwrap();

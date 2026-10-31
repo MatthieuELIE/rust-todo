@@ -22,10 +22,10 @@ mkdir "$dir/todo"
 cat > "$dir/todo.txt" <<TODO
 (A) $created Send the invoices +finance +finance-tax @desk due:$late
 (A) $created Call the accountant +finance-tax @phone due:$today
-(B) $created Book the venue for the team offsite +offsite @phone due:$soon
+(B) $created Book the offsite venue +offsite @phone due:$soon
 (B) $created Review the pull request for the export command +work @computer
 (C) $created Draft the agenda for the offsite +offsite @desk due:$later
-(C) $created Reply to the designer about the new logo +work @computer wait:designer
+(C) $created Reply about the new logo +work @computer wait:designer
 $created Write the release notes for the next version, listing every change since the last tag, the breaking ones first, then the fixes and the documentation updates, and thank the people who reported issues +work @computer
 $created Buy a birthday present @errands
 $created Water the plants @home

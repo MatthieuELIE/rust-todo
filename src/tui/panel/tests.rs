@@ -230,7 +230,7 @@ fn a_task_added_under_waiting_gets_nothing_and_brings_back_all_tasks_with_the_cu
     assert_eq!(app.todos[2].to_line(), "2026-09-26 Call landlord");
     assert_eq!(app.filter, None);
     assert_eq!(app.cursor, 2);
-    assert_eq!(told(&app), None);
+    assert_eq!(told(&app), Some(Notice::Added { hidden: false }));
 }
 
 #[test]

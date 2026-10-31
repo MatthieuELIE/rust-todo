@@ -29,7 +29,8 @@ impl App {
                     && todo.priority != priority
                 {
                     todo.priority = priority;
-                    self.follow(number, Notice::PrioritySet { priority, hidden: true });
+                    let hidden = !self.follow(number);
+                    self.notify(Notice::PrioritySet { priority, hidden });
                     write = true;
                 }
             }
@@ -57,12 +58,14 @@ impl App {
                     let mut todo = self.todos.remove(number - 1);
                     todo.complete(today);
                     self.moves.push(Move::Append(todo));
+                    self.notify(Notice::Done);
                     write = true;
                 }
             }
             KeyCode::Char('d') if pending == Some('d') => {
                 if let Some(number) = selected {
                     self.todos.remove(number - 1);
+                    self.notify(Notice::Deleted);
                     write = true;
                 }
             }

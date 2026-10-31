@@ -146,11 +146,9 @@ impl App {
         self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
     }
 
-    /// Puts the cursor on task `number`, or on its folded group, or shows `hidden` when neither is on screen.
-    pub(super) fn follow(&mut self, number: usize, hidden: Notice) {
-        if !self.select(Row::Task(number)) {
-            self.notify(hidden);
-        }
+    /// Puts the cursor on task `number`, or on its folded group; tells whether one is on screen.
+    pub(super) fn follow(&mut self, number: usize) -> bool {
+        self.select(Row::Task(number))
     }
 }
 

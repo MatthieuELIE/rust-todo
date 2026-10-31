@@ -84,6 +84,14 @@ impl App {
         }
     }
 
+    /// The text the popup held when it opened.
+    fn opening_text(&self, target: &Target) -> String {
+        match target {
+            Target::Add => String::new(),
+            Target::Edit(number) => self.todos[number - 1].to_line().replace(crate::todo::is_control, " "),
+        }
+    }
+
     /// Closes the popup, adding or editing the task when its text was submitted, and tells whether the file must be rewritten; a refused line keeps the popup open.
     fn close_popup(&mut self, outcome: Outcome, today: Date) -> bool {
         let Focus::Popup(popup) = std::mem::replace(&mut self.focus, Focus::List) else {
@@ -93,6 +101,10 @@ impl App {
         let write = match (outcome, &popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
             (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
+            (Outcome::Cancel, target) if popup.editor.text != self.opening_text(target) => {
+                self.notify(Notice::Discarded);
+                false
+            }
             _ => false,
         };
         if self.refusal_shown() {

@@ -18,7 +18,8 @@ impl App {
                     todo.description = format!("{} {term}", todo.description);
                 }
                 self.todos.push(todo);
-                self.follow(self.todos.len(), Notice::Added { hidden: true });
+                let hidden = !self.follow(self.todos.len());
+                self.notify(Notice::Added { hidden });
                 true
             }
             Err(e) => {
@@ -28,7 +29,7 @@ impl App {
         }
     }
 
-    /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; a task with no text word is refused, an unchanged line ignored.
+    /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; a task with no text word is refused, an unchanged line told in a toast.
     pub(super) fn edit(&mut self, number: usize, text: &str, today: Date) -> bool {
         let mut todo = match Todo::from_input(text) {
             Ok(todo) => todo,
@@ -44,9 +45,11 @@ impl App {
             todo.complete(today);
             self.todos.remove(number - 1);
             self.moves.push(Move::Append(todo));
+            self.notify(Notice::Done);
             return true;
         }
         if todo.to_line() == self.todos[number - 1].to_line() {
+            self.notify(Notice::NoChanges);
             return false;
         }
         if let Err(e) = todo.check_text() {
@@ -54,7 +57,8 @@ impl App {
             return false;
         }
         self.todos[number - 1] = todo;
-        self.follow(number, Notice::Updated { hidden: true });
+        let hidden = !self.follow(number);
+        self.notify(Notice::Updated { hidden });
         true
     }
 

@@ -82,6 +82,22 @@ fn a_listing_replaces_the_control_characters_of_the_file() {
 }
 
 #[test]
+fn a_listing_replaces_the_paragraph_separator_of_the_file() {
+    let file = std::env::temp_dir().join(format!("todo-{}-separator.txt", std::process::id()));
+    std::fs::write(&file, "Call\u{2029}the bank\n").unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_todo"))
+        .env("XDG_CONFIG_HOME", "/nonexistent")
+        .arg("list")
+        .env("TODO_FILE", &file)
+        .output()
+        .unwrap();
+    std::fs::remove_file(&file).unwrap();
+
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  1  Call\u{fffd}the bank\n");
+}
+
+#[test]
 fn due_keeps_the_pending_tasks_due_today_or_before() {
     let file = std::env::temp_dir().join(format!("todo-{}-due.txt", std::process::id()));
     let lines =

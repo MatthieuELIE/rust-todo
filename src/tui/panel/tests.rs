@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app_of, history_of, key, press, shown};
+use super::super::tests::{TODAY, app_of, history_of, key, press, shown, told};
 use super::super::*;
 use time::macros::date;
 
@@ -135,7 +135,7 @@ fn shift_d_shows_the_due_tasks_from_any_filter_and_drops_a_pending_d() {
     assert_eq!((app.filter.as_deref(), app.cursor), (Some(DUE_NOW), 0));
     assert_eq!(shown(&app), ["Pay rent due:2026-09-26", "Call +home due:2026-09-01"]);
     assert_eq!((app.todos.len(), app.search.as_str()), (3, "e"));
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 
     press(&mut app, "jD");
     assert_eq!(app.cursor, 1);
@@ -148,7 +148,7 @@ fn shift_d_says_nothing_due_and_keeps_the_filter_when_no_task_is_due() {
 
     press(&mut app, "D");
 
-    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing due"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::NothingDue), false));
     assert_eq!(app.filter.as_deref(), Some("+home"));
 }
 
@@ -160,7 +160,7 @@ fn shift_d_says_nothing_due_matches_the_search_and_keeps_filter_and_search() {
 
     press(&mut app, "D");
 
-    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing due matches the search"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::NothingDueMatchesSearch), false));
     assert_eq!((app.filter.as_deref(), app.search.as_str()), (Some("+home"), "Note"));
 }
 
@@ -171,7 +171,7 @@ fn shift_d_switches_to_due_when_the_search_keeps_a_due_task() {
 
     press(&mut app, "D");
 
-    assert_eq!((app.filter.as_deref(), app.message.as_deref()), (Some(DUE_NOW), None));
+    assert_eq!((app.filter.as_deref(), told(&app)), (Some(DUE_NOW), None));
     assert_eq!(app.search, "rent");
 }
 
@@ -181,7 +181,7 @@ fn shift_d_is_refused_in_the_history() {
 
     press(&mut app, "HD");
 
-    assert_eq!((app.message.as_deref(), app.refused), (Some("history is read-only"), true));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::HistoryReadOnly), true));
     assert_eq!((app.filter.as_deref(), app.in_history), (None, true));
 }
 
@@ -216,7 +216,7 @@ fn a_task_added_under_due_is_due_today_unless_it_carries_a_due_date() {
     assert_eq!(app.todos[2].to_line(), "2026-09-26 Mail due: due:2026-09-26");
     assert_eq!(app.todos[3].to_line(), "2026-09-26 File taxes due:2026-12-26");
     assert_eq!(app.filter.as_deref(), Some(DUE_NOW));
-    assert_eq!(app.message.as_deref(), Some("added, hidden by the filter"));
+    assert_eq!(told(&app), Some(Notice::Added { hidden: true }));
 }
 
 #[test]
@@ -230,7 +230,7 @@ fn a_task_added_under_waiting_gets_nothing_and_brings_back_all_tasks_with_the_cu
     assert_eq!(app.todos[2].to_line(), "2026-09-26 Call landlord");
     assert_eq!(app.filter, None);
     assert_eq!(app.cursor, 2);
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use super::*;
 
 impl App {
-    /// Adds the task typed as `text`, cursor on it, the panel term appended when missing; a rejected text leaves a message.
+    /// Adds the task typed as `text`, cursor on it, the panel term appended when missing; a rejected text is told in a toast.
     pub(super) fn add(&mut self, text: &str, today: Date) -> bool {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
@@ -18,11 +18,11 @@ impl App {
                     todo.description = format!("{} {term}", todo.description);
                 }
                 self.todos.push(todo);
-                self.follow(self.todos.len(), "added, hidden by the filter");
+                self.follow(self.todos.len(), Notice::Added { hidden: true });
                 true
             }
             Err(e) => {
-                self.refuse(&e);
+                self.notify(Notice::Refused(e));
                 false
             }
         }
@@ -33,7 +33,7 @@ impl App {
         let mut todo = match Todo::from_input(text) {
             Ok(todo) => todo,
             Err(e) => {
-                self.refuse(&e);
+                self.notify(Notice::Refused(e));
                 return false;
             }
         };
@@ -50,11 +50,11 @@ impl App {
             return false;
         }
         if let Err(e) = todo.check_text() {
-            self.refuse(&e);
+            self.notify(Notice::Refused(e));
             return false;
         }
         self.todos[number - 1] = todo;
-        self.follow(number, "edited, hidden by the filter");
+        self.follow(number, Notice::Updated { hidden: true });
         true
     }
 
@@ -62,21 +62,21 @@ impl App {
     pub(super) fn reopen(&mut self, number: usize) -> bool {
         let mut todo = self.history[number - 1].clone();
         if let Err(reason) = todo.reopen() {
-            self.refuse(&format!("task {number} {reason}"));
+            self.notify(Notice::Refused(format!("task {number} {reason}")));
             return false;
         }
         self.todos.push(todo);
         self.moves.push(Move::Remove(self.history.remove(number - 1), Some(number)));
-        self.message = Some("reopened".to_string());
+        self.notify(Notice::Reopened);
         true
     }
 
     /// Undoes (`back`) or redoes the last change, keeping the current tasks for the way back; says so when there is none.
     pub(super) fn step(&mut self, back: bool) -> bool {
         let (from, to, done, none) = if back {
-            (&mut self.undo, &mut self.redo, "undone", "nothing to undo")
+            (&mut self.undo, &mut self.redo, Notice::ChangeUndone, Notice::NothingToUndo)
         } else {
-            (&mut self.redo, &mut self.undo, "redone", "nothing to redo")
+            (&mut self.redo, &mut self.undo, Notice::ChangeRedone, Notice::NothingToRedo)
         };
         match from.pop() {
             Some((todos, moved)) => {
@@ -86,11 +86,11 @@ impl App {
                     Move::Remove(todo, _) if back => Move::Append(todo),
                     moved => moved,
                 }));
-                self.message = Some(done.to_string());
+                self.notify(done);
                 true
             }
             None => {
-                self.message = Some(none.to_string());
+                self.notify(none);
                 false
             }
         }

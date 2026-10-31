@@ -1,5 +1,6 @@
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 
+use crate::toast::Notice;
 use crate::todo::{DUE, WAIT};
 
 mod find;
@@ -7,7 +8,7 @@ mod normal;
 mod words;
 
 /// What a key did to the line being edited.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Outcome {
     /// Keep editing.
     Continue,
@@ -18,7 +19,7 @@ pub enum Outcome {
     /// The key after `p` was not a priority, and did nothing.
     NotPriority,
     /// What an undo or a redo did, to be said in the status bar.
-    Message(&'static str),
+    Notice(Notice),
 }
 
 /// How keys act on the text, as in vim.
@@ -105,16 +106,16 @@ impl Editor {
     /// Undoes (`back`) or redoes the last change, keeping the current text for the way back, and tells what it did.
     fn step(&mut self, back: bool) -> Outcome {
         let (from, to, done, none) = if back {
-            (&mut self.undo, &mut self.redo, "undone", "nothing to undo")
+            (&mut self.undo, &mut self.redo, Notice::Undone, Notice::NothingToUndo)
         } else {
-            (&mut self.redo, &mut self.undo, "redone", "nothing to redo")
+            (&mut self.redo, &mut self.undo, Notice::Redone, Notice::NothingToRedo)
         };
         let Some(rest) = from.pop() else {
-            return Outcome::Message(none);
+            return Outcome::Notice(none);
         };
         to.push(std::mem::replace(&mut self.rest, rest));
         (self.text, self.cursor) = self.rest.clone();
-        Outcome::Message(done)
+        Outcome::Notice(done)
     }
 
     /// Keys typed so far of a command still waiting for its end, as `d` or `ci`.

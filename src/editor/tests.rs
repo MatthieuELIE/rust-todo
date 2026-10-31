@@ -145,16 +145,16 @@ fn u_undoes_the_normal_commands_one_by_one_and_ctrl_r_redoes_them_until_a_new_ch
     keys(&mut ed, "dwlx");
     assert_eq!(state(&ed), ("Call bnk", 6));
 
-    assert_eq!(ed.handle_key(u), Outcome::Message("undone"));
+    assert_eq!(ed.handle_key(u), Outcome::Notice(Notice::Undone));
     assert_eq!(state(&ed), ("Call bank", 6));
     ed.handle_key(u);
     assert_eq!(state(&ed), ("Call the bank", 5));
-    assert_eq!(ed.handle_key(u), Outcome::Message("nothing to undo"));
+    assert_eq!(ed.handle_key(u), Outcome::Notice(Notice::NothingToUndo));
 
-    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Message("redone"));
+    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Notice(Notice::Redone));
     assert_eq!(state(&ed), ("Call bank", 6));
     keys(&mut ed, "x");
-    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Message("nothing to redo"));
+    assert_eq!(ed.handle_key(ctrl('r')), Outcome::Notice(Notice::NothingToRedo));
     assert_eq!(state(&ed), ("Call bnk", 6));
 }
 
@@ -179,7 +179,10 @@ fn the_text_typed_from_entering_insert_mode_to_esc_is_undone_at_once() {
 
     let mut opened = Editor::new("Pay rent".to_string());
     keys(&mut opened, "l");
-    assert_eq!(opened.handle_key(KeyEvent::from(KeyCode::Char('u'))), Outcome::Message("nothing to undo"));
+    assert_eq!(
+        opened.handle_key(KeyEvent::from(KeyCode::Char('u'))),
+        Outcome::Notice(Notice::NothingToUndo)
+    );
     keys(&mut opened, "xu");
     assert_eq!(state(&opened), ("Pay rent", 1));
 }

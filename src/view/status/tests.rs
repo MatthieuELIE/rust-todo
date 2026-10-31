@@ -1,5 +1,6 @@
 use super::super::tests::{MOCHA, TODAY, app_of, render_in, rows};
 use super::*;
+use crate::toast::Notice;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Modifier;
 
@@ -58,19 +59,37 @@ fn nothing_shows_on_the_right_in_insert_and_search_and_the_help_shows_its_block_
 }
 
 #[test]
-fn the_message_is_centred_in_accent_and_a_refusal_in_alert_in_mocha() {
+fn a_toast_takes_the_place_of_the_filters_and_the_mode_and_the_help_hint_stay() {
     let mut app = app_of(&["Pay +rent"]);
-    app.message = Some("reloaded".to_string());
+    app.filter = Some("+rent".to_string());
+    app.search = "pay".to_string();
+    app.notify(Notice::Reloaded);
 
-    let buffer = render_in(&app, WIDTH, 5);
-    let status = rows(&buffer)[4].clone();
-    let start = status.find("reloaded").unwrap();
-    assert_eq!(start, (WIDTH as usize - "reloaded".len()) / 2, "{status}");
+    let status = status_of(&app);
+    assert!(status.starts_with(" LIST  File reloaded"), "{status}");
+    assert!(!status.contains("+rent") && !status.contains("/pay"), "{status}");
     assert!(status.ends_with("? help"), "{status}");
-    assert_eq!(buffer[(start as u16, 4)].fg, MOCHA.accent);
+}
 
-    app.refused = true;
-    assert_eq!(render_in(&app, WIDTH, 5)[(start as u16, 4)].fg, MOCHA.alert);
+#[test]
+fn the_search_line_stays_drawn_while_a_toast_is_up() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.notify(Notice::Copied);
+    app.focus = Focus::Search;
+    app.search = "ca".to_string();
+
+    assert_eq!(status_of(&app), " SEARCH  /ca▌");
+}
+
+#[test]
+fn a_toast_too_long_for_the_bar_is_cut_with_an_ellipsis_before_the_keys_on_the_right() {
+    let mut app = app_of(&["Pay +rent"]);
+    app.notify(Notice::Refused("x".repeat(200)));
+    app.handle_key(KeyEvent::from(KeyCode::Char('d')), TODAY);
+
+    let status = status_of(&app);
+    assert!(status.starts_with(" LIST  Xxx"), "{status}");
+    assert!(status.ends_with("… d ? help"), "{status}");
 }
 
 #[test]

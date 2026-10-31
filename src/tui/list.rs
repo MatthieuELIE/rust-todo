@@ -17,7 +17,7 @@ impl App {
             _ => false,
         };
         if self.in_history && writes {
-            self.refuse("history is read-only");
+            self.notify(Notice::HistoryReadOnly);
             return false;
         }
         let mut write = false;
@@ -29,11 +29,11 @@ impl App {
                     && todo.priority != priority
                 {
                     todo.priority = priority;
-                    self.follow(number, "priority set, hidden by the filter");
+                    self.follow(number, Notice::PrioritySet { priority, hidden: true });
                     write = true;
                 }
             }
-            _ if pending == Some('p') => self.refuse(NOT_PRIORITY),
+            _ if pending == Some('p') => self.notify(Notice::NotPriority),
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
             KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
@@ -69,7 +69,7 @@ impl App {
             KeyCode::Char('d') => self.pending = Some('d'),
             KeyCode::Char('y') if pending == Some('y') => match self.selected_task() {
                 Some(todo) => self.copy = Some(todo.to_line()),
-                None => self.refuse("no task under the cursor"),
+                None => self.notify(Notice::NoTaskUnderCursor),
             },
             KeyCode::Char('y') => self.pending = Some('y'),
             KeyCode::Char('o') => {
@@ -110,9 +110,9 @@ impl App {
                 self.history_read = false;
                 self.cursor = 0;
             }
-            KeyCode::Char('D') if self.in_history => self.refuse("history is read-only"),
+            KeyCode::Char('D') if self.in_history => self.notify(Notice::HistoryReadOnly),
             KeyCode::Char('D') if self.filters().iter().any(|(term, _)| term == DUE_NOW) && !self.tasks_due_in_search() => {
-                self.message = Some("nothing due matches the search".to_string())
+                self.notify(Notice::NothingDueMatchesSearch)
             }
             KeyCode::Char('D') if self.filters().iter().any(|(term, _)| term == DUE_NOW) => {
                 if self.filter.as_deref() != Some(DUE_NOW) {
@@ -120,7 +120,7 @@ impl App {
                     self.cursor = 0;
                 }
             }
-            KeyCode::Char('D') => self.message = Some("nothing due".to_string()),
+            KeyCode::Char('D') => self.notify(Notice::NothingDue),
             _ => {}
         }
         write

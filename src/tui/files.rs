@@ -4,8 +4,8 @@ impl App {
     /// Says how copying the line `yy` asked for went.
     pub fn copied(&mut self, copied: io::Result<()>) {
         match copied {
-            Ok(()) => self.message = Some("copied".to_string()),
-            Err(e) => self.refuse(&format!("could not copy: {e}")),
+            Ok(()) => self.notify(Notice::Copied),
+            Err(e) => self.notify(Notice::Refused(format!("could not copy: {e}"))),
         }
     }
 
@@ -19,7 +19,7 @@ impl App {
             }
             (read, Some(Event::Key(key))) if key.kind == KeyEventKind::Press && self.handle_key(key, today) => match read {
                 Ok(_) => return true,
-                Err(e) => self.refuse(&format!("could not read the file: {e} (file left unchanged)")),
+                Err(e) => self.notify(Notice::Refused(format!("could not read the file: {e} (file left unchanged)"))),
             },
             (_, Some(Event::Paste(pasted))) => self.paste(&pasted),
             _ => {}
@@ -60,20 +60,20 @@ impl App {
         if let Some(e) = failed
             && moved
         {
-            self.refuse(&format!("could not save: {e} (done.txt already holds the task)"));
+            self.notify(Notice::Refused(format!("could not save: {e} (done.txt already holds the task)")));
         }
         let mut held = false;
         for (todo, number) in back.iter().filter(|_| saved) {
             let verb = if number.is_some() { "reopened" } else { "undone" };
             match repository::remove_task(&done_path, *number, &todo.to_line()) {
                 Ok(true) => {}
-                Ok(false) if !held => self.message = Some(format!("{verb}, the task was no longer in done.txt")),
+                Ok(false) if !held => self.notify(Notice::GoneFromDone { reopened: number.is_some() }),
                 Ok(false) => {}
                 Err(e) => {
                     self.undo.clear();
                     self.redo.clear();
                     if !held {
-                        self.refuse(&format!("{verb}, but done.txt still holds the task: {e}"));
+                        self.notify(Notice::Refused(format!("{verb}, but done.txt still holds the task: {e}")));
                     }
                     held = true;
                 }
@@ -89,7 +89,7 @@ impl App {
                 if let Ok(current) = reread {
                     self.reload(repository::parse(&current));
                 }
-                self.refuse(&format!("could not save: {e} (file left unchanged)"));
+                self.notify(Notice::Refused(format!("could not save: {e} (file left unchanged)")));
             }
         }
     }
@@ -104,8 +104,8 @@ impl App {
     /// Takes the tasks of `done.txt`, `read` just now, as the history; a failed read empties it and is told, unless a refusal is already shown.
     pub fn set_history(&mut self, read: io::Result<String>) {
         self.history = repository::parse(&read.unwrap_or_else(|e| {
-            if !self.refused {
-                self.refuse(&format!("could not read done.txt: {e}"));
+            if !self.refusal_shown() {
+                self.notify(Notice::Refused(format!("could not read done.txt: {e}")));
             }
             String::new()
         }));
@@ -119,10 +119,9 @@ impl App {
         self.redo.clear();
         self.moves.clear();
         self.history_read = false;
-        self.refused = false;
         self.forget_gone_folds();
         self.clamp_cursor();
-        self.message = Some("reloaded".to_string());
+        self.notify(Notice::Reloaded);
         let focus = if matches!(self.focus, Focus::Help(_)) {
             &mut self.under_help
         } else {
@@ -130,7 +129,7 @@ impl App {
         };
         if let Focus::Popup(Popup { target: Target::Edit(_), .. }) = focus {
             *focus = Focus::List;
-            self.message = Some("reloaded, edit cancelled".to_string());
+            self.notify(Notice::ReloadedEditCancelled);
         }
     }
 }

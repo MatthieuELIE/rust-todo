@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app, app_of, folder, key, lines, moved, names, press, redo, shown};
+use super::super::tests::{TODAY, app, app_of, folder, key, lines, moved, names, press, redo, said, shown, told};
 use super::super::*;
 
 #[test]
@@ -16,23 +16,20 @@ fn save_writes_done_txt_then_the_task_file_and_u_takes_the_line_back_out() {
     let completed = (read(&file), read(&done), text.clone());
     press(&mut app, "u");
     app.save(&file, &mut text);
-    let undone = (read(&file), read(&done), app.message.clone());
+    let undone = (read(&file), read(&done), told(&app));
     press(&mut app, "x");
     app.save(&file, &mut text);
     std::fs::write(&done, "x 2026-09-01 zero\n").unwrap();
     press(&mut app, "u");
     app.save(&file, &mut text);
-    let missing = (read(&file), read(&done), app.message.clone(), app.refused);
+    let missing = (read(&file), read(&done), told(&app), app.refusal_shown());
 
     std::fs::remove_dir_all(&folder).unwrap();
     let history = "x 2026-09-01 zero\nx 2026-09-26 two\n";
     assert_eq!(completed, ("one\n".into(), format!("{history}x 2026-09-26 two\n"), "one\n".into()));
-    assert_eq!(undone, ("one\n(A) two\n".into(), history.into(), Some("undone".into())));
+    assert_eq!(undone, ("one\n(A) two\n".into(), history.into(), Some(Notice::ChangeUndone)));
     let restored = ("one\n(A) two\n".into(), "x 2026-09-01 zero\n".into());
-    assert_eq!(
-        missing,
-        (restored.0, restored.1, Some("undone, the task was no longer in done.txt".into()), false)
-    );
+    assert_eq!(missing, (restored.0, restored.1, Some(Notice::GoneFromDone { reopened: false }), false));
 }
 
 #[test]
@@ -48,7 +45,7 @@ fn save_leaves_both_files_alone_when_the_move_cannot_be_written() {
 
     press(&mut app, "x");
     app.save(&file, &mut text);
-    let refused = (lines(&app), app.refused, std::fs::read_to_string(&file).unwrap());
+    let refused = (lines(&app), app.refusal_shown(), std::fs::read_to_string(&file).unwrap());
     let itself = folder.join("itself");
     std::fs::create_dir(&itself).unwrap();
     std::fs::write(itself.join("done.txt"), "one\ntwo\n").unwrap();
@@ -60,13 +57,13 @@ fn save_leaves_both_files_alone_when_the_move_cannot_be_written() {
     assert_eq!(refused, (vec!["one".to_string(), "two".to_string()], true, "one\ntwo\n".to_string()));
     assert_eq!(kept, "one\ntwo\n");
     assert_eq!(
-        app.message.as_deref(),
-        Some("could not save: the task file is done.txt itself (file left unchanged)")
+        said(&app).as_deref(),
+        Some("Could not save: the task file is done.txt itself (file left unchanged)")
     );
 }
 
 #[test]
-fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
+fn a_reload_keeps_the_cursor_row_and_says_so_through_the_next_key() {
     let mut app = app();
     press(&mut app, "G");
 
@@ -74,9 +71,9 @@ fn a_reload_keeps_the_cursor_row_and_says_so_until_the_next_key() {
 
     assert_eq!(shown(&app), ["one", "four"]);
     assert_eq!(app.cursor, 1);
-    assert_eq!(app.message.as_deref(), Some("reloaded"));
+    assert_eq!(told(&app), Some(Notice::Reloaded));
     press(&mut app, "k");
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), Some(Notice::Reloaded));
 }
 
 #[test]
@@ -160,18 +157,18 @@ fn reading_done_txt_again_after_a_save_keeps_the_refusal_that_save_left() {
 
     std::fs::remove_dir_all(&folder).unwrap();
     assert!(app.history.is_empty());
-    assert!(app.refused);
-    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+    assert!(app.refusal_shown());
+    assert!(said(&app).unwrap().starts_with("Undone, but done.txt still holds the task: "));
 }
 
 #[test]
 fn a_reload_after_a_refusal_is_not_told_as_one() {
     let mut app = app();
-    app.refuse("history is read-only");
+    app.notify(Notice::HistoryReadOnly);
 
     app.reload(vec![Todo::from_line("one")]);
 
-    assert_eq!((app.message.as_deref(), app.refused), (Some("reloaded"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::Reloaded), false));
 }
 
 #[test]
@@ -180,12 +177,12 @@ fn the_history_is_what_done_txt_holds_and_a_done_txt_that_cannot_be_read_is_told
 
     app.set_history(Ok("x old\n\nx new\n".to_string()));
     assert_eq!(app.history.iter().map(Todo::to_line).collect::<Vec<_>>(), ["x old", "x new"]);
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 
     app.set_history(Err(io::ErrorKind::InvalidData.into()));
     assert!(app.history.is_empty());
-    assert!(app.refused);
-    assert!(app.message.unwrap().starts_with("could not read done.txt: "));
+    assert!(app.refusal_shown());
+    assert!(said(&app).unwrap().starts_with("Could not read done.txt: "));
 }
 
 #[test]
@@ -219,8 +216,8 @@ fn a_failed_save_goes_back_to_what_the_file_holds_and_says_so() {
     );
 
     assert_eq!(lines(&app), ["one", "two", "three"]);
-    assert_eq!(app.message.as_deref(), Some("could not save: permission denied (file left unchanged)"));
-    assert!(app.refused);
+    assert_eq!(said(&app).as_deref(), Some("Could not save: permission denied (file left unchanged)"));
+    assert!(app.refusal_shown());
     assert_eq!(text, "one\ntwo\nthree\n");
 
     app.saved(Err(io::ErrorKind::PermissionDenied.into()), &mut text, Ok("one\nfour\n".to_string()));
@@ -234,7 +231,7 @@ fn a_failed_save_goes_back_to_what_the_file_holds_and_says_so() {
         Err(io::ErrorKind::InvalidData.into()),
     );
     assert_eq!(lines(&app), ["four"]);
-    assert!(app.refused);
+    assert!(app.refusal_shown());
 
     app.saved(Ok("one\n".to_string()), &mut text, Ok(String::new()));
     assert_eq!(text, "one\n");
@@ -249,7 +246,7 @@ fn a_turn_does_not_ask_to_save_over_a_file_it_could_not_read() {
 
     assert!(!app.turn(Err(io::ErrorKind::InvalidData.into()), &mut text, x, TODAY));
 
-    assert!(app.refused);
+    assert!(app.refusal_shown());
     assert_eq!(text, "one\ntwo\nthree\n");
 }
 
@@ -297,10 +294,10 @@ fn a_save_failing_after_the_move_says_done_txt_holds_the_task() {
     std::fs::remove_dir_all(&folder).unwrap();
     assert_eq!(lines(&app), ["one", "two"]);
     assert_eq!(history, "x 2026-09-26 one\n");
-    assert!(app.refused);
-    let message = app.message.unwrap();
+    assert!(app.refusal_shown());
+    let message = said(&app).unwrap();
     assert!(
-        message.starts_with("could not save: ") && message.ends_with(" (done.txt already holds the task)"),
+        message.starts_with("Could not save: ") && message.ends_with(" (done.txt already holds the task)"),
         "{message}"
     );
 }
@@ -319,20 +316,20 @@ fn save_takes_the_reopened_line_out_of_done_txt_among_lines_reading_the_same_and
     press(&mut app, "Hjjr");
     app.save(&file, &mut text);
     app.refresh_history(&file);
-    let reopened = (read(&file), read(&done), shown(&app), app.cursor, app.message.clone());
+    let reopened = (read(&file), read(&done), shown(&app), app.cursor, told(&app));
     press(&mut app, "Hu");
     app.save(&file, &mut text);
-    let undone = (read(&file), read(&done), app.message.clone());
+    let undone = (read(&file), read(&done), told(&app));
     redo(&mut app);
     app.save(&file, &mut text);
-    let redone = (read(&file), read(&done), app.message.clone());
+    let redone = (read(&file), read(&done), told(&app));
 
     std::fs::remove_dir_all(&folder).unwrap();
     let left = "x 2026-09-20 dup\r\n\nx 2026-09-21 other\nx 2026-09-20 dup\r\n";
     let listed = ["x 2026-09-20 dup", "x 2026-09-21 other", "x 2026-09-20 dup"].map(String::from).to_vec();
-    assert_eq!(reopened, ("one\ndup\n".into(), left.into(), listed, 2, Some("reopened".into())));
-    assert_eq!(undone, ("one\n".into(), format!("{left}x 2026-09-20 dup\n"), Some("undone".into())));
-    assert_eq!(redone, ("one\ndup\n".into(), left.into(), Some("redone".into())));
+    assert_eq!(reopened, ("one\ndup\n".into(), left.into(), listed, 2, Some(Notice::Reopened)));
+    assert_eq!(undone, ("one\n".into(), format!("{left}x 2026-09-20 dup\n"), Some(Notice::ChangeUndone)));
+    assert_eq!(redone, ("one\ndup\n".into(), left.into(), Some(Notice::ChangeRedone)));
 }
 
 #[test]
@@ -350,18 +347,12 @@ fn a_reopen_writes_nothing_when_done_txt_cannot_be_written() {
     app.refresh_history(&file);
     press(&mut app, "Hr");
     app.save(&file, &mut text);
-    let refused = (
-        lines(&app),
-        read(&file),
-        read(&done),
-        app.refused,
-        app.message.clone().unwrap_or_default(),
-    );
+    let refused = (lines(&app), read(&file), read(&done), app.refusal_shown(), said(&app).unwrap_or_default());
 
     std::fs::remove_dir_all(&folder).unwrap();
     let message = refused.4.clone();
     assert!(
-        message.starts_with("could not save: ") && message.ends_with(" (file left unchanged)"),
+        message.starts_with("Could not save: ") && message.ends_with(" (file left unchanged)"),
         "{message}"
     );
     assert_eq!(
@@ -383,15 +374,15 @@ fn a_reopened_line_ending_in_stray_carriage_returns_leaves_done_txt_and_comes_ba
     app.refresh_history(&file);
     press(&mut app, "Hr");
     app.save(&file, &mut text);
-    let last = (read(&file), read(&done), app.message.clone());
+    let last = (read(&file), read(&done), told(&app));
     app.refresh_history(&file);
     press(&mut app, "r");
     app.save(&file, &mut text);
-    let first = (read(&file), read(&done), app.message.clone());
+    let first = (read(&file), read(&done), told(&app));
 
     std::fs::remove_dir_all(&folder).unwrap();
-    assert_eq!(last, ("one\nnew\n".into(), "x 2026-09-20 old\r\r\n".into(), Some("reopened".into())));
-    assert_eq!(first, ("one\nnew\nold\n".into(), String::new(), Some("reopened".into())));
+    assert_eq!(last, ("one\nnew\n".into(), "x 2026-09-20 old\r\r\n".into(), Some(Notice::Reopened)));
+    assert_eq!(first, ("one\nnew\nold\n".into(), String::new(), Some(Notice::Reopened)));
 }
 
 #[test]
@@ -411,10 +402,7 @@ fn a_reopened_line_gone_from_done_txt_since_it_was_read_is_kept_and_said_so() {
 
     std::fs::remove_dir_all(&folder).unwrap();
     assert_eq!(files, ("one\nnew\n".to_string(), "x 2026-09-20 old\n".to_string()));
-    assert_eq!(
-        (app.message.as_deref(), app.refused),
-        (Some("reopened, the task was no longer in done.txt"), false)
-    );
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::GoneFromDone { reopened: true }), false));
 }
 
 #[test]
@@ -449,8 +437,8 @@ fn a_refusal_to_take_a_line_out_of_done_txt_is_not_replaced_by_a_later_removal_o
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
     assert!(saves);
-    assert!(app.refused);
-    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+    assert!(app.refusal_shown());
+    assert!(said(&app).unwrap().starts_with("Undone, but done.txt still holds the task: "));
 }
 
 #[test]
@@ -479,14 +467,17 @@ fn a_second_refusal_to_take_a_line_out_of_done_txt_in_the_same_save_does_not_rep
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
     assert!(saves);
-    assert!(app.message.unwrap().starts_with("undone, but done.txt still holds the task: "));
+    assert!(said(&app).unwrap().starts_with("Undone, but done.txt still holds the task: "));
 }
 
 #[test]
 fn copied_says_copied_in_grey_or_why_it_could_not_in_red() {
     let mut app = app();
     app.copied(Ok(()));
-    assert_eq!((app.message.as_deref(), app.refused), (Some("copied"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::Copied), false));
     app.copied(Err(io::Error::other("boom")));
-    assert_eq!((app.message.as_deref(), app.refused), (Some("could not copy: boom"), true));
+    assert_eq!(
+        (told(&app), app.refusal_shown()),
+        (Some(Notice::Refused("could not copy: boom".to_string())), true)
+    );
 }

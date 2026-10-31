@@ -58,7 +58,7 @@ A command under way, such as a first `d`, is dropped.
 
 `gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored.
-The status bar then says `priority is a to e, or space`.
+The status bar then says `Priority is a to e, or space`.
 
 A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed.
 `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
@@ -104,7 +104,7 @@ It is peach on a lighter background where the keys go, the list or the panel aft
 
 The status bar shows the mode in a peach block and the active filters coloured as in the list on the left, `? help` on the right.
 In `INSERT` and `SEARCH` and while the help is open, which shows a `HELP` block, there is nothing on the right.
-A message shows in the middle in peach, red when something was refused.
+A message shows as a toast in place of the filters, for three seconds whatever keys are pressed, in green when something was done, grey when it only says what happened, red when something was refused; see [Messages](messages.md#interactive-list).
 
 While a command waits for its end, in the list or the popup, the keys typed so far, such as `d` or `ci`, show in peach on the right, just left of `? help`.
 
@@ -142,7 +142,7 @@ These keys are refused there with `history is read-only`:
 - `p`, `u`, `Ctrl-R`, `D`
 
 `r` reopens the task under the cursor, as `todo reopen` does with its number.
-The task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `reopened`.
+The task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `Task reopened, press u to undo`.
 A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words, a task with no text word included.
 
 Outside the history `r` does nothing.
@@ -196,7 +196,7 @@ Its name is red when one of them is overdue and yellow when they are all for tod
 A task added under `Due` gets `due:` with today's date, unless its line holds a `due:` with a value already.
 
 From the list, `D` goes straight to `Due` whatever the filter in use, the search kept, and `Esc` goes back to `All tasks`.
-With no task due it says `nothing due`, and when the search hides every task due it says `nothing due matches the search`, and changes nothing.
+With no task due it says `No task due`, and when the search hides every task due it says `No due task matches the search`, and changes nothing.
 
 `Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`.
 `/wait:figma` narrows it to one.

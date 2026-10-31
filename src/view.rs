@@ -75,6 +75,7 @@ mod panel;
 mod popup;
 mod status;
 mod style;
+mod toast;
 
 #[cfg(test)]
 pub use help::HELP;

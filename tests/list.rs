@@ -1,3 +1,5 @@
+mod common;
+
 use std::process::{Command, Output};
 
 fn todo_list(terms: &[&str]) -> Output {
@@ -9,6 +11,19 @@ fn todo_list(terms: &[&str]) -> Output {
         .env("TODO_FILE", missing)
         .output()
         .unwrap()
+}
+
+#[test]
+fn a_file_over_ten_mebibytes_is_refused_with_its_limit_and_left_unchanged() {
+    let file = common::folder("too-big").join("todo.txt");
+    std::fs::write(&file, vec![b'a'; 10 * 1024 * 1024 + 1]).unwrap();
+
+    let output = common::todo(&file, &["list"]);
+
+    assert_eq!(output.status.code(), Some(1));
+    let message = format!("could not read {}: larger than 10 MiB\n", file.display());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), message);
+    assert_eq!(std::fs::metadata(&file).unwrap().len(), 10 * 1024 * 1024 + 1);
 }
 
 #[test]

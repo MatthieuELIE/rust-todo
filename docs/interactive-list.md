@@ -111,7 +111,7 @@ While a command waits for its end, in the list or the popup, the keys typed so f
 ### Undo
 
 `u` steps back through the changes made since the list was opened, and `Ctrl-R` steps forward again.
-Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done.
+Each step restores the whole list, so undoing `x` brings the task back at its place with the priority dropped when it was done. The list remembers the last 100 changes; an older one is forgotten without a message.
 
 Undoing `x` also reads `done.txt` again and takes out its last line equal to the task.
 When the line is no longer there the task comes back all the same and the status bar says so.

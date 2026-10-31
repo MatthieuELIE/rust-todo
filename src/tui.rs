@@ -13,6 +13,8 @@ use crate::repository;
 use crate::theme::Theme;
 use crate::todo::{DUE, Todo};
 
+const MAX_UNDO: usize = 100;
+
 /// Said when the key after `p` is not a priority.
 const NOT_PRIORITY: &str = "priority is a to e, or space";
 
@@ -156,6 +158,9 @@ impl App {
         let write = self.apply(key, today);
         self.forget_gone_folds();
         if write && history == (self.undo.len(), self.redo.len()) {
+            if self.undo.len() == MAX_UNDO {
+                self.undo.remove(0);
+            }
             self.undo.push((before, self.moves.get(queued).cloned()));
             self.redo.clear();
         }

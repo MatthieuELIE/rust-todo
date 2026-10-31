@@ -38,7 +38,7 @@ Messages go to stderr; what the commands print on stdout is described in [Comman
 | `task 2 is not done` | `reopen` was given the number of a line of `done.txt` that is not a done task | 1 |
 | `task 2 cannot be reopened: its text starts with x` | `reopen` was given a done task with no creation date whose text starts with `x `: its line would still read as done | 1 |
 | `task 2 cannot be reopened: it is only +projects, @contexts and key: words` | `reopen` was given a line of `done.txt` with no word that is not a `+project`, an `@context`, a `key:` word, a priority or a date, as for `add` | 1 |
-| `could not read <path>: <reason>` | the task file, or `done.txt` for `list --done` and `reopen`, exists and cannot be read, or is not UTF-8 text | 1 |
+| `could not read <path>: <reason>` | the task file, or `done.txt` for `list --done` and `reopen`, exists and cannot be read, is not UTF-8 text, or is larger than 10 MiB | 1 |
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive`, `do` and `reopen` | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `--all is gone: list shows the pending tasks, list --done the done ones` | `list` was given `--all` or `-a` as its first argument | 2 |
@@ -77,7 +77,7 @@ A red one says that something was refused or failed; a peach one only says what 
 | `nothing due` | peach | `D` was pressed with no pending task due today or before; the filter is kept |
 | `nothing due matches the search` | peach | `D` was pressed while the search hides every pending task due today or before; the filter and the search are kept |
 | `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
-| `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, or is not UTF-8 text, when the list opens or at `H`; the history is then empty |
+| `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, is not UTF-8 text, or is larger than 10 MiB, when the list opens or at `H`; the history is then empty |
 | `task 2 is not done`, `task 2 cannot be reopened: its text starts with x`, `task 2 cannot be reopened: it is only +projects, @contexts and key: words` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
 | `reopened` | peach | `r` brought a task of the history back to the task file |
 | `undone, the task was no longer in done.txt`, `reopened, the task was no longer in done.txt` | peach | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
@@ -85,7 +85,7 @@ A red one says that something was refused or failed; a peach one only says what 
 | `a task needs more than +projects, @contexts and key: words` | red | the popup was saved empty, or with only `+projects`, `@contexts`, `key:` words, a priority or a date, for an add or a changed edit; the popup stays open. An `x` typed in front, or an unchanged line, is not checked |
 | `cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space; the popup stays open |
 | `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
-| `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving; the change stays on screen and is saved with the next one, once the file reads again |
+| `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving, because it cannot be read or is larger than 10 MiB; the change stays on screen and is saved with the next one, once the file reads again |
 | `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
 | `reloaded` | peach | the file changed on disk; the key pressed at that moment was ignored and a command under way was dropped |
 | `reloaded, edit cancelled` | peach | the file changed on disk while a task was being edited |

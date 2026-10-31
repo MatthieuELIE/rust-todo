@@ -146,10 +146,10 @@ impl App {
         self.cursor = self.cursor.min(self.rows().len().saturating_sub(1));
     }
 
-    /// Puts the cursor on task `number`, or on its folded group, or says `hidden` when neither is on screen.
-    pub(super) fn follow(&mut self, number: usize, hidden: &str) {
+    /// Puts the cursor on task `number`, or on its folded group, or shows `hidden` when neither is on screen.
+    pub(super) fn follow(&mut self, number: usize, hidden: Notice) {
         if !self.select(Row::Task(number)) {
-            self.message = Some(hidden.to_string());
+            self.notify(hidden);
         }
     }
 }

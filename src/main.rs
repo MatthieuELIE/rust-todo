@@ -6,6 +6,7 @@ mod filter;
 mod repository;
 mod terminal;
 mod theme;
+mod toast;
 mod todo;
 mod tui;
 mod view;

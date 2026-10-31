@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app, app_of, lines, moved, popup, press, shown};
+use super::super::tests::{TODAY, app, app_of, lines, moved, popup, press, shown, told};
 use super::super::*;
 
 #[test]
@@ -106,13 +106,16 @@ fn an_edit_emptied_or_left_unchanged_writes_nothing() {
 
     app.handle_key(enter, TODAY);
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 
     app.handle_key(enter, TODAY);
     press(&mut app, "WD");
     assert_eq!(popup(&app).editor.text, "(A) ");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(
+        told(&app),
+        Some(Notice::Refused("a task needs more than +projects, @contexts and key: words".to_string()))
+    );
     assert_eq!(popup(&app).editor.text, "(A) ");
     assert_eq!(shown(&app), ["(A) one"]);
 }
@@ -143,7 +146,10 @@ fn a_rejected_input_adds_nothing_and_says_why() {
     press(&mut app, "o");
     assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(
+        told(&app),
+        Some(Notice::Refused("a task needs more than +projects, @contexts and key: words".to_string()))
+    );
     assert_eq!(shown(&app), ["one", "two", "three"]);
 }
 
@@ -155,12 +161,15 @@ fn a_refused_line_keeps_the_popup_open_with_its_text_and_esc_closes_it_writing_n
 
     press(&mut app, "o");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(
+        told(&app),
+        Some(Notice::Refused("a task needs more than +projects, @contexts and key: words".to_string()))
+    );
     assert_eq!(popup(&app).editor.text, "");
 
     press(&mut app, "x Lorem");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("cannot add a task that is already done"));
+    assert_eq!(told(&app), Some(Notice::Refused("cannot add a task that is already done".to_string())));
     assert_eq!(popup(&app).editor.text, "x Lorem");
 
     app.handle_key(esc, TODAY);
@@ -177,6 +186,32 @@ fn an_accepted_add_closes_the_popup() {
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
     assert!(!matches!(app.focus, Focus::Popup(_)));
+}
+
+#[test]
+fn an_add_fixed_after_a_refusal_does_not_bring_the_refusal_back() {
+    let mut app = app();
+    let enter = KeyEvent::from(KeyCode::Enter);
+
+    press(&mut app, "o");
+    assert!(!app.handle_key(enter, TODAY));
+    assert!(app.refusal_shown());
+
+    press(&mut app, "Lorem");
+    assert!(app.handle_key(enter, TODAY));
+    assert!(!matches!(app.focus, Focus::Popup(_)));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
+fn a_toast_shown_before_an_accepted_add_is_still_there_after_it() {
+    let mut app = app();
+    app.notify(Notice::Copied);
+
+    press(&mut app, "oLorem");
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(told(&app), Some(Notice::Copied));
 }
 
 #[test]
@@ -212,7 +247,7 @@ fn an_x_typed_in_front_of_a_task_moves_it_to_done_txt_completed_today_and_u_brin
 
     assert_eq!(lines(&app), ["two"]);
     assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one"]);
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
     assert!(press(&mut app, "u"));
     assert_eq!(lines(&app), ["(A) 2026-08-01 one", "two"]);
     assert_eq!(moved(&app), ["+x 2026-09-26 2026-08-01 one", "-x 2026-09-26 2026-08-01 one"]);
@@ -237,10 +272,10 @@ fn u_in_the_popup_undoes_the_typed_text_and_says_so_without_touching_the_list() 
 
     assert!(!press(&mut app, "u"));
     assert_eq!(popup(&app).editor.text, "");
-    assert_eq!((app.message.as_deref(), app.refused), (Some("undone"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::Undone), false));
 
     press(&mut app, "u");
-    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!(told(&app), Some(Notice::NothingToUndo));
     assert_eq!(shown(&app), ["one", "two", "three"]);
 }
 
@@ -251,12 +286,15 @@ fn a_line_of_only_tags_is_refused_unchanged_ignored_and_ended_by_a_typed_x() {
 
     app.handle_key(enter, TODAY);
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 
     app.handle_key(enter, TODAY);
     press(&mut app, "A wait:a");
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(
+        told(&app),
+        Some(Notice::Refused("a task needs more than +projects, @contexts and key: words".to_string()))
+    );
     assert_eq!(shown(&app), ["+work"]);
 
     let mut app = app_of(&["+work"]);
@@ -276,7 +314,10 @@ fn a_line_replaced_by_a_lone_x_is_refused() {
     assert_eq!(popup(&app).editor.text, "x ");
 
     assert!(!app.handle_key(enter, TODAY));
-    assert_eq!(app.message.as_deref(), Some("a task needs more than +projects, @contexts and key: words"));
+    assert_eq!(
+        told(&app),
+        Some(Notice::Refused("a task needs more than +projects, @contexts and key: words".to_string()))
+    );
     assert_eq!(shown(&app), ["one"]);
     assert!(moved(&app).is_empty());
 }

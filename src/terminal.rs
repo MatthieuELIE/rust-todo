@@ -1,7 +1,7 @@
 use std::io::{self, Write};
 use std::path::Path;
 use std::process::{Command, Stdio};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use ratatui::DefaultTerminal;
 use ratatui::crossterm::cursor::SetCursorStyle;
@@ -32,6 +32,7 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
             } else {
                 None
             };
+            app.tick(Instant::now());
             if app.turn(repository::read(path), &mut text, event, today()) {
                 app.save(path, &mut text);
             }

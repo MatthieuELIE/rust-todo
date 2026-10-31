@@ -65,32 +65,37 @@ A `config.toml` that is refused stops every command, and `todo` with no command 
 
 ### Interactive list
 
-Messages show in the middle of the status bar until the next key.
-A red one says that something was refused or failed; a peach one only says what happened.
+Messages are toasts: each takes the place of the filters in the status bar for three seconds, whatever keys are pressed meanwhile.
+While the search line is open it stays drawn, and the toast comes back once it closes if its time is not up.
+The mode on the left, the keys of a command under way and `? help` on the right stay; a toast too long for the room left is cut with `…`.
+A new toast replaces the one shown and lasts its own three seconds, and a refusal does the same.
+A green one says that something was done, a grey one only says what happened, a red one says that something was refused or failed.
+With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes first: a check mark in green, an `i` in grey, a cross in red.
 
 | Message | Colour | When |
 | --- | --- | --- |
-| `priority is a to e, or space` | red | the key after `p` was not a priority |
-| `copied` | peach | `yy` put the line of the task under the cursor in the clipboard; the bar does not show the line |
-| `no task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
-| `could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
-| `nothing due` | peach | `D` was pressed with no pending task due today or before; the filter is kept |
-| `nothing due matches the search` | peach | `D` was pressed while the search hides every pending task due today or before; the filter and the search are kept |
-| `history is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
-| `could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, is not UTF-8 text, or is larger than 10 MiB, when the list opens or at `H`; the history is then empty |
-| `task 2 is not done`, `task 2 cannot be reopened: its text starts with x`, `task 2 cannot be reopened: it is only +projects, @contexts and key: words` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
-| `reopened` | peach | `r` brought a task of the history back to the task file |
-| `undone, the task was no longer in done.txt`, `reopened, the task was no longer in done.txt` | peach | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
-| `undone, but done.txt still holds the task: <reason>`, `reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files, and the `u` and `Ctrl-R` history is cleared; when one save brings back several tasks, only the first refusal is shown, and others may be in both files too |
-| `a task needs more than +projects, @contexts and key: words` | red | the popup was saved empty, or with only `+projects`, `@contexts`, `key:` words, a priority or a date, for an add or a changed edit; the popup stays open. An `x` typed in front, or an unchanged line, is not checked |
-| `cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space; the popup stays open |
-| `could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
-| `could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving, because it cannot be read or is larger than 10 MiB; the change stays on screen and is saved with the next one, once the file reads again |
-| `could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
-| `reloaded` | peach | the file changed on disk; the key pressed at that moment was ignored and a command under way was dropped |
-| `reloaded, edit cancelled` | peach | the file changed on disk while a task was being edited |
-| `added, hidden by the filter` | peach | the task added does not match the search |
-| `edited, hidden by the filter` | peach | the task edited no longer matches the search or the panel filter |
-| `priority set, hidden by the filter` | peach | the task given a priority no longer matches the search |
-| `undone`, `redone` | peach | `u` or `Ctrl-R` did something, in the list or in the popup |
-| `nothing to undo`, `nothing to redo` | peach | `u` or `Ctrl-R` had nothing left |
+| `Priority is a to e, or space` | red | the key after `p` was not a priority |
+| `Task copied to the clipboard` | green | `yy` put the line of the task under the cursor in the clipboard; the bar does not show the line |
+| `No task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
+| `Could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
+| `No task due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |
+| `No due task matches the search` | grey | `D` was pressed while the search hides every pending task due today or before; the filter and the search are kept |
+| `History is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |
+| `Could not read done.txt: <reason>` | red | `done.txt` exists and cannot be read, is not UTF-8 text, or is larger than 10 MiB, when the list opens or at `H`; the history is then empty |
+| `Task 2 is not done`, `Task 2 cannot be reopened: its text starts with x`, `Task 2 cannot be reopened: it is only +projects, @contexts and key: words` | red | `r` was pressed in the history on a line `todo reopen` refuses, for the reason given above for the command line; nothing is written |
+| `Task reopened, press u to undo` | green | `r` brought a task of the history back to the task file |
+| `Undone, the task was no longer in done.txt`, `Reopened, the task was no longer in done.txt` | green | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
+| `Undone, but done.txt still holds the task: <reason>`, `Reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files, and the `u` and `Ctrl-R` history is cleared; when one save brings back several tasks, only the first refusal is shown, and others may be in both files too |
+| `A task needs more than +projects, @contexts and key: words` | red | the popup was saved empty, or with only `+projects`, `@contexts`, `key:` words, a priority or a date, for an add or a changed edit; the popup stays open. An `x` typed in front, or an unchanged line, is not checked |
+| `Cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space; the popup stays open |
+| `Could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
+| `Could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving, because it cannot be read or is larger than 10 MiB; the change stays on screen and is saved with the next one, once the file reads again |
+| `Could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
+| `File reloaded` | grey | the file changed on disk; the key pressed at that moment was ignored and a command under way was dropped |
+| `File reloaded, edit cancelled` | grey | the file changed on disk while a task was being edited |
+| `Task added, hidden by the filter, press u to undo` | green | the task added does not match the search |
+| `Task updated, hidden by the filter, press u to undo` | green | the task edited no longer matches the search or the panel filter |
+| `Priority set to B, hidden by the filter, press u to undo`, `Priority removed, hidden by the filter, press u to undo` | green | the task given a priority, the letter chosen or none for `p Space`, no longer matches the search |
+| `Change undone, press Ctrl-r to redo`, `Change redone, press u to undo` | green | `u` or `Ctrl-R` did something in the list |
+| `Undone`, `Redone` | green | `u` or `Ctrl-R` did something in the popup |
+| `Nothing to undo`, `Nothing to redo` | grey | `u` or `Ctrl-R` had nothing left, in the list or in the popup |

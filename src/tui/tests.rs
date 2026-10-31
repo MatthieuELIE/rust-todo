@@ -1,4 +1,5 @@
 use super::*;
+use std::time::Duration;
 use time::macros::date;
 
 pub(super) const TODAY: Date = date!(2026 - 09 - 26);
@@ -8,6 +9,14 @@ pub(super) fn app_of(lines: &[&str]) -> App {
         today: Some(TODAY),
         ..App::new(lines.iter().map(|l| Todo::from_line(l)).collect())
     }
+}
+
+pub(super) fn told(app: &App) -> Option<Notice> {
+    app.toast.as_ref().map(|toast| toast.notice.clone())
+}
+
+pub(super) fn said(app: &App) -> Option<String> {
+    told(app).map(|notice| notice.text())
 }
 
 pub(super) fn app() -> App {
@@ -60,18 +69,85 @@ fn an_edit_hidden_by_the_search_leaves_the_cursor_where_it_was() {
     assert_eq!(shown(&app), ["two"]);
     assert_eq!(app.cursor, 0);
     assert_eq!(app.todos[2].to_line(), "free");
-    assert_eq!(app.message.as_deref(), Some("edited, hidden by the filter"));
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: true }));
 }
 
 #[test]
-fn a_refusal_is_told_apart_from_an_information_until_the_next_key() {
+fn a_refusal_is_told_apart_from_an_information_and_the_next_toast_replaces_it() {
     let mut app = app_of(&["one"]);
 
     press(&mut app, "pz");
-    assert_eq!((app.message.as_deref(), app.refused), (Some(NOT_PRIORITY), true));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::NotPriority), true));
 
     press(&mut app, "u");
-    assert_eq!((app.message.as_deref(), app.refused), (Some("nothing to undo"), false));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::NothingToUndo), false));
+}
+
+#[test]
+fn a_toast_is_still_there_after_a_key_that_sends_none_and_tick_takes_it_down_once_its_time_is_up() {
+    let mut app = app_of(&["one", "two"]);
+    let start = Instant::now();
+    app.tick(start);
+    app.notify(Notice::Copied);
+
+    press(&mut app, "j");
+    app.tick(start + DURATION - Duration::from_millis(1));
+    assert_eq!(told(&app), Some(Notice::Copied));
+
+    app.tick(start + DURATION);
+    assert_eq!(told(&app), None);
+}
+
+#[test]
+fn a_new_toast_replaces_the_old_one_and_lasts_three_seconds_from_its_own_start() {
+    let mut app = app_of(&["one"]);
+    let start = Instant::now();
+    app.tick(start);
+    app.notify(Notice::Copied);
+
+    app.tick(start + Duration::from_secs(2));
+    app.notify(Notice::NothingDue);
+    app.tick(start + Duration::from_secs(4));
+    assert_eq!(told(&app), Some(Notice::NothingDue));
+
+    app.tick(start + Duration::from_secs(5));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
+fn a_refusal_replaces_a_toast_the_same_way() {
+    let mut app = app_of(&["one"]);
+    app.tick(Instant::now());
+    app.notify(Notice::Copied);
+
+    press(&mut app, "pz");
+
+    assert_eq!(told(&app), Some(Notice::NotPriority));
+}
+
+#[test]
+fn a_priority_that_the_search_hides_names_the_letter_or_says_removed() {
+    let mut app = app_of(&["(A) one", "(A) two"]);
+
+    press(&mut app, "/(A)");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "pb");
+    assert_eq!(
+        told(&app),
+        Some(Notice::PrioritySet {
+            priority: Some('B'),
+            hidden: true
+        })
+    );
+
+    press(&mut app, "p ");
+    assert_eq!(
+        told(&app),
+        Some(Notice::PrioritySet {
+            priority: None,
+            hidden: true
+        })
+    );
 }
 
 #[test]
@@ -94,12 +170,12 @@ fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
     app.reload(reread());
     assert!(!matches!(app.focus, Focus::Popup(_)));
-    assert_eq!(app.message.as_deref(), Some("reloaded, edit cancelled"));
+    assert_eq!(told(&app), Some(Notice::ReloadedEditCancelled));
 
     press(&mut app, "onew");
     app.reload(reread());
     assert_eq!(popup(&app).editor.text, "new");
-    assert_eq!(app.message.as_deref(), Some("reloaded"));
+    assert_eq!(told(&app), Some(Notice::Reloaded));
 }
 
 #[test]
@@ -139,7 +215,7 @@ fn a_reload_under_the_help_cancels_the_edit_it_covers() {
     assert!(matches!(app.focus, Focus::Help(_)));
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
     assert!(matches!(app.focus, Focus::List));
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), Some(Notice::ReloadedEditCancelled));
 }
 
 #[test]
@@ -154,7 +230,7 @@ fn a_task_added_under_a_search_it_does_not_match_is_saved_but_said_hidden() {
 
     assert_eq!(shown(&app), ["two", "three"]);
     assert_eq!(app.cursor, 1);
-    assert_eq!(app.message.as_deref(), Some("added, hidden by the filter"));
+    assert_eq!(told(&app), Some(Notice::Added { hidden: true }));
 }
 
 pub(super) fn history_of(lines: &[&str], done: &[&str]) -> App {
@@ -231,15 +307,15 @@ fn u_after_a_reopen_whose_line_could_not_leave_done_txt_has_nothing_to_undo() {
     app.refresh_history(&file);
     press(&mut app, "Hr");
     app.save(&file, &mut text);
-    let held = (read(&file), app.refused, app.message.clone().unwrap_or_default());
+    let held = (read(&file), app.refusal_shown(), said(&app).unwrap_or_default());
     let wrote = press(&mut app, "Hu");
 
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
-    assert!(held.2.starts_with("reopened, but done.txt still holds the task: "), "{}", held.2);
+    assert!(held.2.starts_with("Reopened, but done.txt still holds the task: "), "{}", held.2);
     assert_eq!((held.0, held.1), ("one\nold\n".to_string(), true));
     assert!(!wrote);
-    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!(told(&app), Some(Notice::NothingToUndo));
 }
 
 #[test]
@@ -260,15 +336,15 @@ fn ctrl_r_after_a_u_whose_line_could_not_leave_done_txt_does_not_add_it_there_ag
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
     press(&mut app, "u");
     app.save(&file, &mut text);
-    let held = (app.refused, app.message.clone().unwrap_or_default());
+    let held = (app.refusal_shown(), said(&app).unwrap_or_default());
     let wrote = app.handle_key(ctrl_r, TODAY);
     let done = std::fs::read_to_string(locked.join("done.txt")).unwrap();
 
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o755)).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
-    assert!(held.1.starts_with("undone, but done.txt still holds the task: "), "{}", held.1);
+    assert!(held.1.starts_with("Undone, but done.txt still holds the task: "), "{}", held.1);
     assert!(held.0);
     assert!(!wrote);
-    assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    assert_eq!(told(&app), Some(Notice::NothingToRedo));
     assert_eq!(done.matches("one").count(), 1);
 }

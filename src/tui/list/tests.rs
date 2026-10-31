@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app, app_of, history_of, key, lines, moved, popup, press, shown};
+use super::super::tests::{TODAY, app, app_of, history_of, key, lines, moved, popup, press, said, shown, told};
 use super::super::*;
 
 #[test]
@@ -41,7 +41,7 @@ fn h_swaps_the_list_for_done_txt_from_its_last_line_without_groups_and_h_swaps_b
     assert!(app.groups().is_empty());
     assert_eq!(app.selected_task().map(Todo::to_line).as_deref(), Some("kept as written"));
     assert!(!press(&mut app, "zMzRzaj"));
-    assert_eq!((app.cursor, app.message.as_deref()), (1, None));
+    assert_eq!((app.cursor, told(&app)), (1, None));
 
     assert!(!press(&mut app, "H"));
     assert_eq!(shown(&app), ["(A) one"]);
@@ -93,7 +93,7 @@ fn the_history_refuses_every_key_that_writes() {
         let wrote = keys.iter().fold(false, |wrote, key| app.handle_key(*key, TODAY) | wrote);
 
         assert!(!wrote, "{keys:?}");
-        assert_eq!((app.message.as_deref(), app.refused), (Some("history is read-only"), true), "{keys:?}");
+        assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::HistoryReadOnly), true), "{keys:?}");
         assert!(matches!(app.focus, Focus::List), "{keys:?}");
         assert_eq!(lines(&app), ["two"], "{keys:?}");
         assert_eq!(moved(&app), ["+x 2026-09-26 one"], "{keys:?}");
@@ -146,7 +146,7 @@ fn a_key_after_p_other_than_a_to_e_or_space_says_so_and_is_swallowed() {
     let enter = KeyEvent::from(KeyCode::Enter);
 
     assert!(!press(&mut app, "pj"));
-    assert_eq!(app.message.as_deref(), Some("priority is a to e, or space"));
+    assert_eq!(told(&app), Some(Notice::NotPriority));
     assert_eq!(app.cursor, 0);
     press(&mut app, "pq");
     assert!(!app.quit);
@@ -154,16 +154,16 @@ fn a_key_after_p_other_than_a_to_e_or_space_says_so_and_is_swallowed() {
     app.handle_key(enter, TODAY);
     assert!(matches!(app.focus, Focus::List));
     press(&mut app, "j");
-    assert_eq!((app.message.as_deref(), app.cursor), (None, 1));
+    assert_eq!(app.cursor, 1);
 
     app.handle_key(enter, TODAY);
     press(&mut app, "pA");
-    assert_eq!(app.message.as_deref(), Some("priority is a to e, or space"));
+    assert_eq!(told(&app), Some(Notice::NotPriority));
     press(&mut app, "p");
     app.handle_key(enter, TODAY);
     assert_eq!(popup(&app).editor.text, "two");
     press(&mut app, "pa");
-    assert_eq!((popup(&app).editor.text.as_str(), app.message.as_deref()), ("(A) two", None));
+    assert_eq!(popup(&app).editor.text, "(A) two");
 }
 
 #[test]
@@ -230,7 +230,7 @@ fn a_control_key_in_the_list_is_not_its_letter() {
 
     press(&mut app, "p");
     assert!(!app.handle_key(control('a'), TODAY));
-    assert_eq!(app.message.as_deref(), Some(NOT_PRIORITY));
+    assert_eq!(told(&app), Some(Notice::NotPriority));
 
     press(&mut app, "odue:");
     app.handle_key(control('h'), TODAY);
@@ -248,7 +248,7 @@ fn r_in_the_history_reopens_the_task_under_the_cursor_as_todo_reopen_does_and_do
 
     assert_eq!(lines(&app), ["one", "2026-09-01 mid"]);
     assert_eq!(shown(&app), ["x 2026-09-26 new", "x 2026-09-20 old"]);
-    assert_eq!((app.cursor, app.message.as_deref(), app.refused), (1, Some("reopened"), false));
+    assert_eq!((app.cursor, told(&app), app.refusal_shown()), (1, Some(Notice::Reopened), false));
 }
 
 #[test]
@@ -257,8 +257,8 @@ fn r_refuses_a_line_todo_reopen_refuses_in_its_words_with_its_number() {
 
     assert!(!press(&mut app, "Hjr"));
 
-    let refusal = "task 2 cannot be reopened: its text starts with x";
-    assert_eq!((app.message.as_deref(), app.refused), (Some(refusal), true));
+    let refusal = "Task 2 cannot be reopened: its text starts with x";
+    assert_eq!((said(&app).as_deref(), app.refusal_shown()), (Some(refusal), true));
     assert_eq!((lines(&app), app.history.len(), moved(&app).len()), (vec!["one".to_string()], 3, 0));
 }
 
@@ -267,7 +267,7 @@ fn yy_leaves_the_line_of_the_task_under_the_cursor_to_copy() {
     let mut app = app_of(&["one", "(B) 2026-09-01 two +p @c k:v"]);
     assert!(!press(&mut app, "yy"));
     assert_eq!(app.copy.as_deref(), Some("(B) 2026-09-01 two +p @c k:v"));
-    assert_eq!(app.message, None);
+    assert_eq!(told(&app), None);
 }
 
 #[test]
@@ -275,7 +275,7 @@ fn yy_on_a_folded_group_copies_nothing_and_says_so() {
     let mut app = app_of(&["(A) one"]);
     press(&mut app, "zMyy");
     assert_eq!(app.copy, None);
-    assert_eq!((app.message.as_deref(), app.refused), (Some("no task under the cursor"), true));
+    assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::NoTaskUnderCursor), true));
 }
 
 #[test]
@@ -283,12 +283,12 @@ fn yy_in_the_history_copies_the_line_of_done_txt_without_refusing() {
     let mut app = history_of(&["one"], &["x 2026-09-25 old"]);
     press(&mut app, "Hyy");
     assert_eq!(app.copy.as_deref(), Some("x 2026-09-25 old"));
-    assert_eq!((app.message, app.refused), (None, false));
+    assert_eq!((told(&app), app.refusal_shown()), (None, false));
 }
 
 #[test]
 fn y_then_another_key_copies_nothing() {
     let mut app = app();
     press(&mut app, "yjyg");
-    assert_eq!((app.copy, app.message), (None, None));
+    assert_eq!((told(&app), app.copy), (None, None));
 }

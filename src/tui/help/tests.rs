@@ -1,4 +1,4 @@
-use super::super::tests::{app, app_of, key, popup, press, shown};
+use super::super::tests::{app, app_of, key, popup, press, shown, told};
 use super::super::*;
 
 fn scroll(app: &App) -> u16 {
@@ -57,7 +57,7 @@ fn esc_enter_question_mark_and_q_each_close_the_help_with_no_other_effect() {
         press(&mut app, "?");
         key(&mut app, code, KeyModifiers::NONE);
         assert!(matches!(app.focus, Focus::List), "{code:?}");
-        assert!(!app.quit && app.moves.is_empty() && app.message.is_none(), "{code:?}");
+        assert!(!app.quit && app.moves.is_empty() && told(&app).is_none(), "{code:?}");
         assert_eq!(shown(&app), ["one", "two", "three"]);
     }
 }

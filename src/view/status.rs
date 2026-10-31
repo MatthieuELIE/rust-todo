@@ -5,10 +5,11 @@ use ratatui::text::{Line, Span};
 use ratatui::widgets::Paragraph;
 
 use super::style::{mode_block, tag_style};
+use super::toast::toast_span;
 use crate::editor::Mode;
 use crate::tui::{App, Focus};
 
-/// Draws the status bar: mode block and active filters on the left, the message centred, the keys of a command under way and `? help` on the right.
+/// Draws the status bar: mode block and active filters on the left, or the toast in their place, the keys of a command under way and `? help` on the right.
 pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     let theme = &app.theme;
     let mode = match &app.focus {
@@ -29,21 +30,22 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         [app.filter.clone(), search].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
     let mut status = Line::from_iter([mode_block(theme, mode, true), " ".into()]);
-    for (i, word) in filters.split(' ').enumerate() {
-        status.extend([
-            if i > 0 { " " } else { "" }.into(),
-            Span::styled(word.to_string(), tag_style(theme, word)),
-        ]);
-    }
-    frame.render_widget(Paragraph::new(status), area);
-    if let Some(message) = app.message.as_deref() {
-        let colour = if app.refused { theme.alert } else { theme.accent };
-        frame.render_widget(Paragraph::new(message.to_string().fg(colour)).centered(), area);
-    }
     let mut right = Line::from_iter([app.pending().fg(theme.accent), " ".into()]);
     if !matches!(mode, "INSERT" | "SEARCH" | "HELP") {
         right.extend(["?".bold(), " help ".fg(theme.tertiary)]);
     }
+    if let Some(toast) = app.toast.as_ref().filter(|_| !matches!(app.focus, Focus::Search)) {
+        let room = (area.width as usize).saturating_sub(status.width() + right.width() + 1);
+        status.push_span(toast_span(theme, app.icons, toast, room));
+    } else {
+        for (i, word) in filters.split(' ').enumerate() {
+            status.extend([
+                if i > 0 { " " } else { "" }.into(),
+                Span::styled(word.to_string(), tag_style(theme, word)),
+            ]);
+        }
+    }
+    frame.render_widget(Paragraph::new(status), area);
     frame.render_widget(Paragraph::new(right).right_aligned(), area);
 }
 

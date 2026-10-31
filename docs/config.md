@@ -44,11 +44,12 @@ Pick one of the `catppuccin-` themes there.
 
 ### Icons
 
-`icons = true` shows six [Nerd Font](https://www.nerdfonts.com) icons, each before its word and followed by a space, in the word's own style:
+`icons = true` shows nine [Nerd Font](https://www.nerdfonts.com) icons, each before its word and followed by a space, in the word's own style:
 
 - the `PROJECTS` and `CONTEXTS` headers of the panel;
 - its `All tasks`, `Due` and `Waiting` entries;
-- the `DETAILS` title.
+- the `DETAILS` title;
+- a toast in the status bar: a check mark for a success, an `i` for an information and a cross for a refusal.
 
 It needs a Nerd Font in the terminal; without one the icons show as empty boxes.
 The key does not depend on `name` or on `NO_COLOR`: it works with every theme and with no colour.

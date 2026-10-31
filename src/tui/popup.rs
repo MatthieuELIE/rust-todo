@@ -73,11 +73,11 @@ impl App {
         match outcome {
             Outcome::Continue => false,
             Outcome::NotPriority => {
-                self.refuse(NOT_PRIORITY);
+                self.notify(Notice::NotPriority);
                 false
             }
-            Outcome::Message(message) => {
-                self.message = Some(message.to_string());
+            Outcome::Notice(notice) => {
+                self.notify(notice);
                 false
             }
             outcome => self.close_popup(outcome, today),
@@ -89,13 +89,18 @@ impl App {
         let Focus::Popup(popup) = std::mem::replace(&mut self.focus, Focus::List) else {
             unreachable!("the popup is open");
         };
+        let earlier = self.toast.take();
         let write = match (outcome, &popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
             (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
             _ => false,
         };
-        if self.refused {
+        if self.refusal_shown() {
             self.focus = Focus::Popup(popup);
+        }
+        let earlier_refusal = earlier.as_ref().is_some_and(|toast| toast.notice.kind() == Kind::Refusal);
+        if self.toast.is_none() && !earlier_refusal {
+            self.toast = earlier;
         }
         write
     }

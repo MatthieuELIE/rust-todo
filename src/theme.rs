@@ -33,6 +33,8 @@ pub struct Theme {
     pub(crate) context: Color,
     /// A due date past, or something refused.
     pub(crate) alert: Color,
+    /// Something done, told by a toast.
+    pub(crate) success: Color,
     /// A due date on the day.
     pub(crate) due_today: Color,
     /// Priorities A to E.
@@ -57,6 +59,7 @@ impl Theme {
         project: Color::Rgb(0xcb, 0xa6, 0xf7),
         context: Color::Rgb(0x94, 0xe2, 0xd5),
         alert: Color::Rgb(0xf3, 0x8b, 0xa8),
+        success: Color::Rgb(0xa6, 0xe3, 0xa1),
         due_today: Color::Rgb(0xf9, 0xe2, 0xaf),
         priorities: [
             Color::Rgb(0xf5, 0xc2, 0xe7),
@@ -84,6 +87,7 @@ impl Theme {
         project: Color::Rgb(0x88, 0x39, 0xef),
         context: Color::Rgb(0x17, 0x92, 0x99),
         alert: Color::Rgb(0xd2, 0x0f, 0x39),
+        success: Color::Rgb(0x40, 0xa0, 0x2b),
         due_today: Color::Rgb(0xdf, 0x8e, 0x1d),
         priorities: [
             Color::Rgb(0xea, 0x76, 0xcb),
@@ -111,6 +115,7 @@ impl Theme {
         project: Color::Rgb(0xca, 0x9e, 0xe6),
         context: Color::Rgb(0x81, 0xc8, 0xbe),
         alert: Color::Rgb(0xe7, 0x82, 0x84),
+        success: Color::Rgb(0xa6, 0xd1, 0x89),
         due_today: Color::Rgb(0xe5, 0xc8, 0x90),
         priorities: [
             Color::Rgb(0xf4, 0xb8, 0xe4),
@@ -138,6 +143,7 @@ impl Theme {
         project: Color::Rgb(0xc6, 0xa0, 0xf6),
         context: Color::Rgb(0x8b, 0xd5, 0xca),
         alert: Color::Rgb(0xed, 0x87, 0x96),
+        success: Color::Rgb(0xa6, 0xda, 0x95),
         due_today: Color::Rgb(0xee, 0xd4, 0x9f),
         priorities: [
             Color::Rgb(0xf5, 0xbd, 0xe6),
@@ -165,6 +171,7 @@ impl Theme {
         project: Color::Reset,
         context: Color::Reset,
         alert: Color::Reset,
+        success: Color::Reset,
         due_today: Color::Reset,
         priorities: [Color::Reset; 5],
     };
@@ -186,6 +193,7 @@ impl Theme {
         project: Color::Magenta,
         context: Color::Cyan,
         alert: Color::Red,
+        success: Color::Green,
         due_today: Color::Yellow,
         priorities: [Color::Green; 5],
     };

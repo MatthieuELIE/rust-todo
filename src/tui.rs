@@ -2,6 +2,7 @@ use std::cell::Cell;
 use std::cmp::Reverse;
 use std::io;
 use std::path::Path;
+use std::time::Instant;
 
 use ratatui::crossterm::cursor::SetCursorStyle;
 use ratatui::crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
@@ -11,12 +12,10 @@ use crate::editor::{Editor, Mode, Outcome};
 use crate::filter::list;
 use crate::repository;
 use crate::theme::Theme;
+use crate::toast::{DURATION, Kind, Notice, Toast};
 use crate::todo::{DUE, Todo};
 
 const MAX_UNDO: usize = 100;
-
-/// Said when the key after `p` is not a priority.
-const NOT_PRIORITY: &str = "priority is a to e, or space";
 
 /// Where the keys go.
 #[derive(Default)]
@@ -92,10 +91,10 @@ pub struct App {
     pending: Option<char>,
     /// Set once the user asked to leave.
     pub quit: bool,
-    /// Last message for the status bar, cleared by the next key.
-    pub message: Option<String>,
-    /// Whether the message tells of something refused rather than done.
-    pub refused: bool,
+    /// The instant of the current turn of the loop, brought by `tick`; a toast started without it counts from the clock.
+    pub now: Option<Instant>,
+    /// What the status bar says, taken down by `tick` once its time is up.
+    pub toast: Option<Toast>,
     /// Line of the task `yy` asked to copy, taken by the loop of the list.
     pub copy: Option<String>,
     /// Where the keys go.
@@ -185,8 +184,6 @@ impl App {
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
     fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
         let pending = self.pending.take();
-        self.message = None;
-        self.refused = false;
         if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
             self.quit = true;
             return false;
@@ -196,7 +193,7 @@ impl App {
             && key.code != KeyCode::Char('r')
         {
             if pending == Some('p') {
-                self.refuse(NOT_PRIORITY);
+                self.notify(Notice::NotPriority);
             }
             return false;
         }
@@ -220,10 +217,26 @@ impl App {
         write
     }
 
-    /// Leaves `message` in the status bar as a refusal.
-    pub fn refuse(&mut self, message: &str) {
-        self.message = Some(message.to_string());
-        self.refused = true;
+    /// Shows `notice` in the status bar for three seconds, in place of the toast already there.
+    pub fn notify(&mut self, notice: Notice) {
+        let now = self.now.unwrap_or_else(Instant::now);
+        self.toast = Some(Toast {
+            notice,
+            until: now + DURATION,
+        });
+    }
+
+    /// Notes `now` as the instant of the turn and takes the toast down when its time is up.
+    pub fn tick(&mut self, now: Instant) {
+        self.now = Some(now);
+        if self.toast.as_ref().is_some_and(|toast| toast.expired(now)) {
+            self.toast = None;
+        }
+    }
+
+    /// Whether the toast shown tells of a refusal.
+    fn refusal_shown(&self) -> bool {
+        self.toast.as_ref().is_some_and(|toast| toast.notice.kind() == Kind::Refusal)
     }
 }
 

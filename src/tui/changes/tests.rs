@@ -1,4 +1,6 @@
-use super::super::tests::{app, app_of, lines, moved, press, redo};
+use super::super::tests::{app, app_of, lines, moved, press, redo, told};
+
+use crate::toast::Notice;
 
 #[test]
 fn u_takes_the_completed_task_back_from_done_txt_and_ctrl_r_sends_it_again() {
@@ -35,11 +37,11 @@ fn u_undoes_the_last_hundred_changes_then_has_nothing_to_undo() {
     }
     for _ in 0..100 {
         press(&mut app, "u");
-        assert_eq!(app.message.as_deref(), Some("undone"));
+        assert_eq!(told(&app), Some(Notice::ChangeUndone));
     }
     press(&mut app, "u");
 
-    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!(told(&app), Some(Notice::NothingToUndo));
     assert_eq!((lines(&app).len(), lines(&app)[0].as_str()), (100, "task 1"));
 }
 
@@ -51,7 +53,7 @@ fn u_brings_back_a_completed_task_with_its_priority() {
     assert!(press(&mut app, "u"));
 
     assert_eq!(lines(&app), ["(A) one", "two"]);
-    assert_eq!(app.message.as_deref(), Some("undone"));
+    assert_eq!(told(&app), Some(Notice::ChangeUndone));
 }
 
 #[test]
@@ -65,7 +67,7 @@ fn u_steps_back_through_every_change_and_ctrl_r_forward_again() {
 
     assert!(redo(&mut app));
     assert_eq!(lines(&app), ["two", "three"]);
-    assert_eq!(app.message.as_deref(), Some("redone"));
+    assert_eq!(told(&app), Some(Notice::ChangeRedone));
 }
 
 #[test]
@@ -75,7 +77,7 @@ fn a_change_after_u_leaves_nothing_to_redo() {
     press(&mut app, "xux");
 
     assert!(!redo(&mut app));
-    assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    assert_eq!(told(&app), Some(Notice::NothingToRedo));
 }
 
 #[test]
@@ -83,12 +85,12 @@ fn u_and_ctrl_r_with_no_history_write_nothing_and_say_so() {
     let mut app = app();
 
     assert!(!press(&mut app, "u"));
-    assert_eq!(app.message.as_deref(), Some("nothing to undo"));
+    assert_eq!(told(&app), Some(Notice::NothingToUndo));
     assert!(press(&mut app, "x"));
     assert!(press(&mut app, "u"));
     assert!(!press(&mut app, "r"));
     assert_eq!(lines(&app), ["one", "two", "three"]);
     press(&mut app, "x");
     assert!(!redo(&mut app));
-    assert_eq!(app.message.as_deref(), Some("nothing to redo"));
+    assert_eq!(told(&app), Some(Notice::NothingToRedo));
 }

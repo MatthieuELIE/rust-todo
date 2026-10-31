@@ -1,4 +1,4 @@
-use super::super::tests::{MOCHA, TODAY, app_of, render, render_in, rows};
+use super::super::tests::{MOCHA, TODAY, app_of, render_in, rows};
 use super::*;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::style::Modifier;

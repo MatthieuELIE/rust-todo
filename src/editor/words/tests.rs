@@ -41,6 +41,7 @@ fn e_goes_to_the_end_of_the_word_or_of_the_next_one_when_already_there() {
     assert_eq!(stops(LINE, 0, 'e', 4), [1, 2, 7, 8]);
     assert_eq!(stops(LINE, 15, 'e', 3), [18, 20, 24]);
     assert_eq!(stops(LINE, 38, 'e', 2), [39, 39]);
+    assert_eq!(stops("Appeler  ", 6, 'e', 1), [6]);
     assert_eq!(stops(LINE, 15, 'E', 3), [18, 24, 39]);
 }
 
@@ -57,6 +58,7 @@ fn iw_is_the_run_of_letters_punctuation_or_blanks_under_the_cursor_and_i_capital
     assert_eq!(after(TAGGED, 11, "ciWx"), ("Appeler x due:2026-10-15".to_string(), 9));
     assert_eq!(after(TAGGED, 26, "diw"), ("Appeler +banque due:2026--15".to_string(), 25));
     assert_eq!(after(TAGGED, 8, "diw"), ("Appeler banque due:2026-10-15".to_string(), 8));
+    assert_eq!(after(TAGGED, 3, "diw"), (" +banque due:2026-10-15".to_string(), 0));
     assert_eq!(after("Appeler  +banque", 7, "diw"), ("Appeler+banque".to_string(), 7));
     assert_eq!(after("", 0, "diw"), (String::new(), 0));
 }
@@ -70,4 +72,11 @@ fn aw_takes_the_blanks_after_the_word_too_or_those_before_it_when_none_follow() 
     assert_eq!(after("Appeler  +banque", 7, "daw"), ("Appelerbanque".to_string(), 7));
     assert_eq!(after("Appeler  +banque", 8, "caWx"), ("Appelerx".to_string(), 8));
     assert_eq!(after("Appeler  ", 8, "daw"), ("Appeler".to_string(), 6));
+    assert_eq!(after("Appeler", 2, "daw"), (String::new(), 0));
+}
+
+#[test]
+fn word_motions_on_an_empty_line_keep_the_cursor_at_0() {
+    assert_eq!(stops("", 0, 'w', 1), [0]);
+    assert_eq!(stops("", 0, 'b', 1), [0]);
 }

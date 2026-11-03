@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- `todo` needs Rust 1.89 or later to build; nothing in the commands or the list changes.
+
 ## [0.8.0] - 2026-10-31
 
 ### Changed

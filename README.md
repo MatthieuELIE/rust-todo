@@ -6,7 +6,7 @@ A small editor for a [todo.txt](https://github.com/todotxt/todo.txt) file: a com
 
 ## Install
 
-It needs Rust 1.88 or later.
+It needs Rust 1.89 or later.
 
 ```sh
 cargo install --locked --git https://github.com/MatthieuELIE/rust-todo --tag v0.8.0

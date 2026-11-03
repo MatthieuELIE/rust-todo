@@ -55,6 +55,10 @@ fn cw_changes_up_to_the_end_of_the_word_keeping_the_spaces_after_it() {
     let mut ed = normal("Call  +bank", 4);
     keys(&mut ed, "cw");
     assert_eq!(state(&ed), ("Call+bank", 4));
+
+    let mut ed = normal("Call +bank", 5);
+    keys(&mut ed, "cw");
+    assert_eq!(state(&ed), ("Call bank", 5));
 }
 
 #[test]
@@ -124,6 +128,12 @@ fn a_key_that_is_not_w_after_di_or_da_cancels_the_command_and_does_nothing() {
     assert_eq!(ed.handle_key(KeyEvent::from(KeyCode::Esc)), Outcome::Continue);
     keys(&mut ed, "x");
     assert_eq!(state(&ed), ("Appeler +baque due:2026-10-15", 11));
+
+    let mut ed = normal("a x b x", 0);
+    keys(&mut ed, "fxdifdi;");
+    assert_eq!(state(&ed), ("a x b x", 2));
+    assert_eq!(ed.mode, Mode::Normal);
+    assert_eq!(ed.pending(), "");
 }
 
 #[test]
@@ -172,6 +182,10 @@ fn p_then_a_letter_writes_or_replaces_the_priority_keeping_the_cursor_on_its_cha
     assert_eq!(state(&ed), ("(E) 2026-09-26 Call +bank due:2026-10-01", 1));
     keys(&mut ed, "p ");
     assert_eq!(state(&ed), ("2026-09-26 Call +bank due:2026-10-01", 0));
+
+    let mut ed = normal("Call", 0);
+    keys(&mut ed, "pa");
+    assert_eq!(state(&ed), ("(A) Call", 4));
 }
 
 #[test]

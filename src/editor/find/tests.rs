@@ -81,6 +81,18 @@ fn semicolon_repeats_and_comma_reverses() {
     assert_eq!(ed.cursor, 6);
     keys(&mut ed, ",");
     assert_eq!(ed.cursor, 2);
+
+    let mut ed = normal("a x b x c", 4);
+    keys(&mut ed, "Fx,");
+    assert_eq!(ed.cursor, 6);
+
+    let mut ed = normal("a x b x c", 4);
+    keys(&mut ed, "tx,");
+    assert_eq!(ed.cursor, 3);
+
+    let mut ed = normal("a xx", 0);
+    keys(&mut ed, "fx;");
+    assert_eq!(ed.cursor, 3);
 }
 
 #[test]

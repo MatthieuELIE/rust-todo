@@ -14,6 +14,8 @@ fn a_task_made_only_of_non_text_words_is_refused() {
         "2026-10-09",
         "",
         "+work (B) 2026-10-09 due:",
+        "due-date:x",
+        "my_key:x",
     ] {
         assert!(Todo::from_input(line).unwrap().check_text().is_err(), "{line}");
     }
@@ -183,6 +185,16 @@ fn reopening_a_task_clears_its_completion_but_not_the_dropped_priority() {
     task.reopen().unwrap();
 
     assert_eq!(task.to_line(), "2026-08-01 Lorem ipsum");
+}
+
+#[test]
+fn a_reopened_task_completed_again_is_dated_on_the_new_day() {
+    let mut task = Todo::from_line("x 2026-09-01 Pay rent");
+
+    task.reopen().unwrap();
+    task.complete(date!(2026 - 10 - 01));
+
+    assert_eq!(task.to_line(), "x 2026-10-01 Pay rent");
 }
 
 #[test]

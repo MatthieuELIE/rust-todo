@@ -116,10 +116,10 @@ mod tests {
     #[test]
     fn read_refuses_a_file_over_ten_mebibytes_and_accepts_one_of_exactly_ten() {
         let path = temp_path("limit");
-        std::fs::write(&path, vec![b'a'; MAX_BYTES as usize]).unwrap();
-        assert_eq!(read(&path).unwrap().len(), MAX_BYTES as usize);
+        std::fs::write(&path, vec![b'a'; 10 * 1024 * 1024]).unwrap();
+        assert_eq!(read(&path).unwrap().len(), 10 * 1024 * 1024);
 
-        std::fs::write(&path, vec![b'a'; MAX_BYTES as usize + 1]).unwrap();
+        std::fs::write(&path, vec![b'a'; 10 * 1024 * 1024 + 1]).unwrap();
         assert_eq!(read(&path).unwrap_err().to_string(), "larger than 10 MiB");
     }
 
@@ -263,5 +263,13 @@ mod tests {
         std::fs::write(&path, b"Lorem ipsum\n\xff\n").unwrap();
 
         assert!(load(&path).is_err());
+    }
+
+    #[test]
+    fn read_fails_on_a_path_it_cannot_open_for_another_reason_than_absence() {
+        let file = temp_path("not-a-folder");
+        std::fs::write(&file, "Lorem ipsum\n").unwrap();
+
+        assert_eq!(read(&file.join("todo.txt")).unwrap_err().kind(), io::ErrorKind::NotADirectory);
     }
 }

@@ -122,6 +122,18 @@ mod tests {
     }
 
     #[test]
+    fn a_file_that_cannot_be_read_is_refused_with_its_path() {
+        let path = std::env::temp_dir()
+            .join(format!("todo-config-{}-folder", std::process::id()))
+            .join("config.toml");
+        std::fs::create_dir_all(&path).unwrap();
+
+        let message = theme(&path, false).err().unwrap();
+
+        assert!(message.starts_with(&format!("could not read {}: ", path.display())), "{message:?}");
+    }
+
+    #[test]
     fn the_terminal_name_is_read() {
         assert!(theme(&written("terminal", "[theme]\nname = \"terminal\"\n"), false).is_ok());
     }

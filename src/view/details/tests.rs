@@ -93,6 +93,21 @@ fn a_text_too_long_for_a_low_screen_leaves_the_list_five_rows_and_ends_its_last_
 }
 
 #[test]
+fn a_text_too_long_for_a_screen_with_no_row_to_spare_keeps_the_card_of_seven_rows_with_its_text_on_one() {
+    let text = "A rather long description that will not fit here at all because it is far too long for the card";
+
+    let rows = list_rows(&render_in(&app_of(&[text]), 75, 16));
+
+    assert!(rows[8].starts_with(" DETAILS"), "{}", rows[8]);
+    assert!(
+        rows[10].starts_with(" Text      A rather long") && rows[10].ends_with('…'),
+        "{}",
+        rows[10]
+    );
+    assert!(rows[11].starts_with(" Created"), "{}", rows[11]);
+}
+
+#[test]
 fn the_details_stay_empty_when_the_cursor_is_on_no_task() {
     let mut app = app_of(&["(A) a"]);
     fold_all(&mut app);
@@ -121,6 +136,17 @@ fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_valu
     assert_eq!(zone[2], format!("{:<25} Due       2026-10-15", " Created   2026-09-01"));
     assert_eq!(zone[4], " wait:figma  rec:1w");
     assert_eq!((buffer[(25, 15)].fg, buffer[(30, 15)].fg), (MOCHA.tertiary, MOCHA.primary));
+}
+
+#[test]
+fn a_detail_row_as_wide_as_the_card_is_whole_and_a_wider_one_ends_on_an_ellipsis_inside_the_card() {
+    let fits = format!("Ship it wait:{}", "a".repeat(44));
+    let over = format!("Ship it wait:{}", "a".repeat(45));
+
+    assert_eq!(list_rows(&render_in(&app_of(&[&fits]), 75, 18))[15], format!(" wait:{}", "a".repeat(44)));
+    let buffer = render_in(&app_of(&[&over]), 75, 18);
+    assert_eq!(list_rows(&buffer)[15], format!(" wait:{}…", "a".repeat(43)));
+    assert_eq!(rows(&buffer)[15].chars().last(), Some('│'));
 }
 
 #[test]

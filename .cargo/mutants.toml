@@ -8,4 +8,12 @@ exclude_re = [
     'src/editor/normal\.rs:19:13: delete match arm \(Some\(_\), _\) in Editor::normal',
     # Without group or other bits, the extra set_permissions(mode & 0o700) can drop only setuid, setgid and sticky: the write clears the first two, the last does nothing on a regular file.
     'src/repository\.rs:81:13: replace & with [|^] in append',
+    # REVERSED and HIDDEN are disjoint flags: `^` gives the same set as `|`.
+    'src/view/popup\.rs:44:69: replace \| with \^ in draw_popup',
+    # `today` only changes the colours of the words, not their width, so the text wraps onto as many rows.
+    'src/view/details\.rs:21:31: delete ! in details_height',
+    # The help opens from the popup only with the date picker open or in normal mode, so no popup in insert mode is under it.
+    'src/view/help\.rs:147:32: replace match guard popup\.editor\.mode == Mode::Insert with false in opened_from',
+    # A priority is a letter from A to E, so the index is at most 4 and the bound never applies.
+    'src/view/style\.rs:77:96: replace - with [+/] in priority',
 ]

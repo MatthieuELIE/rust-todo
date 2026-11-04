@@ -1,4 +1,5 @@
-use super::super::tests::{MOCHA, app_of, render_in, rows};
+use super::super::tests::{MOCHA, TODAY, add_popup, app_of, render_in, rows};
+use crate::editor::Mode;
 use crate::tui::{App, Focus};
 use ratatui::buffer::Buffer;
 use ratatui::style::Modifier;
@@ -87,6 +88,29 @@ fn rows_of(app: &App, width: u16, height: u16) -> Vec<String> {
     rows(&render_in(app, width, height))
 }
 
+fn box_width(rows: &[String]) -> usize {
+    let top = rows.iter().find(|row| row.contains("╭ HELP ─")).expect("box");
+    let from = top.split("╭ HELP ─").next().expect("row").chars().count();
+    top.chars().skip(from).position(|c| c == '╮').expect("corner") + 1
+}
+
+#[test]
+fn the_help_needs_92_columns_for_its_two_columns() {
+    let app = help_app(Focus::List);
+
+    assert_eq!(box_width(&rows_of(&app, 91, 36)), 48);
+    assert_eq!(box_width(&rows_of(&app, 92, 36)), 92);
+}
+
+#[test]
+fn the_help_box_holds_its_lines_and_padding_on_a_screen_taller_than_them() {
+    let rows = rows_of(&help_app(Focus::List), 109, 40);
+    let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
+    let bottom = rows.iter().position(|row| row.contains("─ esc close ╯")).expect("bottom");
+
+    assert_eq!(bottom - top + 1, 30 + 4);
+}
+
 #[test]
 fn the_help_lights_the_mode_it_was_opened_from_in_accent_and_the_others_in_structure_in_mocha() {
     let buffer = render_in(&help_app(Focus::Panel), 109, 36);
@@ -105,6 +129,27 @@ fn the_help_lights_the_mode_it_was_opened_from_in_accent_and_the_others_in_struc
         assert_eq!((cell.fg, cell.bg), (MOCHA.primary, MOCHA.structure), "{name}");
         assert!(cell.modifier.contains(Modifier::BOLD), "{name}");
     }
+}
+
+#[test]
+fn the_help_opened_from_the_popup_lights_normal_or_date_when_the_date_picker_is_open() {
+    let lit = |picker: bool| {
+        let mut app = app_of(&["Pay +rent"]);
+        add_popup(&mut app, "Ship due:", 0);
+        if let Focus::Popup(popup) = &mut app.focus {
+            popup.editor.mode = Mode::Normal;
+            popup.picker = picker.then_some(TODAY);
+        }
+        let buffer = render_in(&help_app(std::mem::take(&mut app.focus)), 109, 36);
+        let rows = rows(&buffer);
+        ["INSERT", "NORMAL", "DATE"]
+            .into_iter()
+            .filter(|name| buffer[(57, header(&rows, 1, name).expect(name) as u16)].bg == MOCHA.accent)
+            .collect::<Vec<_>>()
+    };
+
+    assert_eq!(lit(false), ["NORMAL"]);
+    assert_eq!(lit(true), ["DATE"]);
 }
 
 #[test]
@@ -167,6 +212,16 @@ fn the_help_has_a_scrollbar_in_its_right_margin_when_its_lines_overflow_the_box_
         .filter(|&y| buffer[(98, y)].symbol() == "▐" && buffer[(98, y)].fg == MOCHA.tertiary)
         .max();
     assert_eq!(thumb, Some(16));
+}
+
+#[test]
+fn the_help_scrollbar_thumb_is_the_share_of_the_lines_the_box_shows() {
+    let buffer = render_in(&help_app(Focus::List), 109, 25);
+    let thumb = (0..25)
+        .filter(|&y| buffer[(98, y)].symbol() == "▐" && buffer[(98, y)].fg == MOCHA.tertiary)
+        .count();
+
+    assert_eq!(thumb, 13);
 }
 
 #[test]

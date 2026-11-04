@@ -226,6 +226,21 @@ fn a_toast_shown_before_a_popup_closed_with_nothing_to_say_is_still_there_after_
 }
 
 #[test]
+fn a_refusal_shown_before_a_popup_closed_with_nothing_to_say_is_taken_down_with_it() {
+    let mut app = app();
+    let esc = KeyEvent::from(KeyCode::Esc);
+
+    press(&mut app, "o");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    assert!(app.refusal_shown());
+    app.handle_key(esc, TODAY);
+    app.handle_key(esc, TODAY);
+
+    assert!(!matches!(app.focus, Focus::Popup(_)));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
 fn esc_on_an_add_or_an_edit_whose_text_changed_says_the_changes_are_discarded() {
     let mut app = app_of(&["one"]);
     let esc = KeyEvent::from(KeyCode::Esc);

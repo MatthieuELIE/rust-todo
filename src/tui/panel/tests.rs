@@ -35,6 +35,17 @@ fn in_the_panel_j_and_k_filter_the_list_from_the_top_and_tab_goes_back_keeping_t
 }
 
 #[test]
+fn k_back_onto_all_tasks_drops_the_filter_and_shows_every_task() {
+    let mut app = app_of(&["Pay +rent", "Call +bank"]);
+
+    key(&mut app, KeyCode::Tab, KeyModifiers::NONE);
+    press(&mut app, "jk");
+
+    assert_eq!(app.filter, None);
+    assert_eq!(shown(&app), ["Pay +rent", "Call +bank"]);
+}
+
+#[test]
 fn the_panel_takes_the_arrows_stops_at_its_last_entry_and_enter_and_q_act_as_in_the_list() {
     let mut app = app_of(&["Pay +rent", "Call +bank"]);
 

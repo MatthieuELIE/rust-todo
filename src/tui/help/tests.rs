@@ -76,6 +76,28 @@ fn any_other_key_leaves_the_help_open_and_changes_nothing() {
 }
 
 #[test]
+fn a_key_with_ctrl_or_alt_neither_closes_nor_scrolls_the_help() {
+    for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+        let mut app = help_app();
+        press(&mut app, "?");
+        key(&mut app, KeyCode::Char('j'), modifiers);
+        key(&mut app, KeyCode::Char('q'), modifiers);
+        assert_eq!(scroll(&app), 0, "{modifiers:?}");
+    }
+}
+
+#[test]
+fn question_mark_with_ctrl_or_alt_in_the_popups_normal_mode_does_not_open_the_help() {
+    for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+        let mut app = app();
+        press(&mut app, "oBuy milk");
+        esc(&mut app);
+        key(&mut app, KeyCode::Char('?'), modifiers);
+        assert_eq!(popup(&app).editor.text, "Buy milk", "{modifiers:?}");
+    }
+}
+
+#[test]
 fn ctrl_c_quits_from_the_help() {
     let mut app = help_app();
     press(&mut app, "?");

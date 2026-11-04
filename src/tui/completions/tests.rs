@@ -1,4 +1,4 @@
-use super::super::tests::{app_of, history_of, key, names, popup, press, shown};
+use super::super::tests::{TODAY, app_of, history_of, key, names, popup, press, shown};
 use super::super::*;
 
 #[test]
@@ -126,4 +126,49 @@ fn names_used_as_often_are_listed_alphabetically_whatever_their_case() {
     press(&mut app, "o+");
 
     assert_eq!(names(&app), ["+apple 1", "+Bank 1"]);
+}
+
+#[test]
+fn up_and_ctrl_p_pick_the_name_above_the_one_picked() {
+    let mut app = app_of(&["Pay +aa", "Pay +ab", "Pay +ac"]);
+
+    press(&mut app, "o+a");
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Up, KeyModifiers::NONE);
+    assert_eq!(app.completions().1, 1);
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Char('p'), KeyModifiers::CONTROL);
+    assert_eq!(app.completions().1, 1);
+}
+
+#[test]
+fn arrows_ctrl_n_and_tab_with_no_name_to_complete_leave_the_text_as_typed() {
+    let mut app = app_of(&["Pay +bank"]);
+
+    press(&mut app, "oab");
+    for (code, modifiers) in [
+        (KeyCode::Down, KeyModifiers::NONE),
+        (KeyCode::Char('n'), KeyModifiers::CONTROL),
+        (KeyCode::Up, KeyModifiers::NONE),
+        (KeyCode::Tab, KeyModifiers::NONE),
+    ] {
+        key(&mut app, code, modifiers);
+    }
+
+    assert_eq!(popup(&app).editor.text, "ab");
+}
+
+#[test]
+fn the_pick_held_on_the_last_name_stays_on_it_when_a_reload_brings_one_after_it() {
+    let mut app = app_of(&["Pay +aa", "Pay +ab"]);
+    let mut text = "Pay +aa\nPay +ab\n".to_string();
+
+    press(&mut app, "o+a");
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    key(&mut app, KeyCode::Down, KeyModifiers::NONE);
+    app.turn(Ok("Pay +aa\nPay +ab\nPay +ac\n".to_string()), &mut text, None, TODAY);
+
+    assert_eq!(names(&app), ["+aa 1", "+ab 1", "+ac 1"]);
+    assert_eq!(app.completions().1, 1);
 }

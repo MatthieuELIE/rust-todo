@@ -88,6 +88,17 @@ fn capital_z_r_unfolds_back_onto_the_task_or_the_first_task_of_the_folded_group(
 }
 
 #[test]
+fn capital_m_capital_r_and_a_without_z_before_them_neither_fold_nor_unfold() {
+    let mut app = grouped();
+
+    press(&mut app, "Ma");
+    assert_eq!(app.rows().len(), 4);
+
+    press(&mut app, "zMR");
+    assert_eq!(app.rows().len(), 3);
+}
+
+#[test]
 fn z_followed_by_another_key_is_dropped_and_zm_without_groups_does_nothing() {
     let mut app = grouped();
     press(&mut app, "zj");

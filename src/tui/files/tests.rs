@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app, app_of, folder, key, lines, moved, names, press, redo, said, shown, told};
+use super::super::tests::{TODAY, app, app_of, folder, key, lines, moved, names, popup, press, redo, said, shown, told};
 use super::super::*;
 
 #[test]
@@ -236,6 +236,17 @@ fn a_failed_save_goes_back_to_what_the_file_holds_and_says_so() {
     app.saved(Ok("one\n".to_string()), &mut text, Ok(String::new()));
     assert_eq!(text, "one\n");
     assert_eq!(lines(&app), ["four"]);
+}
+
+#[test]
+fn a_turn_types_a_paste_into_the_popup_without_asking_to_save() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    press(&mut app, "o");
+
+    assert!(!app.turn(Ok(text.clone()), &mut text, Some(Event::Paste("call the bank".to_string())), TODAY));
+
+    assert_eq!(popup(&app).editor.text, "call the bank");
 }
 
 #[test]

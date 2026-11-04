@@ -16,4 +16,8 @@ exclude_re = [
     'src/view/help\.rs:147:32: replace match guard popup\.editor\.mode == Mode::Insert with false in opened_from',
     # A priority is a letter from A to E, so the index is at most 4 and the bound never applies.
     'src/view/style\.rs:77:96: replace - with [+/] in priority',
+    # CONTROL and ALT are disjoint flags: `^` gives the same set as `|`.
+    'src/tui\.rs:192:63: replace \| with \^ in App::apply',
+    'src/tui/help\.rs:17:65: replace \| with \^ in App::help_key',
+    'src/tui/popup\.rs:(32:64|40:69): replace \| with \^ in App::popup_key',
 ]

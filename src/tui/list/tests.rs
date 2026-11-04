@@ -106,6 +106,14 @@ fn the_history_refuses_every_key_that_writes() {
 }
 
 #[test]
+fn a_first_d_in_the_history_waits_for_the_second_without_refusing() {
+    let mut app = history_of(&["one"], &["x old"]);
+    press(&mut app, "Hd");
+
+    assert_eq!((told(&app), app.pending()), (None, "d".to_string()));
+}
+
+#[test]
 fn dd_removes_the_selected_task_and_a_d_followed_by_another_key_does_nothing() {
     let mut app = app();
 
@@ -225,6 +233,7 @@ fn a_control_key_in_the_list_is_not_its_letter() {
     assert!(!app.handle_key(control('u'), TODAY));
     assert!(!app.handle_key(control('x'), TODAY));
 
+    assert_eq!(told(&app), Some(Notice::Done));
     assert_eq!(shown(&app), ["two", "three"]);
     assert_eq!(app.todos.len(), 2);
 

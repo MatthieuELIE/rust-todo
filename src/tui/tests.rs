@@ -163,6 +163,17 @@ fn the_cursor_is_a_bar_while_typing_in_the_popup_and_a_block_otherwise() {
 }
 
 #[test]
+fn the_keys_pending_in_the_popup_are_those_of_its_editor() {
+    let mut app = app_of(&["one"]);
+
+    press(&mut app, "o");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    press(&mut app, "d");
+
+    assert_eq!(app.pending(), "d");
+}
+
+#[test]
 fn a_reload_cancels_an_edit_but_keeps_an_add_being_typed() {
     let mut app = app();
     let reread = || vec![Todo::from_line("one"), Todo::from_line("two")];

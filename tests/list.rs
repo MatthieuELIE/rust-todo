@@ -15,7 +15,8 @@ fn todo_list(terms: &[&str]) -> Output {
 
 #[test]
 fn a_file_over_ten_mebibytes_is_refused_with_its_limit_and_left_unchanged() {
-    let file = common::folder("too-big").join("todo.txt");
+    let folder = common::folder("too-big");
+    let file = folder.join("todo.txt");
     std::fs::write(&file, vec![b'a'; 10 * 1024 * 1024 + 1]).unwrap();
 
     let output = common::todo(&file, &["list"]);
@@ -24,6 +25,7 @@ fn a_file_over_ten_mebibytes_is_refused_with_its_limit_and_left_unchanged() {
     let message = format!("could not read {}: larger than 10 MiB\n", file.display());
     assert_eq!(String::from_utf8_lossy(&output.stderr), message);
     assert_eq!(std::fs::metadata(&file).unwrap().len(), 10 * 1024 * 1024 + 1);
+    std::fs::remove_dir_all(&folder).unwrap();
 }
 
 #[test]

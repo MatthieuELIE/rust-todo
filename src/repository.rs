@@ -121,6 +121,7 @@ mod tests {
 
         std::fs::write(&path, vec![b'a'; 10 * 1024 * 1024 + 1]).unwrap();
         assert_eq!(read(&path).unwrap_err().to_string(), "larger than 10 MiB");
+        std::fs::remove_file(&path).unwrap();
     }
 
     #[test]

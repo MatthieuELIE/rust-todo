@@ -6,7 +6,7 @@ use ratatui::backend::IntoCrossterm;
 use ratatui::text::Line;
 use time::Date;
 
-use crate::cli::Commands;
+use crate::cli::{Commands, Task};
 use crate::filter;
 use crate::repository;
 use crate::theme::Theme;
@@ -34,6 +34,23 @@ fn styled(line: &Line) -> String {
         .skip(1)
         .map(|span| span.style.into_crossterm().apply(clean(&span.content)).to_string())
         .collect()
+}
+
+/// The number of the one pending task `term` matches, as `list` matches it, or the message saying how many match.
+fn pending_match(todos: &[Todo], term: &str) -> Result<usize, String> {
+    if term.starts_with('-') {
+        return Err(format!("edit takes a term to match, not one to exclude: {term}"));
+    }
+    let numbers: Vec<usize> = filter::list(todos, &[term.to_owned()])
+        .into_iter()
+        .filter(|(_, todo)| !todo.done)
+        .map(|(number, _)| number)
+        .collect();
+    match numbers[..] {
+        [number] => Ok(number),
+        [] => Err(format!("no pending task matches {term}")),
+        _ => Err(format!("{} pending tasks match {term}", numbers.len())),
+    }
 }
 
 /// Runs `command` on the tasks of the file at `path`, writes what it changed and returns the exit code.
@@ -85,7 +102,11 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             }
         },
 
-        Commands::Remove { number } | Commands::Do { number } | Commands::Edit { number, .. } if !(1..=todos.len()).contains(&number) => {
+        Commands::Remove { number }
+        | Commands::Do { number }
+        | Commands::Edit {
+            task: Task::Number(number), ..
+        } if !(1..=todos.len()).contains(&number) => {
             eprintln!("no task numbered {number}");
             return ExitCode::FAILURE;
         }
@@ -104,32 +125,46 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             moved.push(todo);
         }
 
-        Commands::Edit { number, .. } if todos[number - 1].done => {
+        Commands::Edit {
+            task: Task::Number(number), ..
+        } if todos[number - 1].done => {
             eprintln!("task {number} is done");
             return ExitCode::FAILURE;
         }
 
-        Commands::Edit { number, text } => match Todo::from_input(&text) {
-            Ok(todo) if todo.done => {
-                eprintln!("cannot edit a task into a done one");
-                return ExitCode::FAILURE;
-            }
-            Ok(mut todo) => {
-                todo.created = todo.created.or(todos[number - 1].created);
-                if todo.to_line() == todos[number - 1].to_line() {
-                    return ExitCode::SUCCESS;
+        Commands::Edit { task, text } => {
+            let number = match task {
+                Task::Number(number) => number,
+                Task::Term(term) => match pending_match(&todos, &term) {
+                    Ok(number) => number,
+                    Err(message) => {
+                        eprintln!("{message}");
+                        return ExitCode::FAILURE;
+                    }
+                },
+            };
+            match Todo::from_input(&text) {
+                Ok(todo) if todo.done => {
+                    eprintln!("cannot edit a task into a done one");
+                    return ExitCode::FAILURE;
                 }
-                if let Err(e) = todo.check_text() {
+                Ok(mut todo) => {
+                    todo.created = todo.created.or(todos[number - 1].created);
+                    if todo.to_line() == todos[number - 1].to_line() {
+                        return ExitCode::SUCCESS;
+                    }
+                    if let Err(e) = todo.check_text() {
+                        eprintln!("{e}");
+                        return ExitCode::FAILURE;
+                    }
+                    todos[number - 1] = todo;
+                }
+                Err(e) => {
                     eprintln!("{e}");
                     return ExitCode::FAILURE;
                 }
-                todos[number - 1] = todo;
             }
-            Err(e) => {
-                eprintln!("{e}");
-                return ExitCode::FAILURE;
-            }
-        },
+        }
 
         Commands::Reopen { number } => {
             let text = match repository::read(&done_path) {

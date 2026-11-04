@@ -32,6 +32,9 @@ Messages go to stderr; what the commands print on stdout is described in [Comman
 | `no task numbered 9` | `do`, `edit` or `remove` was given a number that is not in the task file, or `reopen` one that is not in `done.txt` | 1 |
 | `task 2 is already done` | `do` was given the number of a done task still in the task file: `archive` moves it | 1 |
 | `task 2 is done` | `edit` was given the number of a done task | 1 |
+| `no pending task matches ticket:demo/01` | `edit` was given a term that no pending task contains | 1 |
+| `3 pending tasks match ticket:demo/0` | `edit` was given a term that more than one pending task contains | 1 |
+| `edit takes a term to match, not one to exclude: -foo` | `edit` was given a term starting with `-`, which `list` reads as one to exclude | 1 |
 | `cannot edit a task into a done one` | `edit` was given a line starting with `x `, the `x` and a space | 1 |
 | `nothing to archive` | `archive` found no done task in the file; nothing is written | 0 |
 | `the task file is done.txt itself: <path>` | `archive`, `do` or `reopen` was run on a task file that is `done.txt` itself, or a link to it | 1 |

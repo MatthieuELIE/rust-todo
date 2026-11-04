@@ -151,3 +151,72 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
         "(A) 2026-09-01 Call the @bank due:2026-10-09\nx 2026-09-03 2026-09-02 Pay rent\nBuy milk\n2026-10-01 Water the plants\n"
     );
 }
+
+#[test]
+fn edit_by_a_term_replaces_the_one_pending_task_it_matches_and_keeps_its_creation_date() {
+    let file = std::env::temp_dir().join(format!("todo-{}-edit-term.txt", std::process::id()));
+    std::fs::write(&file, "2026-09-01 Call the bank ticket:demo/01\n(B) 2026-09-02 Pay rent ticket:demo/02\n").unwrap();
+
+    let output = todo(&file, &["edit", "TICKET:demo/02", "(A) Pay the rent ticket:demo/02"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    assert_eq!(
+        text,
+        "2026-09-01 Call the bank ticket:demo/01\n(A) 2026-09-02 Pay the rent ticket:demo/02\n"
+    );
+}
+
+#[test]
+fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
+    let file = std::env::temp_dir().join(format!("todo-{}-edit-term-refused.txt", std::process::id()));
+    let before = "Call the bank ticket:demo/01\nPay rent ticket:demo/02\nx 2026-09-03 Water plants ticket:demo/03\n";
+    std::fs::write(&file, before).unwrap();
+
+    let refused = [
+        (
+            todo(&file, &["edit", "ticket:demo/09", "Lorem"]),
+            "no pending task matches ticket:demo/09\n",
+        ),
+        (todo(&file, &["edit", "ticket:demo/0", "Lorem"]), "2 pending tasks match ticket:demo/0\n"),
+        (
+            todo(&file, &["edit", "ticket:demo/03", "Lorem"]),
+            "no pending task matches ticket:demo/03\n",
+        ),
+    ];
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    for (output, error) in refused {
+        assert!(!output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), error);
+    }
+    assert_eq!(text, before);
+}
+
+#[test]
+fn edit_refuses_a_term_starting_with_a_dash_and_writes_nothing() {
+    let file = std::env::temp_dir().join(format!("todo-{}-edit-term-dash.txt", std::process::id()));
+    let before = "Call the bank ticket:demo/01\nx 2026-09-03 Pay rent ticket:demo/02\n";
+    std::fs::write(&file, before).unwrap();
+
+    let refused = [
+        (
+            todo(&file, &["edit", "-", "Lorem"]),
+            "edit takes a term to match, not one to exclude: -\n",
+        ),
+        (
+            todo(&file, &["edit", "--", "-ticket:demo/02", "Lorem"]),
+            "edit takes a term to match, not one to exclude: -ticket:demo/02\n",
+        ),
+    ];
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_file(&file).unwrap();
+    for (output, error) in refused {
+        assert!(!output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), error);
+    }
+    assert_eq!(text, before);
+}

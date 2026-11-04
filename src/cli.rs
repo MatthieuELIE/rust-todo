@@ -1,3 +1,5 @@
+use std::num::ParseIntError;
+
 use clap::{Parser, Subcommand};
 
 /// Minimal todo.txt editor.
@@ -50,10 +52,11 @@ pub enum Commands {
         number: usize,
     },
 
-    /// Replace a pending task by its number with a todo.txt line, keeping its creation date unless the line carries one
+    /// Replace a pending task, by its number or a term only it matches, with a todo.txt line, keeping its creation date unless the line carries one
     Edit {
-        /// Task number to edit
-        number: usize,
+        /// Task number to edit, or a case-insensitive term matching a single pending task
+        #[arg(value_parser = task)]
+        task: Task,
 
         /// The task's new line, optionally with priority and projects
         #[arg(allow_hyphen_values = true)]
@@ -68,6 +71,22 @@ pub enum Commands {
 
     /// Move the done tasks to the end of done.txt, next to the task file
     Archive,
+}
+
+/// The task a command names: by its number, or by a term.
+#[derive(Clone)]
+pub enum Task {
+    Number(usize),
+    Term(String),
+}
+
+/// An argument made only of digits as a number, any other as a term.
+fn task(arg: &str) -> Result<Task, ParseIntError> {
+    if arg.bytes().all(|byte| byte.is_ascii_digit()) {
+        return arg.parse().map(Task::Number);
+    }
+
+    Ok(Task::Term(arg.to_owned()))
 }
 
 #[cfg(test)]
@@ -91,8 +110,27 @@ mod tests {
         assert!(matches!(command(&["todo", "add", "-5 degrees"]), Commands::Add { text } if text == "-5 degrees"));
         assert!(matches!(
             command(&["todo", "edit", "2", "-5 degrees"]),
-            Commands::Edit { number: 2, text } if text == "-5 degrees"
+            Commands::Edit { task: Task::Number(2), text } if text == "-5 degrees"
         ));
+    }
+
+    #[test]
+    fn edit_takes_a_number_made_only_of_digits_and_a_term_otherwise() {
+        let command = |args: &[&str]| Cli::try_parse_from(args).unwrap().command.unwrap();
+
+        assert!(matches!(
+            command(&["todo", "edit", "2", "Lorem"]),
+            Commands::Edit { task: Task::Number(2), .. }
+        ));
+        assert!(matches!(
+            command(&["todo", "edit", "ticket:x/01", "Lorem"]),
+            Commands::Edit { task: Task::Term(term), .. } if term == "ticket:x/01"
+        ));
+        assert!(matches!(
+            command(&["todo", "edit", "+2", "Lorem"]),
+            Commands::Edit { task: Task::Term(term), .. } if term == "+2"
+        ));
+        assert!(Cli::try_parse_from(["todo", "edit", "", "Lorem"]).is_err());
     }
 
     #[test]

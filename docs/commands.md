@@ -16,6 +16,7 @@ todo list --done              # the tasks of done.txt
 todo reopen 2                 # move task 2 of done.txt back, pending again
 todo do 2                     # complete task 2: it moves to done.txt
 todo edit 2 "(B) Oat milk"    # replace pending task 2, its creation date kept
+todo edit milk "Oat milk"     # replace the one pending task holding milk
 todo remove 2                 # delete task 2
 todo archive                  # move the done tasks to done.txt
 ```
@@ -24,7 +25,7 @@ todo archive                  # move the done tasks to done.txt
 | --- | --- |
 | `todo list [--due] [terms]`, `todo list --done [terms]` | list the pending tasks, or those of `done.txt` |
 | `todo add "<line>"` | append a task |
-| `todo edit <number> "<line>"` | replace a pending task |
+| `todo edit <number> "<line>"`, `todo edit <term> "<line>"` | replace a pending task |
 | `todo do <number>` | complete a task: it moves to `done.txt` |
 | `todo remove <number>` | delete a task |
 | `todo reopen <number>` | move a task of `done.txt` back to the task file, pending again |
@@ -41,6 +42,7 @@ How `list` filters, sorts and colours is described in [Listing](listing.md).
 A task's number is its position in its file, blank lines not counted.
 `list` shows it, so a filtered `list` shows gaps.
 `do`, `edit` and `remove` take a number of the task file.
+`edit` also takes a term in its place, as told in [Adding and editing](#adding-and-editing).
 `reopen` takes one of `done.txt`, the one `list --done` shows.
 
 ### Help and version
@@ -67,11 +69,17 @@ So `todo add "+work due:2026-10-20"` fails, and `todo add "Call +bank"` does not
 The creation date is kept unless the line carries one, and a priority left out is removed.
 A line equal to the task writes nothing and is not checked.
 
+`edit` takes a term in place of the number, `todo edit ticket:demo/02 "(B) Call the bank ticket:demo/02"`: the term matches the pending tasks as one of `list` does, case-insensitive, and the one pending task it matches is replaced.
+An argument made only of digits stays a number.
+The search and the write happen in the same command, so a task completed in between by another command cannot shift the number onto the wrong task.
+
 `edit` refuses:
 
 - any other line that has no text word, as for `add`;
 - a line starting with `x `, which makes it stricter than [the popup](popup.md#saving), where the popup completes the task;
-- a done task still in the task file.
+- a done task still in the task file;
+- a term that matches no pending task, `no pending task matches <term>`, or several, `3 pending tasks match <term>`;
+- a term starting with `-`, which `list` reads as one to exclude.
 
 `remove` deletes the task from the task file, whether it is done or not.
 Nothing goes to `done.txt`.

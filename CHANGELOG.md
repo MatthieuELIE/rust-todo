@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `todo edit` takes a term in place of the task number, `todo edit ticket:demo/02 "<line>"`: the one pending task the term matches, case-insensitive as in `list`, is replaced; no match or several write nothing and fail with their count, as `no pending task matches ticket:demo/02` or `3 pending tasks match ticket:demo/0`.
+
 ## [0.8.1] - 2026-11-03
 
 ### Changed

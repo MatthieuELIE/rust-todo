@@ -68,6 +68,21 @@ fn the_popup_colours_its_text_as_the_list_colours_a_task_in_mocha() {
 }
 
 #[test]
+fn the_popup_greys_the_completion_date_of_a_done_line_but_not_its_marker_in_mocha() {
+    let mut app = app_of(&["Pay rent"]);
+    add_popup(&mut app, "x 2026-09-20 Old", 0);
+
+    let buffer = render_in(&app, 80, 7);
+    let row = rows(&buffer).iter().position(|row| row.contains("x 2026")).expect("popup line");
+    let x = rows(&buffer)[row].split("x 2026").next().expect("row").chars().count() as u16;
+
+    assert_eq!(
+        (buffer[(x, row as u16)].fg, buffer[(x + 2, row as u16)].fg),
+        (MOCHA.primary, MOCHA.tertiary)
+    );
+}
+
+#[test]
 fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
     let mut app = app_of(&["Pay rent"]);
     let cursor_at = |app: &mut App, text: &str, cursor: usize| {

@@ -6,4 +6,6 @@ exclude_re = [
     'src/editor\.rs:194:44: replace < with <= in Editor::insert',
     # A key that is not a character does nothing in normal mode, so falling through after `f` only clamps a cursor already on the text.
     'src/editor/normal\.rs:19:13: delete match arm \(Some\(_\), _\) in Editor::normal',
+    # Without group or other bits, the extra set_permissions(mode & 0o700) can drop only setuid, setgid and sticky: the write clears the first two, the last does nothing on a regular file.
+    'src/repository\.rs:81:13: replace & with [|^] in append',
 ]

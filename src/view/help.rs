@@ -147,6 +147,7 @@ fn opened_from(focus: &Focus) -> &'static str {
         Focus::Panel => "PANEL",
         Focus::Popup(popup) if popup.picker.is_some() => "DATE",
         Focus::Popup(popup) if popup.editor.mode == Mode::Insert => "INSERT",
+        Focus::Popup(popup) if popup.editor.mode == Mode::Visual => "VISUAL",
         Focus::Popup(_) => "NORMAL",
         Focus::List | Focus::Help(_) => "LIST",
     }

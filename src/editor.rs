@@ -5,6 +5,7 @@ use crate::todo::{DUE, WAIT};
 
 mod find;
 mod normal;
+mod visual;
 mod words;
 
 /// What a key did to the line being edited.
@@ -32,6 +33,8 @@ pub enum Mode {
     Insert,
     /// Keys move the cursor and change the text by commands.
     Normal,
+    /// Motions move the cursor away from the anchor, `y` copies what lies between them.
+    Visual,
 }
 
 /// A one-line text field with a cursor, edited with a small subset of vim.
@@ -45,6 +48,8 @@ pub struct Editor {
     pub mode: Mode,
     /// Key (`d`, `c`, `y`, `p`) waiting for its motion or priority; after `d`, `c` or `y`, a key completing no command only drops it.
     pending: Option<char>,
+    /// Character the selection started on in visual mode, the cursor being its other end.
+    anchor: usize,
     /// Text `y` just took, for `handle_key` to hand over.
     copy: Option<String>,
     /// `i` or `a` typed after `d`, `c` or `y`, waiting for the `w` or `W` of its word.
@@ -83,6 +88,7 @@ impl Editor {
         match (self.mode, key.code) {
             (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if busy => (self.pending, self.scope, self.finding) = (None, None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
+            (Mode::Visual, _) => self.visual(key),
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
             (Mode::Normal, KeyCode::Char('r')) if !busy && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
             (Mode::Normal, _) if modified => (self.pending, self.scope, self.finding) = (None, None, None),
@@ -132,6 +138,9 @@ impl Editor {
 
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.
     pub fn paste(&mut self, text: &str) {
+        if self.mode == Mode::Visual {
+            return;
+        }
         self.text.insert_str(self.byte(self.cursor), text);
         self.cursor += text.chars().count();
         if self.mode == Mode::Normal {

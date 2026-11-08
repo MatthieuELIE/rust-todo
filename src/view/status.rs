@@ -18,6 +18,7 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         Focus::Popup(popup) => match popup.editor.mode {
             Mode::Insert => "INSERT",
             Mode::Normal => "NORMAL",
+            Mode::Visual => "VISUAL",
         },
         Focus::Panel => "PANEL",
         Focus::List => "LIST",

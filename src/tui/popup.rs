@@ -30,7 +30,7 @@ impl App {
         };
         let opens_help = key.code == KeyCode::Char('?')
             && !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
-            && (popup.picker.is_some() || (popup.editor.mode == Mode::Normal && popup.editor.pending().is_empty()));
+            && (popup.picker.is_some() || (popup.editor.mode != Mode::Insert && popup.editor.pending().is_empty()));
         if opens_help {
             self.open_help();
             return false;

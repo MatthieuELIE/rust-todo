@@ -534,3 +534,123 @@ fn y_copies_the_text_as_it_is_on_screen_unsaved_changes_included() {
 
     assert_eq!(app.copy.as_deref(), Some("onetwo"));
 }
+
+fn key(app: &mut App, code: KeyCode) {
+    app.handle_key(KeyEvent::from(code), TODAY);
+}
+
+#[test]
+fn v_selects_from_the_character_under_the_cursor_and_y_copies_both_ends_in() {
+    let cases = [
+        ("fCvy", "C"),
+        ("fCvey", "Call"),
+        ("fCvwwy", "Call the b"),
+        ("fCvhy", " C"),
+        ("fCvly", "Ca"),
+        ("fCv0y", &COPIED[..16]),
+        ("fCv$y", &COPIED[15..]),
+        ("fCvwwWy", "Call the bank a"),
+        ("fbvby", "the b"),
+        ("$vby", "20"),
+        ("fCvBy", &COPIED[4..16]),
+        ("fCvt+y", "Call the bank about the loan "),
+        ("fCvf+y", "Call the bank about the loan +"),
+        ("$vT:y", "2026-11-20"),
+        ("fCvfty", "Call t"),
+        ("fCvft;y", "Call the bank about"),
+        ("fCvft;,y", "Call t"),
+    ];
+
+    for (keys, copied) in cases {
+        let mut app = opened(COPIED);
+        press(&mut app, keys);
+        assert_eq!((keys, app.copy.as_deref()), (keys, Some(copied)));
+        assert_eq!(popup(&app).editor.text, COPIED);
+    }
+}
+
+#[test]
+fn y_in_visual_mode_goes_back_to_normal_with_the_cursor_at_the_start_and_says_so() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fbvby");
+
+    assert_eq!((popup(&app).editor.mode, popup(&app).editor.cursor), (Mode::Normal, 20));
+    app.copied(Ok(()));
+    assert_eq!(told(&app), Some(Notice::CopiedText));
+
+    press(&mut app, "xvey");
+    press(&mut app, "u");
+    assert_eq!(popup(&app).editor.text, COPIED);
+}
+
+#[test]
+fn y_in_visual_mode_copies_the_text_as_it_is_on_screen_and_an_empty_one_says_nothing_to_copy() {
+    let mut app = opened("one");
+    press(&mut app, "Atwo");
+    key(&mut app, KeyCode::Esc);
+    press(&mut app, "0v$y");
+    assert_eq!(app.copy.as_deref(), Some("onetwo"));
+
+    let mut app = opened("one");
+    press(&mut app, "ddvy");
+    assert_eq!((app.copy.clone(), told(&app)), (None, Some(Notice::NothingToCopy)));
+    assert_eq!(popup(&app).editor.mode, Mode::Normal);
+}
+
+#[test]
+fn esc_or_v_go_back_to_normal_without_a_copy_and_enter_saves() {
+    for end in [KeyCode::Esc, KeyCode::Char('v')] {
+        let mut app = opened(COPIED);
+        press(&mut app, "fCve");
+        key(&mut app, end);
+
+        assert!(matches!(app.focus, Focus::Popup(_)));
+        assert_eq!((popup(&app).editor.mode, app.copy.clone()), (Mode::Normal, None));
+        assert_eq!(popup(&app).editor.cursor, 18);
+    }
+
+    let mut app = opened(COPIED);
+    press(&mut app, "fCvf");
+    key(&mut app, KeyCode::Esc);
+    assert_eq!((popup(&app).editor.mode, popup(&app).editor.pending().as_str()), (Mode::Normal, ""));
+
+    let mut app = opened(COPIED);
+    press(&mut app, "ve");
+    key(&mut app, KeyCode::Enter);
+    assert!(matches!(app.focus, Focus::List));
+    assert_eq!(told(&app), Some(Notice::NoChanges));
+}
+
+#[test]
+fn any_other_key_in_visual_mode_changes_nothing_and_the_selection_stays() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fCv");
+    let before = (popup(&app).editor.text.clone(), popup(&app).editor.cursor);
+
+    press(&mut app, "dcxpiauoIADCuYV");
+    app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY);
+    app.paste("zz");
+
+    assert_eq!((popup(&app).editor.text.clone(), popup(&app).editor.cursor), before);
+    assert_eq!((popup(&app).editor.mode, app.copy.clone()), (Mode::Visual, None));
+
+    press(&mut app, "ey");
+    assert_eq!(app.copy.as_deref(), Some("Call"));
+}
+
+#[test]
+fn only_y_leaves_a_text_to_copy_in_visual_mode() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fCvewbBeEh0$ft;,");
+    assert_eq!(app.copy, None);
+}
+
+#[test]
+fn question_mark_in_visual_mode_opens_the_help_and_closing_it_goes_back_to_visual() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fCve?");
+    assert!(matches!(app.focus, Focus::Help(_)));
+
+    key(&mut app, KeyCode::Esc);
+    assert_eq!(popup(&app).editor.mode, Mode::Visual);
+}

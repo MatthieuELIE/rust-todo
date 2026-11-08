@@ -21,11 +21,9 @@ pub(super) fn words(theme: &Theme, text: &str, today: Option<Date>) -> Vec<Span<
         if i > 0 {
             spans.push(" ".into());
         }
-
         let due = word.strip_prefix(DUE).and_then(|value| due_style(theme, value, today));
         spans.push(Span::styled(word.to_string(), due.unwrap_or_else(|| tag_style(theme, word))));
     }
-
     spans
 }
 

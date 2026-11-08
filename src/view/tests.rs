@@ -16,7 +16,6 @@ pub(super) fn app_of(lines: &[&str]) -> App {
     let mut app = App::new(lines.iter().map(|l| Todo::from_line(l)).collect());
     app.today = Some(TODAY);
     app.theme = MOCHA;
-
     app
 }
 
@@ -41,7 +40,6 @@ pub(super) fn render_with_cursor(app: &App, width: u16, height: u16) -> (Buffer,
     let mut terminal = Terminal::new(TestBackend::new(width, height)).unwrap();
     terminal.draw(|frame| draw(frame, app, &mut ListState::default(), TODAY)).unwrap();
     let backend = terminal.backend();
-
     (backend.buffer().clone(), backend.cursor_visible().then(|| backend.cursor_position()))
 }
 
@@ -53,7 +51,6 @@ pub(super) fn rows(buffer: &Buffer) -> Vec<String> {
             .trim_end()
             .to_string()
     };
-
     (0..buffer.area.height).map(row).collect()
 }
 
@@ -69,7 +66,6 @@ pub(super) fn list_rows(buffer: &Buffer) -> Vec<String> {
 
 fn columns(buffer: &Buffer, from: u16, to: u16) -> Vec<String> {
     let row = |y| (from..to).map(|x| buffer[(x, y)].symbol()).collect::<String>().trim_end().to_string();
-
     (0..buffer.area.height).map(row).collect()
 }
 
@@ -198,7 +194,6 @@ fn the_terminal_theme_leaves_the_background_and_the_text_to_the_terminal_on_the_
 
 pub(super) fn style_of(line_text: &str, token: &str) -> Style {
     let line = line(&MOCHA, 1, &Todo::from_line(line_text), TODAY);
-
     line.iter().find(|span| span.content == token).expect(token).style
 }
 
@@ -274,7 +269,6 @@ pub(super) fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
             }
         }
     }
-
     found
 }
 

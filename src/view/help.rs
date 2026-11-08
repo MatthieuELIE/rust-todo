@@ -182,12 +182,10 @@ fn column_lines(theme: &Theme, sections: &[&'static str], lit: &str) -> Vec<Line
         if i > 0 {
             lines.push(Line::default());
         }
-
         let (name, keys) = section.split_once('\n').unwrap_or((section, ""));
         lines.push(Line::from(mode_block(theme, name, name == lit)));
         lines.extend(help_lines(theme, keys));
     }
-
     lines
 }
 
@@ -203,12 +201,9 @@ fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
                 if i > 0 {
                     spans.push("/".fg(theme.separator));
                 }
-
                 spans.push(alternative.bold());
             }
-
             spans.push(action.fg(theme.tertiary));
-
             Line::from(spans)
         })
         .collect()

@@ -82,7 +82,6 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         let name = Span::styled(format!("{:<13.13}", format!("{entry_icon}{term}")), style);
         lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(theme.tertiary)]));
     }
-
     (lines, row)
 }
 

@@ -46,7 +46,6 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
             if let Focus::Popup(popup) = &app.under_help {
                 draw_popup(frame, app, popup, main_area, today);
             }
-
             draw_help(frame, app, *scroll, main_area)
         }
         Focus::Popup(popup) => draw_popup(frame, app, popup, main_area, today),
@@ -57,7 +56,6 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
         if cell.bg == Color::Reset {
             cell.bg = theme.background;
         }
-
         if cell.fg == Color::Reset {
             cell.fg = theme.primary;
         }

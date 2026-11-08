@@ -95,7 +95,6 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
         if let Focus::Popup(popup) = &mut app.focus {
             popup.editor.cursor = cursor;
         }
-
         render_with_cursor(app, 40, 12)
     };
 
@@ -316,7 +315,6 @@ fn visual_app(theme: Theme, keys: &str) -> App {
         selected: 0,
         picker: None,
     });
-
     app
 }
 

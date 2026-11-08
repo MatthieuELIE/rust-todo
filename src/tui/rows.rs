@@ -9,6 +9,7 @@ impl App {
     /// Tasks having `terms`, numbered: the pending ones of the task file by priority, or the history from its last line.
     pub(super) fn listed(&self, terms: &[String]) -> Vec<(usize, &Todo)> {
         let mut tasks = list(self.source(), terms);
+
         if self.in_history {
             tasks.sort_by_key(|(number, _)| Reverse(*number));
         } else {
@@ -22,6 +23,7 @@ impl App {
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
         let mut tasks = self.listed(&terms);
+
         if let Some(filter) = &self.filter {
             tasks.retain(|(_, todo)| shows(todo, filter, self.today));
         }
@@ -32,8 +34,10 @@ impl App {
     /// Groups of the tasks on screen with their counts, in display order; none in the history or when no task on screen has a priority.
     pub(super) fn groups(&self) -> Vec<(Group, usize)> {
         let mut groups: Vec<(Group, usize)> = Vec::new();
+
         for (_, todo) in self.tasks() {
             let group = Group::of(todo);
+
             match groups.last_mut() {
                 Some((last, count)) if *last == group => *count += 1,
                 _ => groups.push((group, 1)),
@@ -51,6 +55,7 @@ impl App {
     pub fn shown(&self) -> Vec<Shown<'_>> {
         let mut tasks = self.tasks().into_iter().map(|(number, todo)| Shown::Task(number, todo));
         let mut shown = Vec::new();
+
         for (group, count) in self.groups() {
             let folded = self.folded.contains(&group);
             shown.push(Shown::Header(group, count, folded));
@@ -93,7 +98,9 @@ impl App {
             Row::Task(number) => Row::Group(Group::of(&self.source()[number - 1])),
             Row::Group(_) => row,
         };
+
         let rows = self.rows();
+
         match rows.iter().position(|r| *r == row).or_else(|| rows.iter().position(|r| *r == group)) {
             Some(position) => {
                 self.cursor = position;
@@ -112,6 +119,7 @@ impl App {
     /// Folds every group on screen, the cursor on the header of the group of `row`.
     pub(super) fn fold_all(&mut self, row: Option<Row>) {
         self.folded = self.groups().into_iter().map(|(group, _)| group).collect();
+
         if let Some(row) = row {
             self.select(row);
         }
@@ -120,10 +128,12 @@ impl App {
     /// Unfolds every group, the cursor back on the task of `row`, or on the first task of its group when `row` is a header.
     pub(super) fn unfold_all(&mut self, row: Option<Row>) {
         self.folded.clear();
+
         let target = match row {
             Some(Row::Group(group)) => self.first_task(group),
             row => row,
         };
+
         if let Some(target) = target {
             self.select(target);
         }
@@ -138,6 +148,7 @@ impl App {
             }
             Some(Row::Group(group)) => {
                 self.folded.retain(|folded| *folded != group);
+
                 if let Some(first) = self.first_task(group) {
                     self.select(first);
                 }

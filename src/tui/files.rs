@@ -13,6 +13,7 @@ impl App {
     /// One turn of the loop: reloads when the file, `read` just now, no longer matches `text`, else applies `event`; tells whether to save.
     pub fn turn(&mut self, read: io::Result<String>, text: &mut String, event: Option<Event>, today: Date) -> bool {
         self.today = Some(today);
+
         match (read, event) {
             (Ok(current), _) if current != *text => {
                 self.reload(repository::parse(&current));
@@ -25,6 +26,7 @@ impl App {
             (_, Some(Event::Paste(pasted))) => self.paste(&pasted),
             _ => {}
         }
+
         false
     }
 
@@ -32,6 +34,7 @@ impl App {
     pub fn save(&mut self, path: &Path, text: &mut String) {
         let done_path = path.with_file_name("done.txt");
         let (mut gone, mut back) = (Vec::new(), Vec::new());
+
         for moved in std::mem::take(&mut self.moves) {
             match moved {
                 Move::Append(todo) => gone.push(todo),
@@ -40,6 +43,7 @@ impl App {
         }
 
         self.history_read &= gone.is_empty() && back.is_empty();
+
         let appended = if gone.is_empty() && back.is_empty() {
             Ok(())
         } else if repository::same_file(path, &done_path) {
@@ -48,17 +52,20 @@ impl App {
             let writable = |path: &Path| std::fs::OpenOptions::new().write(true).open(path).map(drop);
             let reopens = back.iter().any(|(_, number)| number.is_some());
             let checked = if reopens { writable(&done_path) } else { Ok(()) };
+
             if gone.is_empty() {
                 checked
             } else {
                 checked.and_then(|()| writable(path)).and_then(|()| repository::append(&done_path, &gone))
             }
         };
+
         let moved = !gone.is_empty() && appended.is_ok();
         let written = appended.and_then(|()| repository::save(path, &self.todos));
         let failed = written.as_ref().err().map(|e| e.to_string());
         let saved = failed.is_none();
         self.saved(written, text, repository::read(path));
+
         if let Some(e) = failed
             && moved
         {
@@ -66,8 +73,10 @@ impl App {
         }
 
         let mut held = false;
+
         for (todo, number) in back.iter().filter(|_| saved) {
             let verb = if number.is_some() { "reopened" } else { "undone" };
+
             match repository::remove_task(&done_path, *number, &todo.to_line()) {
                 Ok(true) => {}
                 Ok(false) if !held => self.notify(Notice::GoneFromDone { reopened: number.is_some() }),
@@ -75,6 +84,7 @@ impl App {
                 Err(e) => {
                     self.undo.clear();
                     self.redo.clear();
+
                     if !held {
                         self.notify(Notice::Refused(format!("{verb}, but done.txt still holds the task: {e}")));
                     }
@@ -128,11 +138,13 @@ impl App {
         self.forget_gone_folds();
         self.clamp_cursor();
         self.notify(Notice::Reloaded);
+
         let focus = if matches!(self.focus, Focus::Help(_)) {
             &mut self.under_help
         } else {
             &mut self.focus
         };
+
         if let Focus::Popup(Popup { target: Target::Edit(_), .. }) = focus {
             *focus = Focus::List;
             self.notify(Notice::ReloadedEditCancelled);

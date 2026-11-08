@@ -9,6 +9,7 @@ impl App {
                     self.filter = None;
                 } else if self.filter.as_deref() == Some(DUE_NOW) {
                     let dated = |word: &str| word.strip_prefix(DUE).is_some_and(|value| !value.is_empty());
+
                     if !todo.description.split_whitespace().any(dated) {
                         todo.description = format!("{} {DUE}{today}", todo.description);
                     }
@@ -39,6 +40,7 @@ impl App {
                 return false;
             }
         };
+
         if todo.done && !todo.description.is_empty() {
             if todo.created.is_none() && todo.completed == self.todos[number - 1].created {
                 todo.created = todo.completed.take();
@@ -70,6 +72,7 @@ impl App {
     /// Brings task `number` of the history back, pending, at the end of the tasks, as `todo reopen` does and refuses.
     pub(super) fn reopen(&mut self, number: usize) -> bool {
         let mut todo = self.history[number - 1].clone();
+
         if let Err(reason) = todo.reopen() {
             self.notify(Notice::Refused(format!("task {number} {reason}")));
             return false;
@@ -88,6 +91,7 @@ impl App {
         } else {
             (&mut self.redo, &mut self.undo, Notice::ChangeRedone, Notice::NothingToRedo)
         };
+
         match from.pop() {
             Some((todos, moved)) => {
                 to.push((std::mem::replace(&mut self.todos, todos), moved.clone()));

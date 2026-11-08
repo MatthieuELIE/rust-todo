@@ -31,6 +31,7 @@ impl App {
         let opens_help = key.code == KeyCode::Char('?')
             && !key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
             && (popup.picker.is_some() || (popup.editor.mode != Mode::Insert && popup.editor.pending().is_empty()));
+
         if opens_help {
             self.open_help();
             return false;
@@ -50,6 +51,7 @@ impl App {
         }
 
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+
         match (key.code, ctrl) {
             _ if names.is_empty() => {}
             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => {
@@ -67,8 +69,10 @@ impl App {
             }
             _ => {}
         }
+
         popup.selected = 0;
         let outcome = popup.editor.handle_key(key);
+
         if popup.editor.wants_date() {
             popup.picker = Some(today);
         }
@@ -109,6 +113,7 @@ impl App {
             unreachable!("the popup is open");
         };
         let earlier = self.toast.take();
+
         let write = match (outcome, &popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
             (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
@@ -118,11 +123,13 @@ impl App {
             }
             _ => false,
         };
+
         if self.refusal_shown() {
             self.focus = Focus::Popup(popup);
         }
 
         let earlier_refusal = earlier.as_ref().is_some_and(|toast| toast.notice.kind() == Kind::Refusal);
+
         if self.toast.is_none() && !earlier_refusal {
             self.toast = earlier;
         }

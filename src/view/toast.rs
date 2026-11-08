@@ -31,6 +31,7 @@ fn cut(text: &str, room: usize) -> String {
     if text.chars().count() <= room {
         return text.to_string();
     }
+
     let kept: String = text.chars().take(room.saturating_sub(1)).collect();
     format!("{kept}…")
 }

@@ -44,17 +44,20 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
     for cell in area.positions() {
         frame.buffer_mut()[cell].modifier.remove(Modifier::RAPID_BLINK | Modifier::HIDDEN);
     }
+
     if let Some(cursor) = cursor
         && popup.picker.is_none()
         && !matches!(app.focus, Focus::Help(_))
     {
         frame.set_cursor_position(cursor);
     }
+
     if let (Some(tag), Some(cursor)) = (popup.editor.tag(), cursor) {
         let (names, selected) = app.completions();
         let start = Position::new(cursor.x.saturating_sub(tag.chars().count() as u16), cursor.y);
         draw_completions(frame, theme, &names, selected, start, bounds);
     }
+
     if let (Some(date), Some(cursor)) = (popup.picker, cursor) {
         draw_picker(
             frame,
@@ -87,9 +90,11 @@ fn draw_picker(frame: &mut Frame, theme: &Theme, date: Date, today: Date, word: 
             week.push_span(" ");
         }
     }
+
     if !week.spans.is_empty() {
         lines.push(week);
     }
+
     let title = format!(" {} {} ", date.month().to_string().to_uppercase(), date.year());
     let area = drop_down(word, 22, lines.len() as u16 + 2, bounds);
     frame.render_widget(Clear, area);
@@ -101,6 +106,7 @@ fn draw_completions(frame: &mut Frame, theme: &Theme, names: &[(String, usize)],
     if names.is_empty() {
         return;
     }
+
     let width = names.iter().map(|(name, _)| name.chars().count()).max().unwrap_or_default();
     let rows = names.iter().map(|(name, count)| {
         Line::from_iter([
@@ -135,13 +141,16 @@ fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
     if editor.cursor >= chars.len() {
         chars.push(" ".into());
     }
+
     for selected in editor.selection().into_iter().flatten() {
         chars[selected].style = chars[selected].style.reversed();
     }
+
     chars[editor.cursor].style = chars[editor.cursor].style.rapid_blink();
     for before in &mut chars[..editor.cursor] {
         before.style = before.style.hidden();
     }
+
     Line::from(chars)
 }
 
@@ -159,6 +168,7 @@ fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
         };
         spans.push(Span::styled(word.to_string(), style));
     }
+
     spans.extend(words(theme, &description, Some(today)));
     spans
 }

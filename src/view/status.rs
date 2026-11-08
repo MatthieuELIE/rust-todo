@@ -35,6 +35,7 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
     if !matches!(mode, "INSERT" | "SEARCH" | "HELP") {
         right.extend(["?".bold(), " help ".fg(theme.tertiary)]);
     }
+
     if let Some(toast) = app.toast.as_ref().filter(|_| !matches!(app.focus, Focus::Search)) {
         let room = (area.width as usize).saturating_sub(status.width() + right.width() + 1);
         status.push_span(toast_span(theme, app.icons, toast, room));
@@ -46,6 +47,7 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
             ]);
         }
     }
+
     frame.render_widget(Paragraph::new(status), area);
     frame.render_widget(Paragraph::new(right).right_aligned(), area);
 }

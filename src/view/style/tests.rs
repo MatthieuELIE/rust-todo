@@ -9,6 +9,7 @@ fn key_values_are_greyed_but_not_urls_times_or_labels_in_mocha() {
     for greyed in ["wait:figma", "rec:1w", "a:b:c", "é-t_2:x"] {
         assert_eq!(style_of(text, greyed), Style::new().fg(MOCHA.tertiary), "{greyed}");
     }
+
     for plain in ["https://herdr.dev", "10:30", "Note:", "wait:", ":x", "_a:b", "a/b:c"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }

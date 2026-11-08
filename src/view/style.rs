@@ -20,9 +20,11 @@ pub(super) fn words(theme: &Theme, text: &str, today: Option<Date>) -> Vec<Span<
         if i > 0 {
             spans.push(" ".into());
         }
+
         let due = word.strip_prefix(DUE).and_then(|value| due_style(theme, value, today));
         spans.push(Span::styled(word.to_string(), due.unwrap_or_else(|| tag_style(theme, word))));
     }
+
     spans
 }
 
@@ -87,6 +89,7 @@ pub(super) fn mode_block(theme: &Theme, mode: &str, lit: bool) -> Span<'static> 
     if lit {
         return format!(" {mode} ").bold().fg(theme.on_accent).bg(theme.accent);
     }
+
     format!(" {mode} ").bold().fg(theme.primary).bg(theme.structure)
 }
 

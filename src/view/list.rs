@@ -37,15 +37,18 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
             if matches!(shown, Shown::Header(..)) && !lines.is_empty() {
                 lines.push(Line::default());
             }
+
             if !matches!(shown, Shown::Header(_, _, false)) {
                 rows.push(lines.len());
             }
+
             lines.push(match shown {
                 Shown::Header(group, count, folded) => header(theme, group, count, folded, area.width.saturating_sub(2) as usize),
                 Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(theme.secondary),
                 Shown::Task(number, todo) => line(theme, number, todo, today),
             });
         }
+
         let list = List::new(lines)
             .highlight_symbol(arrow(theme, focused))
             .highlight_style(highlight(theme, focused))
@@ -66,14 +69,17 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
     if todo.done {
         return Line::from_iter([number.into(), todo.to_line().fg(theme.tertiary).crossed_out()]);
     }
+
     let mut spans = vec![Span::raw(number)];
     spans.extend(todo.priority.map(|letter| badge(theme, letter)));
     if todo.priority.is_some() {
         spans.push(" ".into());
     }
+
     if let Some(created) = todo.created {
         spans.extend([created.to_string().fg(theme.tertiary), " ".into()]);
     }
+
     spans.extend(words(theme, &todo.description, Some(today)).into_iter().map(|span| {
         let late = span.content.strip_prefix(DUE).and_then(parse_date).is_some_and(|due| due < today);
         if late { span.bold() } else { span }

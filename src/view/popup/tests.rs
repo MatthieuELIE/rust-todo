@@ -43,6 +43,7 @@ fn the_popup_wraps_its_text_under_its_title_with_the_terminal_cursor_on_its_cell
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = Mode::Normal;
     }
+
     let buffer = render_in(&app, 70, 5);
     assert_eq!(
         self::rows(&buffer)[4],
@@ -93,16 +94,19 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
         if let Focus::Popup(popup) = &mut app.focus {
             popup.editor.cursor = cursor;
         }
+
         render_with_cursor(app, 40, 12)
     };
 
     for length in 1..=64 {
         assert!(cursor_at(&mut app, &"a".repeat(length), length).1.is_some(), "{length} letters");
     }
+
     let words = "abcd ".repeat(13);
     for cursor in 0..=words.len() {
         assert!(cursor_at(&mut app, &words, cursor).1.is_some(), "words at {cursor}");
     }
+
     let (buffer, cursor) = cursor_at(&mut app, &"a".repeat(29), 29);
     let cursor = cursor.expect("cursor");
     assert_eq!(
@@ -125,6 +129,7 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
     if let Focus::Popup(popup) = &mut app.focus {
         popup.picker = Some(TODAY);
     }
+
     assert!(rows(&render_in(&app, 40, 30)).iter().any(|row| row.contains("Mo Tu We")));
 }
 
@@ -242,6 +247,7 @@ fn the_date_picker_stays_above_the_status_bar_on_a_small_screen() {
     if let Focus::Popup(popup) = &mut app.focus {
         popup.picker = Some(TODAY);
     }
+
     let rows = rows(&render_in(&app, 30, 8));
     assert!(rows.iter().any(|row| row.contains("SEPTEMBER")));
     assert_eq!(rows[7], " DATE                  ? help");
@@ -286,6 +292,7 @@ fn the_popup_is_titled_by_the_number_of_the_task_edited_and_leaves_waiting_out_o
     if let Focus::Popup(popup) = &mut app.focus {
         popup.target = Target::Edit(1);
     }
+
     assert!(titled(&app, "╭ EDIT 1 ─"));
 }
 
@@ -296,6 +303,7 @@ fn visual_app(theme: Theme, keys: &str) -> App {
     for c in keys.chars() {
         editor.handle_key(KeyEvent::from(KeyCode::Char(c)));
     }
+
     app.focus = Focus::Popup(Popup {
         editor,
         target: Target::Add,

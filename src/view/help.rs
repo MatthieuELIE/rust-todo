@@ -208,6 +208,7 @@ fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
             }
 
             spans.push(action.fg(theme.tertiary));
+
             Line::from(spans)
         })
         .collect()

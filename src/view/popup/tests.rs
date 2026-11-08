@@ -316,6 +316,7 @@ fn visual_app(theme: Theme, keys: &str) -> App {
         selected: 0,
         picker: None,
     });
+
     app
 }
 

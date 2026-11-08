@@ -20,6 +20,7 @@ pub(super) fn details_height(theme: &Theme, todo: Option<&Todo>, width: u16, spa
     let text_rows = todo.map_or(1, |todo| {
         text_of(theme, todo, (!todo.done).then_some(today)).line_count(text_width) as u16
     });
+
     DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare)
 }
 
@@ -55,6 +56,7 @@ pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: 
     let due = key_values.iter().find_map(|word| word.strip_prefix(DUE)).map(|value| {
         let span = Span::styled(value.to_string(), due_style(theme, value, today).unwrap_or_default());
         let late = parse_date(value).zip(today).is_some_and(|(due, today)| due < today);
+
         if late { span.bold() } else { span }
     });
     let mut others = Line::from(" ");

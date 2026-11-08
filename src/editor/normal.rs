@@ -55,6 +55,10 @@ impl Editor {
             }
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
             KeyCode::Char(op @ ('d' | 'c' | 'y' | 'p')) => self.pending = Some(op),
+            KeyCode::Char('v') if pending.is_none() => {
+                self.anchor = at;
+                self.mode = Mode::Visual;
+            }
             KeyCode::Char('x') => self.remove(at, (at + 1).min(len)),
             KeyCode::Char('D') => self.remove(at, len),
             KeyCode::Char('C') => {

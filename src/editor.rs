@@ -85,6 +85,7 @@ impl Editor {
 
         let busy = self.pending.is_some() || self.finding.is_some();
         let mut copy = None;
+
         match (self.mode, key.code) {
             (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if busy => (self.pending, self.scope, self.finding) = (None, None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
@@ -96,6 +97,7 @@ impl Editor {
             (Mode::Insert, _) => self.insert(key),
             (Mode::Normal, code) => copy = self.normal(code),
         }
+
         self.settle();
         match copy {
             Some(text) => Outcome::Copy(text),
@@ -124,6 +126,7 @@ impl Editor {
         } else {
             (&mut self.redo, &mut self.undo, Notice::Redone, Notice::NothingToRedo)
         };
+
         let Some(rest) = from.pop() else {
             return Outcome::Notice(none);
         };
@@ -145,6 +148,7 @@ impl Editor {
 
         self.text.insert_str(self.byte(self.cursor), text);
         self.cursor += text.chars().count();
+
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
@@ -176,8 +180,10 @@ impl Editor {
             .iter()
             .position(|c| c.is_whitespace())
             .map_or(chars.len(), |i| self.cursor + i);
+
         self.remove(start, end);
         self.paste(name);
+
         if chars.get(end).is_some_and(|c| c.is_whitespace()) {
             self.cursor += 1;
         } else {
@@ -189,6 +195,7 @@ impl Editor {
     fn insert(&mut self, key: KeyEvent) {
         let len = self.text.chars().count();
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
+
         match key.code {
             KeyCode::Esc => {
                 self.mode = Mode::Normal;

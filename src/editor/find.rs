@@ -36,17 +36,20 @@ impl Editor {
     pub(super) fn seek(&mut self, chars: &[char], pending: Option<char>, kind: char, target: char, repeat: bool) -> Option<String> {
         let at = self.cursor;
         let to = find(chars, at, kind, target, repeat)?;
+
         if pending.is_none() {
             self.cursor = to;
             return None;
         }
 
         let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
+
         if pending == Some('y') {
             return Some(self.yank(chars, range));
         }
 
         self.remove(range.start, range.end);
+
         if pending == Some('c') {
             self.mode = Mode::Insert;
         } else {

@@ -23,11 +23,13 @@ pub(super) fn object(chars: &[char], at: usize, big: bool, around: bool) -> Rang
     }
 
     let mut start = at;
+
     while start > 0 && class(chars[start - 1], big) == class(chars[at], big) {
         start -= 1;
     }
 
     let mut end = run_end(chars, at, big) + 1;
+
     if around && end < chars.len() && (chars[end].is_whitespace() || chars[at].is_whitespace()) {
         end = run_end(chars, end, big) + 1;
     } else if around {
@@ -54,8 +56,10 @@ fn class(c: char, big: bool) -> u8 {
 fn next_start(chars: &[char], at: usize, big: bool) -> usize {
     let class = |i: usize| class(chars[i], big);
     let mut i = at;
+
     if i < chars.len() && class(i) != 0 {
         let word = class(i);
+
         while i < chars.len() && class(i) == word {
             i += 1;
         }
@@ -72,6 +76,7 @@ fn next_start(chars: &[char], at: usize, big: bool) -> usize {
 fn previous_start(chars: &[char], at: usize, big: bool) -> usize {
     let class = |i: usize| class(chars[i], big);
     let mut i = at.saturating_sub(1);
+
     while i > 0 && class(i) == 0 {
         i -= 1;
     }
@@ -86,6 +91,7 @@ fn previous_start(chars: &[char], at: usize, big: bool) -> usize {
 /// End of the word at `at`, or of the next one when `at` already ends a word; `at` itself when no word follows.
 fn next_end(chars: &[char], at: usize, big: bool) -> usize {
     let mut i = at + 1;
+
     while i < chars.len() && class(chars[i], big) == 0 {
         i += 1;
     }
@@ -96,6 +102,7 @@ fn next_end(chars: &[char], at: usize, big: bool) -> usize {
 /// Last character of the run of characters of the same class as the one at `at`.
 pub(super) fn run_end(chars: &[char], at: usize, big: bool) -> usize {
     let mut i = at;
+
     while i + 1 < chars.len() && class(chars[i + 1], big) == class(chars[at], big) {
         i += 1;
     }

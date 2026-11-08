@@ -12,6 +12,7 @@ impl Editor {
         }
 
         let mut copy = None;
+
         match (finding, key.code) {
             (_, KeyCode::Esc) | (None, KeyCode::Char('v')) => self.mode = Mode::Normal,
             (Some(kind), KeyCode::Char(c)) => {
@@ -35,6 +36,7 @@ impl Editor {
             }
             (None, code) => self.cursor = motion(&chars, self.cursor, code).unwrap_or(self.cursor),
         }
+
         self.cursor = self.cursor.min(chars.len().saturating_sub(1));
 
         copy

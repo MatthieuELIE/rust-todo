@@ -11,6 +11,7 @@ impl Editor {
         let (len, at) = (chars.len(), self.cursor);
         let (pending, scope, finding) = (self.pending.take(), self.scope.take(), self.finding.take());
         let free = scope.is_none() && matches!(pending, None | Some('d' | 'c' | 'y'));
+
         let search = match (finding, code) {
             (Some(kind), KeyCode::Char(c)) => {
                 self.find = Some((kind, c));
@@ -27,11 +28,13 @@ impl Editor {
             }),
             _ => None,
         };
+
         if let Some((kind, c, repeat)) = search {
             return self.seek(&chars, pending, kind, c, repeat);
         }
 
         let mut copy = None;
+
         match code {
             KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c' | 'y')) && scope.is_none() => {
                 self.pending = pending;
@@ -48,6 +51,7 @@ impl Editor {
                     KeyCode::Char('e' | 'E') => motion(&chars, at, code).map(|end| at..(end + 1).min(len)),
                     code => motion(&chars, at, code).map(|to| at.min(to)..at.max(to)),
                 };
+
                 if let Some(range) = range {
                     if pending == Some('y') {
                         copy = Some(self.yank(&chars, range));
@@ -86,6 +90,7 @@ impl Editor {
             }
             code => self.cursor = motion(&chars, at, code).unwrap_or(at),
         }
+
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
@@ -108,12 +113,15 @@ impl Editor {
         }
 
         let old = if todo.priority.is_some() { 4 } else { 0 };
+
         let new = if c == ' ' {
             String::new()
         } else {
             format!("({}) ", c.to_ascii_uppercase())
         };
+
         self.text.replace_range(..old, &new);
+
         self.cursor = if self.cursor < old {
             self.cursor.min(new.len())
         } else {

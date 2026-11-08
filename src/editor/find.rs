@@ -40,10 +40,12 @@ impl Editor {
             self.cursor = to;
             return None;
         }
+
         let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
         if pending == Some('y') {
             return Some(self.yank(chars, range));
         }
+
         self.remove(range.start, range.end);
         if pending == Some('c') {
             self.mode = Mode::Insert;

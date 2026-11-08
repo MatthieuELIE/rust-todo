@@ -21,10 +21,12 @@ pub(super) fn object(chars: &[char], at: usize, big: bool, around: bool) -> Rang
     if at >= chars.len() {
         return at..at;
     }
+
     let mut start = at;
     while start > 0 && class(chars[start - 1], big) == class(chars[at], big) {
         start -= 1;
     }
+
     let mut end = run_end(chars, at, big) + 1;
     if around && end < chars.len() && (chars[end].is_whitespace() || chars[at].is_whitespace()) {
         end = run_end(chars, end, big) + 1;
@@ -33,6 +35,7 @@ pub(super) fn object(chars: &[char], at: usize, big: bool, around: bool) -> Rang
             start -= 1;
         }
     }
+
     start..end
 }
 
@@ -57,9 +60,11 @@ fn next_start(chars: &[char], at: usize, big: bool) -> usize {
             i += 1;
         }
     }
+
     while i < chars.len() && class(i) == 0 {
         i += 1;
     }
+
     i
 }
 
@@ -70,9 +75,11 @@ fn previous_start(chars: &[char], at: usize, big: bool) -> usize {
     while i > 0 && class(i) == 0 {
         i -= 1;
     }
+
     while i > 0 && class(i - 1) == class(i) {
         i -= 1;
     }
+
     i
 }
 
@@ -82,6 +89,7 @@ fn next_end(chars: &[char], at: usize, big: bool) -> usize {
     while i < chars.len() && class(chars[i], big) == 0 {
         i += 1;
     }
+
     if i < chars.len() { run_end(chars, i, big) } else { at }
 }
 
@@ -91,6 +99,7 @@ pub(super) fn run_end(chars: &[char], at: usize, big: bool) -> usize {
     while i + 1 < chars.len() && class(chars[i + 1], big) == class(chars[at], big) {
         i += 1;
     }
+
     i
 }
 

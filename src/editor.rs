@@ -82,6 +82,7 @@ impl Editor {
             self.pending = None;
             return Outcome::NotPriority;
         }
+
         let busy = self.pending.is_some() || self.finding.is_some();
         let mut copy = None;
         match (self.mode, key.code) {
@@ -107,6 +108,7 @@ impl Editor {
         if self.mode == Mode::Insert || self.pending.is_some() {
             return;
         }
+
         if self.text == self.rest.0 {
             self.rest.1 = self.cursor;
         } else {
@@ -140,11 +142,13 @@ impl Editor {
         if self.mode == Mode::Visual {
             return;
         }
+
         self.text.insert_str(self.byte(self.cursor), text);
         self.cursor += text.chars().count();
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
+
         self.settle();
     }
 

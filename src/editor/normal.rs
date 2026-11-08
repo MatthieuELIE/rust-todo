@@ -30,6 +30,7 @@ impl Editor {
         if let Some((kind, c, repeat)) = search {
             return self.seek(&chars, pending, kind, c, repeat);
         }
+
         let mut copy = None;
         match code {
             KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c' | 'y')) && scope.is_none() => {
@@ -105,6 +106,7 @@ impl Editor {
         if todo.done {
             return;
         }
+
         let old = if todo.priority.is_some() { 4 } else { 0 };
         let new = if c == ' ' {
             String::new()

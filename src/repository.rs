@@ -17,6 +17,7 @@ pub fn read(path: &Path) -> io::Result<String> {
     if bytes.len() as u64 > MAX_BYTES {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "larger than 10 MiB"));
     }
+
     String::from_utf8(bytes).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "stream did not contain valid UTF-8"))
 }
 
@@ -60,6 +61,7 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
         if let Some(permissions) = permissions {
             file.set_permissions(fs::Permissions::from_mode(permissions.mode() & 0o700))?;
         }
+
         file.write_all(body.as_bytes())?;
         file.sync_all()?;
         fs::rename(&tmp, &path)
@@ -67,6 +69,7 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
     if written.is_err() {
         let _ = fs::remove_file(&tmp);
     }
+
     written.map(|()| body)
 }
 
@@ -76,11 +79,13 @@ pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     if read(path)?.chars().last().is_some_and(|last| last != '\n') {
         body.insert(0, '\n');
     }
+
     let mut file = fs::OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
     let mode = file.metadata()?.permissions().mode();
     if mode & 0o077 != 0 {
         file.set_permissions(fs::Permissions::from_mode(mode & 0o700))?;
     }
+
     file.write_all(body.as_bytes())?;
     file.sync_all()
 }

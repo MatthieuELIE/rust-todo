@@ -44,6 +44,7 @@ impl Todo {
         } else if let Some(priority) = self.priority {
             parts.push(format!("({priority})"));
         }
+
         parts.extend(self.created.map(|date| date.to_string()));
         parts.push(self.description.clone());
         parts.join(" ")
@@ -72,6 +73,7 @@ impl Todo {
         if text.contains(is_control) {
             return Err("a task is one line, without control characters".to_string());
         }
+
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
         Ok(todo)
@@ -101,6 +103,7 @@ impl Todo {
         if todo.done {
             return Err("cannot add a task that is already done".to_string());
         }
+
         todo.created.get_or_insert(today);
         Ok(todo)
     }
@@ -126,11 +129,13 @@ impl Todo {
                     if !value.is_empty() && !value.starts_with("//") {
                         spans.push((s, i));
                     }
+
                     start = None;
                 }
                 _ => {}
             }
         }
+
         for (s, e) in spans.into_iter().rev() {
             let current = &self.description;
             let range = match current[..s].chars().next_back() {
@@ -147,6 +152,7 @@ impl Todo {
         if !self.done {
             return Err("is not done");
         }
+
         let pending = Todo {
             done: false,
             completed: None,
@@ -156,9 +162,11 @@ impl Todo {
         if Todo::from_line(&pending.to_line()).done {
             return Err("cannot be reopened: its text starts with x");
         }
+
         if !pending.has_text() {
             return Err("cannot be reopened: it is only +projects, @contexts and key: words");
         }
+
         *self = pending;
         Ok(())
     }
@@ -181,6 +189,7 @@ impl Todo {
                 names.push(name);
             }
         }
+
         names
     }
 
@@ -193,6 +202,7 @@ impl Todo {
             if !Todo::is_key_value(last) {
                 return trimmed;
             }
+
             text = rest;
         }
     }

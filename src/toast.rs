@@ -131,6 +131,7 @@ fn undoable(done: String, hidden: bool) -> String {
     if hidden {
         return format!("{done}, hidden by the filter, press u to undo");
     }
+
     format!("{done}, press u to undo")
 }
 

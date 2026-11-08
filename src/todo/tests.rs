@@ -19,6 +19,7 @@ fn a_task_made_only_of_non_text_words_is_refused() {
     ] {
         assert!(Todo::from_input(line).unwrap().check_text().is_err(), "{line}");
     }
+
     for line in [
         "Appeler +banque",
         "Appeler 2026-10-09",
@@ -268,6 +269,7 @@ fn a_typed_line_holding_a_bidi_or_zero_width_character_is_refused() {
     for c in ['\u{200b}', '\u{200f}', '\u{202a}', '\u{202e}', '\u{2066}', '\u{2069}'] {
         assert!(Todo::from_input(&format!("Lorem {c}ipsum")).is_err());
     }
+
     assert!(Todo::from_input("Café 🏠 ipsum").is_ok());
 }
 

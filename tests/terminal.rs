@@ -52,6 +52,7 @@ fn script(command: &[String]) -> Command {
         let quoted: Vec<String> = command.iter().map(|word| format!("'{}'", word.replace('\'', r"'\''"))).collect();
         script.args(["-qec", &quoted.join(" "), "/dev/null"]);
     }
+
     script
 }
 
@@ -69,6 +70,7 @@ impl Pty {
         if no_color {
             command.env("NO_COLOR", "1");
         }
+
         let mut child = command
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
@@ -119,9 +121,11 @@ impl Pty {
                 self.reader.take().unwrap().join().unwrap();
                 return (status, self.screen());
             }
+
             if start.elapsed() > DEADLINE {
                 panic!("todo did not exit: {:?}", self.screen());
             }
+
             std::thread::sleep(Duration::from_millis(20));
         }
     }

@@ -174,6 +174,7 @@ impl App {
         let queued = self.moves.len();
         let write = self.apply(key, today);
         self.forget_gone_folds();
+
         if write && history == (self.undo.len(), self.redo.len()) {
             if self.undo.len() == MAX_UNDO {
                 self.undo.remove(0);
@@ -193,17 +194,20 @@ impl App {
             .filter(|line| !line.is_empty())
             .collect::<Vec<_>>()
             .join(" ");
+
         match &mut self.focus {
             Focus::Popup(popup) if popup.picker.is_none() => popup.editor.paste(&text),
             Focus::Search => self.search.push_str(&text),
             _ => {}
         }
+
         self.forget_gone_folds();
     }
 
     /// Applies one key press to the state, dated `today`, and tells whether the file must be rewritten.
     fn apply(&mut self, key: KeyEvent, today: Date) -> bool {
         let pending = self.pending.take();
+
         if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
             self.quit = true;
             return false;
@@ -219,6 +223,7 @@ impl App {
 
             return false;
         }
+
         let write = match self.focus {
             Focus::Help(_) => {
                 self.help_key(key, pending);
@@ -235,6 +240,7 @@ impl App {
             }
             Focus::List => self.list_key(key, pending, today),
         };
+
         self.clamp_cursor();
         write
     }
@@ -251,6 +257,7 @@ impl App {
     /// Notes `now` as the instant of the turn and takes the toast down when its time is up.
     pub fn tick(&mut self, now: Instant) {
         self.now = Some(now);
+
         if self.toast.as_ref().is_some_and(|toast| toast.expired(now)) {
             self.toast = None;
         }

@@ -13,6 +13,7 @@ impl App {
             KeyCode::Enter => self.focus = Focus::List,
             _ => {}
         }
+
         self.cursor = 0;
     }
 }

@@ -6,22 +6,26 @@ impl App {
         let rows = self.rows();
         let last = rows.len().saturating_sub(1);
         let row = rows.get(self.cursor).copied();
+
         let selected = match row {
             Some(Row::Task(number)) => Some(number),
             _ => None,
         };
+
         let writes = match key.code {
             KeyCode::Char('x' | 'o' | 'p' | 'u') | KeyCode::Enter => true,
             KeyCode::Char('d') => pending == Some('d'),
             KeyCode::Char('r') => key.modifiers == KeyModifiers::CONTROL,
             _ => false,
         };
+
         if self.in_history && writes {
             self.notify(Notice::HistoryReadOnly);
             return false;
         }
 
         let mut write = false;
+
         match key.code {
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
                 let priority = (c != ' ').then(|| c.to_ascii_uppercase());
@@ -108,6 +112,7 @@ impl App {
             KeyCode::Char('?') => self.open_help(),
             KeyCode::Char('H') => {
                 self.in_history = !self.in_history;
+
                 if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {
                     self.filter = None;
                 }
@@ -128,6 +133,7 @@ impl App {
             KeyCode::Char('D') => self.notify(Notice::NothingDue),
             _ => {}
         }
+
         write
     }
 }

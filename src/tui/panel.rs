@@ -28,11 +28,13 @@ impl App {
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
         let due = shown.iter().filter(|(_, todo)| shows(todo, DUE_NOW, self.today)).count();
+
         if due > 0 && !self.in_history {
             filters.push((DUE_NOW.to_string(), due));
         }
 
         let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
+
         if waiting > 0 && !self.in_history {
             filters.push((WAITING.to_string(), waiting));
         }
@@ -59,6 +61,7 @@ impl App {
         let row = self.filter_row(&filters).unwrap_or(0);
         let pick = |row: usize| (row > 0).then(|| filters[row].0.clone());
         let before = self.filter.clone();
+
         match key.code {
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('?') => self.open_help(),
@@ -68,6 +71,7 @@ impl App {
             KeyCode::Tab | KeyCode::Enter => self.focus = Focus::List,
             _ => {}
         }
+
         if self.filter != before {
             self.cursor = 0;
         }

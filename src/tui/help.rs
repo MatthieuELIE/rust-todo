@@ -13,6 +13,7 @@ impl App {
             unreachable!("the help is open");
         };
         let max = self.help_max.get();
+
         match key.code {
             _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => {}
             KeyCode::Esc | KeyCode::Enter | KeyCode::Char('?' | 'q') => self.focus = std::mem::take(&mut self.under_help),

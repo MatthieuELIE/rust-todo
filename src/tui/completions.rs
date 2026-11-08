@@ -12,12 +12,15 @@ impl App {
         let Some(tag) = popup.editor.tag() else {
             return Default::default();
         };
+
         let (sigil, names): (&str, fn(&Todo) -> Vec<&str>) = match tag.chars().next() {
             Some('+') => ("+", Todo::projects),
             Some('@') => ("@", Todo::contexts),
             _ => (WAIT, Todo::waits),
         };
+
         let mut counts = HashMap::new();
+
         for name in self.todos.iter().flat_map(names) {
             *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
         }

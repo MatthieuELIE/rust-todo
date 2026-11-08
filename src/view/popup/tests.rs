@@ -1,6 +1,9 @@
 use super::super::tests::{MOCHA, TODAY, add_popup, app_of, render, render_in, render_with_cursor, rows};
 use crate::editor::{Editor, Mode};
 use crate::tui::{App, DUE_NOW, Focus, Popup, Target, WAITING};
+use crate::theme::Theme;
+use ratatui::buffer::Buffer;
+use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Position;
 use ratatui::style::Modifier;
 use time::macros::date;
@@ -284,6 +287,67 @@ fn the_popup_is_titled_by_the_number_of_the_task_edited_and_leaves_waiting_out_o
         popup.target = Target::Edit(1);
     }
     assert!(titled(&app, "╭ EDIT 1 ─"));
+}
+
+fn visual_app(theme: Theme, keys: &str) -> App {
+    let mut app = app_of(&["Pay rent"]);
+    app.theme = theme;
+    let mut editor = Editor::new("Call the bank about it".to_string());
+    for c in keys.chars() {
+        editor.handle_key(KeyEvent::from(KeyCode::Char(c)));
+    }
+    app.focus = Focus::Popup(Popup {
+        editor,
+        target: Target::Add,
+        selected: 0,
+        picker: None,
+    });
+    app
+}
+
+fn reversed_text(buffer: &Buffer) -> String {
+    buffer
+        .content
+        .iter()
+        .filter(|cell| cell.modifier.contains(Modifier::REVERSED))
+        .map(|cell| cell.symbol())
+        .collect()
+}
+
+#[test]
+fn the_selection_is_reversed_in_every_theme_and_nothing_else_is_with_the_cursor_on_its_end() {
+    for theme in [MOCHA, Theme::TERMINAL, Theme::NONE] {
+        let app = visual_app(theme, "fbvee");
+        let (buffer, cursor) = render_with_cursor(&app, 50, 5);
+        let rows = rows(&buffer);
+        let y = rows.iter().position(|row| row.contains("Call")).expect("popup line");
+        let x = rows[y].split("Call").next().expect("row").chars().count() as u16;
+
+        assert_eq!(reversed_text(&buffer), "bank about");
+        assert_eq!(cursor, Some(Position::new(x + 18, y as u16)));
+        assert!(rows[4].contains(" VISUAL ") && rows[4].ends_with("? help"), "{}", rows[4]);
+        assert!(buffer.content.iter().all(|cell| !cell.modifier.intersects(Modifier::HIDDEN | Modifier::RAPID_BLINK)));
+    }
+}
+
+#[test]
+fn the_selection_and_its_cursor_survive_the_wrapping_of_the_line() {
+    let app = visual_app(MOCHA, "fbveee");
+    let (buffer, cursor) = render_with_cursor(&app, 30, 6);
+
+    assert_eq!(reversed_text(&buffer).replace(' ', ""), "bankaboutit");
+    let cursor = cursor.expect("cursor");
+    assert_eq!(buffer[(cursor.x, cursor.y)].symbol(), "t");
+}
+
+#[test]
+fn a_backwards_selection_puts_the_cursor_on_its_start() {
+    let app = visual_app(MOCHA, "fbvb");
+    let (buffer, cursor) = render_with_cursor(&app, 50, 5);
+    let cursor = cursor.expect("cursor");
+
+    assert_eq!(reversed_text(&buffer), "the b");
+    assert_eq!(buffer[(cursor.x, cursor.y)].symbol(), "t");
 }
 
 fn cells(row: &str, x: usize, width: usize) -> String {

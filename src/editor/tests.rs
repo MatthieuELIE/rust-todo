@@ -135,7 +135,6 @@ pub(super) const TAGGED: &str = "Appeler +banque due:2026-10-15";
 pub(super) fn after(text: &str, from: usize, typed: &str) -> (String, usize) {
     let mut ed = normal(text, from);
     keys(&mut ed, typed);
-
     (ed.text, ed.cursor)
 }
 

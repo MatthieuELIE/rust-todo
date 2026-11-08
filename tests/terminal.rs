@@ -46,6 +46,7 @@ fn sized_command(args: &[&str]) -> Vec<String> {
 
 fn script(command: &[String]) -> Command {
     let mut script = Command::new("/usr/bin/script");
+
     if cfg!(target_os = "macos") {
         script.args(["-q", "/dev/null"]).args(command);
     } else {
@@ -67,6 +68,7 @@ impl Pty {
             .env("HOME", dir)
             .env("TODO_FILE", dir.join("todo.txt"))
             .env("XDG_CONFIG_HOME", dir.join("config"));
+
         if no_color {
             command.env("NO_COLOR", "1");
         }
@@ -103,6 +105,7 @@ impl Pty {
 
     fn wait_for(&self, text: &str) {
         let start = Instant::now();
+
         while !self.screen().contains(text) {
             assert!(start.elapsed() < DEADLINE, "{text:?} never showed in {:?}", self.screen());
             std::thread::sleep(Duration::from_millis(20));
@@ -116,6 +119,7 @@ impl Pty {
 
     fn finish(mut self) -> (ExitStatus, String) {
         let start = Instant::now();
+
         loop {
             if let Some(status) = self.child.try_wait().unwrap() {
                 self.reader.take().unwrap().join().unwrap();

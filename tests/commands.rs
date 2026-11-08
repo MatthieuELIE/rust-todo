@@ -30,6 +30,7 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
 
     let (text, history) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
     std::fs::remove_dir_all(&folder).unwrap();
+
     for (output, confirmation) in said {
         assert!(output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stdout), confirmation);
@@ -141,6 +142,7 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
 
     let text = std::fs::read_to_string(&file).unwrap();
     std::fs::remove_file(&file).unwrap();
+
     for (output, error) in refused {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
@@ -191,6 +193,7 @@ fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
 
     let text = std::fs::read_to_string(&file).unwrap();
     std::fs::remove_file(&file).unwrap();
+
     for (output, error) in refused {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
@@ -218,6 +221,7 @@ fn edit_refuses_a_term_starting_with_a_dash_and_writes_nothing() {
 
     let text = std::fs::read_to_string(&file).unwrap();
     std::fs::remove_file(&file).unwrap();
+
     for (output, error) in refused {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);

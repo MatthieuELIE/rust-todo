@@ -138,6 +138,7 @@ fn undoable(done: String, hidden: bool) -> String {
 /// `text` with its first letter in capital.
 fn capitalised(text: &str) -> String {
     let mut letters = text.chars();
+
     match letters.next() {
         Some(first) => first.to_uppercase().chain(letters).collect(),
         None => String::new(),

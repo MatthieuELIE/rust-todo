@@ -26,10 +26,12 @@ fn main() -> ExitCode {
     let cli = Cli::parse();
     let path = todo_path();
     let no_color = config::no_color(std::env::var_os("NO_COLOR"));
+
     let (theme, icons) = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir()), no_color) {
         Ok(read) => read,
         Err(message) => {
             eprintln!("{message}");
+
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &config::choose(no_color, None));
             }
@@ -37,6 +39,7 @@ fn main() -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
+
     if no_color && theme != Theme::NONE {
         force_color_output(true);
     }
@@ -52,6 +55,7 @@ fn main() -> ExitCode {
         Err(e) => {
             let message = format!("could not read {}: {e}", path.display());
             eprintln!("{message}");
+
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &theme);
             }

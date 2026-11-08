@@ -82,6 +82,7 @@ pub fn theme(path: &Path, no_color: bool) -> Result<(Theme, bool), String> {
         Err(e) if e.kind() == ErrorKind::NotFound => return Ok((choose(no_color, None), false)),
         Err(e) => return Err(format!("could not read {}: {e}", path.display())),
     };
+
     let config: Config = toml::from_str(&text).map_err(|e| cleaned(&format!("{}: {e}", path.display())))?;
     Ok((choose(no_color, config.theme.name), config.theme.icons))
 }

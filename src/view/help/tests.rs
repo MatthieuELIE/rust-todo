@@ -8,6 +8,7 @@ fn help_app(focus: Focus) -> App {
     let mut app = app_of(&["Pay +rent"]);
     app.focus = Focus::Help(0);
     app.under_help = focus;
+
     app
 }
 
@@ -89,6 +90,7 @@ fn the_help_draws_one_column_in_the_order_of_help_on_a_narrow_area() {
                 match (titled(&rows, names[0]), titled(&rows, names[1])) {
                     (Some(first), Some(second)) => {
                         assert!(first < second, "{names:?}");
+
                         true
                     }
                     _ => false,
@@ -109,6 +111,7 @@ fn rows_of(app: &App, width: u16, height: u16) -> Vec<String> {
 fn box_width(rows: &[String]) -> usize {
     let top = rows.iter().find(|row| row.contains("╭ HELP ─")).expect("box");
     let from = top.split("╭ HELP ─").next().expect("row").chars().count();
+
     top.chars().skip(from).position(|c| c == '╮').expect("corner") + 1
 }
 
@@ -135,6 +138,7 @@ fn header_cell(app: &mut App, name: &str) -> Cell {
     for scroll in [0, u16::MAX] {
         app.focus = Focus::Help(scroll);
         let buffer = render_in(app, 109, 36);
+
         if let Some(y) = header(&rows(&buffer), column, name) {
             return buffer[(13 + 44 * column as u16, y as u16)].clone();
         }
@@ -171,6 +175,7 @@ fn the_help_opened_from_the_popup_lights_normal_visual_or_date_when_the_date_pic
         }
 
         let mut app = help_app(std::mem::take(&mut app.focus));
+
         ["INSERT", "NORMAL", "VISUAL", "DATE"]
             .into_iter()
             .filter(|name| header_cell(&mut app, name).bg == MOCHA.accent)

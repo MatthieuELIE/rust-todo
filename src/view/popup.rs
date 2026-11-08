@@ -40,6 +40,7 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
     let marked = |frame: &mut Frame, mark| area.positions().filter(|&cell| frame.buffer_mut()[cell].modifier.contains(mark)).last();
     let after = marked(frame, Modifier::HIDDEN).map(|cell| {
         let width = Span::raw(frame.buffer_mut()[cell].symbol()).width() as u16;
+
         Position::new(cell.x + width, cell.y)
     });
     let cursor = marked(frame, Modifier::RAPID_BLINK).or(after);
@@ -182,6 +183,7 @@ fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
     }
 
     spans.extend(words(theme, &description, Some(today)));
+
     spans
 }
 

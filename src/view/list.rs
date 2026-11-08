@@ -85,8 +85,10 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
 
     spans.extend(words(theme, &todo.description, Some(today)).into_iter().map(|span| {
         let late = span.content.strip_prefix(DUE).and_then(parse_date).is_some_and(|due| due < today);
+
         if late { span.bold() } else { span }
     }));
+
     Line::from(spans)
 }
 
@@ -100,6 +102,7 @@ fn header(theme: &Theme, group: Group, count: usize, folded: bool, width: usize)
     let count = format!(" ({count})");
     let end = if folded { " ▸" } else { "" };
     let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4 + end.chars().count()));
+
     Line::from_iter([
         count.fg(theme.tertiary),
         "  ".into(),

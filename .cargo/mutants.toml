@@ -16,9 +16,9 @@ exclude_re = [
     # `today` only changes the colours of the words, not their width, so the text wraps onto as many rows.
     'src/view/details\.rs:21:31: delete ! in details_height',
     # The help opens from the popup only with the date picker open or in normal or visual mode, so no popup in insert mode is under it.
-    'src/view/help\.rs:161:32: replace match guard popup\.editor\.mode == Mode::Insert with false in opened_from',
+    'src/view/help\.rs:162:32: replace match guard popup\.editor\.mode == Mode::Insert with false in opened_from',
     # A priority is a letter from A to E, so the index is at most 4 and the bound never applies.
-    'src/view/style\.rs:77:96: replace - with [+/] in priority',
+    'src/view/style\.rs:79:96: replace - with [+/] in priority',
     # CONTROL and ALT are disjoint flags: `^` gives the same set as `|`.
     'src/tui\.rs:215:63: replace \| with \^ in App::apply',
     'src/tui/help\.rs:18:65: replace \| with \^ in App::help_key',

@@ -73,6 +73,7 @@ pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: 
         let priority = todo.priority.map(|letter| badge(theme, letter));
         detail(frame, theme, "Priority", priority.into_iter().collect(), first_row);
     }
+
     draw_text(frame, theme, text_of(theme, todo, today), text_row);
     detail(frame, theme, "Created", date(todo.created), created_area);
     detail(frame, theme, "Due", due.into_iter().collect(), due_area);

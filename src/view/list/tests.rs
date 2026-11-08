@@ -68,6 +68,7 @@ fn a_pending_line_keeps_its_text_but_shows_its_priority_as_a_badge_and_colours_d
     for plain in ["Call", "a+b", "+", "@"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }
+
     for (i, letter) in ['B', 'C', 'D', 'E'].into_iter().enumerate() {
         assert_eq!(style_of(&format!("({letter}) x"), &format!(" {letter} ")), badge(i + 1), "{letter}");
     }

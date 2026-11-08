@@ -136,6 +136,7 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     for (column, slot) in columns.into_iter().zip(slots.iter()) {
         frame.render_widget(Paragraph::new(column).scroll((scroll.min(max), 0)), *slot);
     }
+
     if max > 0 {
         let bar = Rect::new(area.right() - 3, inner.y, 1, inner.height);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
@@ -177,10 +178,12 @@ fn column_lines(theme: &Theme, sections: &[&'static str], lit: &str) -> Vec<Line
         if i > 0 {
             lines.push(Line::default());
         }
+
         let (name, keys) = section.split_once('\n').unwrap_or((section, ""));
         lines.push(Line::from(mode_block(theme, name, name == lit)));
         lines.extend(help_lines(theme, keys));
     }
+
     lines
 }
 
@@ -195,8 +198,10 @@ fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
                 if i > 0 {
                     spans.push("/".fg(theme.separator));
                 }
+
                 spans.push(alternative.bold());
             }
+
             spans.push(action.fg(theme.tertiary));
             Line::from(spans)
         })

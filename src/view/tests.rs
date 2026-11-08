@@ -186,6 +186,7 @@ fn the_terminal_theme_leaves_the_background_and_the_text_to_the_terminal_on_the_
         let cell = &buffer[(x, y as u16)];
         assert_eq!((cell.fg, cell.bg), (Color::Reset, Color::Reset), "{word}");
     }
+
     assert_eq!(buffer[(60, 20)].bg, Color::Reset);
 }
 
@@ -265,6 +266,7 @@ pub(super) fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
             }
         }
     }
+
     found
 }
 
@@ -296,6 +298,7 @@ fn with_icons_the_six_glyphs_stand_before_their_word_in_its_style() {
         let (icon, first) = (&buffer[(x, y)], &buffer[(x + 2, y)]);
         assert_eq!((icon.fg, icon.modifier), (first.fg, first.modifier), "{word}");
     }
+
     let due = found.iter().find(|(glyph, ..)| *glyph == '\u{f073}').unwrap();
     assert_eq!(buffer[(due.1, due.2)].fg, MOCHA.alert);
 }

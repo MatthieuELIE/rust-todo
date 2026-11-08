@@ -56,6 +56,7 @@ fn the_help_draws_two_columns_on_a_wide_area_each_section_whole_in_its_own() {
     for name in ["INSERT", "NORMAL", "VISUAL", "DATE"] {
         assert_eq!(at(&left, name), None, "{name}");
     }
+
     for name in ["LIST", "PANEL", "SEARCH"] {
         assert_eq!(at(&right, name), None, "{name}");
     }
@@ -135,6 +136,7 @@ fn header_cell(app: &mut App, name: &str) -> Cell {
             return buffer[(13 + 44 * column as u16, y as u16)].clone();
         }
     }
+
     panic!("{name} is in no screen of the help");
 }
 
@@ -162,6 +164,7 @@ fn the_help_opened_from_the_popup_lights_normal_visual_or_date_when_the_date_pic
             popup.editor.mode = mode;
             popup.picker = picker.then_some(TODAY);
         }
+
         let mut app = help_app(std::mem::take(&mut app.focus));
         ["INSERT", "NORMAL", "VISUAL", "DATE"]
             .into_iter()

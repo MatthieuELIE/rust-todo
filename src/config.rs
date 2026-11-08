@@ -53,7 +53,6 @@ pub fn path(xdg_config_home: Option<OsString>, home: Option<PathBuf>) -> PathBuf
         .filter(|value| !value.is_empty())
         .map(PathBuf::from)
         .unwrap_or_else(|| home.unwrap_or_default().join(".config"));
-
     config_home.join("todo").join("config.toml")
 }
 
@@ -85,7 +84,6 @@ pub fn theme(path: &Path, no_color: bool) -> Result<(Theme, bool), String> {
     };
 
     let config: Config = toml::from_str(&text).map_err(|e| cleaned(&format!("{}: {e}", path.display())))?;
-
     Ok((choose(no_color, config.theme.name), config.theme.icons))
 }
 
@@ -98,7 +96,6 @@ mod tests {
         std::fs::create_dir_all(&folder).unwrap();
         let path = folder.join("config.toml");
         std::fs::write(&path, text).unwrap();
-
         path
     }
 

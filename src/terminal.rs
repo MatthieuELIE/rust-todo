@@ -68,7 +68,6 @@ fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Re
     let mut terminal = ratatui::try_init().map_err(|e| io::Error::other(format!("could not set up the terminal: {e}")))?;
     let result = f(&mut terminal);
     ratatui::restore();
-
     result
 }
 

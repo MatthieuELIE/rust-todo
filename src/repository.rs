@@ -25,6 +25,7 @@ pub fn read(path: &Path) -> io::Result<String> {
 /// Parse the tasks of a todo file's text, its blank lines dropped.
 pub fn parse(text: &str) -> Vec<Todo> {
     let lines = text.split('\n').map(|line| line.trim_end_matches('\r'));
+
     lines.filter(|line| !line.trim().is_empty()).map(Todo::from_line).collect()
 }
 
@@ -32,6 +33,7 @@ pub fn parse(text: &str) -> Vec<Todo> {
 pub fn load(path: &Path) -> io::Result<(String, Vec<Todo>)> {
     let text = read(path)?;
     let todos = parse(&text);
+
     Ok((text, todos))
 }
 
@@ -92,6 +94,7 @@ pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     }
 
     file.write_all(body.as_bytes())?;
+
     file.sync_all()
 }
 
@@ -106,6 +109,7 @@ pub fn remove_task(path: &Path, number: Option<usize>, line: &str) -> io::Result
         return Ok(false);
     };
     lines.remove(index);
+
     write(path, lines.concat()).map(|_| true)
 }
 

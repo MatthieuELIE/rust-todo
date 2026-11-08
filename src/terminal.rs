@@ -21,6 +21,7 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
     app.icons = icons;
     app.today = Some(today());
     let mut scroll = ListState::default();
+
     on_terminal(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;
 
@@ -67,6 +68,7 @@ fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Re
     let mut terminal = ratatui::try_init().map_err(|e| io::Error::other(format!("could not set up the terminal: {e}")))?;
     let result = f(&mut terminal);
     ratatui::restore();
+
     result
 }
 

@@ -10,6 +10,7 @@ pub fn list<'a>(todos: &'a [Todo], terms: &[String]) -> Vec<(usize, &'a Todo)> {
         .filter(|(_, todo)| matches(&todo.to_line().to_lowercase(), &terms))
         .collect();
     tasks.sort_by_key(|(_, todo)| (todo.priority.is_none(), todo.priority));
+
     tasks
 }
 

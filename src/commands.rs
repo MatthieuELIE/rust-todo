@@ -61,6 +61,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
 
     if matches!(command, Commands::Archive | Commands::Reopen { .. } | Commands::Do { .. }) && repository::same_file(&path, &done_path) {
         eprintln!("the task file is done.txt itself: {}", path.display());
+
         return ExitCode::FAILURE;
     }
 
@@ -72,6 +73,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
     match command {
         Commands::List { terms, .. } if terms.first().is_some_and(|term| term == "--all" || term == "-a") => {
             eprintln!("--all is gone: list shows the pending tasks, list --done the done ones");
+
             return ExitCode::from(2);
         }
 
@@ -107,6 +109,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             Ok(todo) => todos.push(todo),
             Err(e) => {
                 eprintln!("{e}");
+
                 return ExitCode::FAILURE;
             }
         },
@@ -117,6 +120,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             task: Task::Number(number), ..
         } if !(1..=todos.len()).contains(&number) => {
             eprintln!("no task numbered {number}");
+
             return ExitCode::FAILURE;
         }
 
@@ -124,6 +128,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
 
         Commands::Do { number } if todos[number - 1].done => {
             eprintln!("task {number} is already done");
+
             return ExitCode::FAILURE;
         }
 
@@ -138,6 +143,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             task: Task::Number(number), ..
         } if todos[number - 1].done => {
             eprintln!("task {number} is done");
+
             return ExitCode::FAILURE;
         }
 
@@ -148,6 +154,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                     Ok(number) => number,
                     Err(message) => {
                         eprintln!("{message}");
+
                         return ExitCode::FAILURE;
                     }
                 },
@@ -156,6 +163,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             match Todo::from_input(&text) {
                 Ok(todo) if todo.done => {
                     eprintln!("cannot edit a task into a done one");
+
                     return ExitCode::FAILURE;
                 }
                 Ok(mut todo) => {
@@ -166,6 +174,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
 
                     if let Err(e) = todo.check_text() {
                         eprintln!("{e}");
+
                         return ExitCode::FAILURE;
                     }
 
@@ -173,6 +182,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 }
                 Err(e) => {
                     eprintln!("{e}");
+
                     return ExitCode::FAILURE;
                 }
             }
@@ -183,6 +193,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 Ok(text) => text,
                 Err(e) => {
                     eprintln!("could not read {}: {e}", done_path.display());
+
                     return ExitCode::FAILURE;
                 }
             };
@@ -197,11 +208,13 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
 
             if let Err(reason) = todo.reopen() {
                 eprintln!("task {number} {reason}");
+
                 return ExitCode::FAILURE;
             }
 
             if let Err(e) = std::fs::OpenOptions::new().write(true).open(&done_path) {
                 eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+
                 return ExitCode::FAILURE;
             }
 
@@ -215,6 +228,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
 
             if done.is_empty() {
                 eprintln!("nothing to archive");
+
                 return ExitCode::SUCCESS;
             }
 
@@ -228,6 +242,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
         && let Err(e) = std::fs::OpenOptions::new().write(true).open(&path)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
+
         return ExitCode::FAILURE;
     }
 
@@ -235,11 +250,13 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
         && let Err(e) = repository::append(&done_path, &moved)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+
         return ExitCode::FAILURE;
     }
 
     if let Err(e) = repository::save(&path, &todos) {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
+
         return ExitCode::FAILURE;
     }
 
@@ -247,6 +264,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
         && let Err(e) = repository::write(&done_path, body)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
+
         return ExitCode::FAILURE;
     }
 

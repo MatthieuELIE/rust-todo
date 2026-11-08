@@ -1,7 +1,7 @@
 use super::super::tests::{MOCHA, TODAY, add_popup, app_of, render, render_in, render_with_cursor, rows};
 use crate::editor::{Editor, Mode};
-use crate::tui::{App, DUE_NOW, Focus, Popup, Target, WAITING};
 use crate::theme::Theme;
+use crate::tui::{App, DUE_NOW, Focus, Popup, Target, WAITING};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Position;
@@ -326,7 +326,12 @@ fn the_selection_is_reversed_in_every_theme_and_nothing_else_is_with_the_cursor_
         assert_eq!(reversed_text(&buffer), "bank about");
         assert_eq!(cursor, Some(Position::new(x + 18, y as u16)));
         assert!(rows[4].contains(" VISUAL ") && rows[4].ends_with("? help"), "{}", rows[4]);
-        assert!(buffer.content.iter().all(|cell| !cell.modifier.intersects(Modifier::HIDDEN | Modifier::RAPID_BLINK)));
+        assert!(
+            buffer
+                .content
+                .iter()
+                .all(|cell| !cell.modifier.intersects(Modifier::HIDDEN | Modifier::RAPID_BLINK))
+        );
     }
 }
 

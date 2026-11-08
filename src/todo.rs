@@ -88,9 +88,7 @@ impl Todo {
     fn has_text(&self) -> bool {
         self.description.split_whitespace().any(|word| {
             let named = |sigil| word.strip_prefix(sigil).is_some_and(|name| !name.is_empty());
-            let key = word
-                .split_once(':')
-                .is_some_and(|(key, _)| key.starts_with(char::is_alphabetic) && key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_'));
+            let key = word.split_once(':').is_some_and(|(key, _)| Todo::is_key(key));
             let priority = matches!(word.as_bytes(), [b'(', p, b')'] if Todo::is_valid_priority(*p as char));
             !(named('+') || named('@') || key || priority || parse_date(word).is_some())
         })
@@ -236,10 +234,12 @@ impl Todo {
             return false;
         };
 
-        key.starts_with(char::is_alphabetic)
-            && key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
-            && !value.is_empty()
-            && !value.starts_with("//")
+        Todo::is_key(key) && !value.is_empty() && !value.starts_with("//")
+    }
+
+    /// Whether `name` is a key: letters, digits, `-` and `_`, starting with a letter.
+    fn is_key(name: &str) -> bool {
+        name.starts_with(char::is_alphabetic) && name.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
     }
 }
 

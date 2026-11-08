@@ -245,6 +245,7 @@ fn the_former_all_flag_is_refused_rather_than_read_as_a_term() {
     let outputs = [list("--all"), list("-a")];
 
     std::fs::remove_file(&file).unwrap();
+
     for output in outputs {
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());

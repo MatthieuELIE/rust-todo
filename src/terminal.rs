@@ -23,16 +23,20 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
     let mut scroll = ListState::default();
     on_terminal(|terminal| {
         execute!(io::stdout(), EnableBracketedPaste)?;
+
         while !app.quit {
             app.refresh_history(path);
             terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
             execute!(io::stdout(), app.cursor_shape())?;
+
             let event = if event::poll(Duration::from_millis(250))? {
                 Some(event::read()?)
             } else {
                 None
             };
+
             app.tick(Instant::now());
+
             if app.turn(repository::read(path), &mut text, event, today()) {
                 app.save(path, &mut text);
             }
@@ -70,6 +74,7 @@ fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Re
 pub fn show_error(message: &str, theme: &Theme) -> io::Result<()> {
     on_terminal(|terminal| {
         terminal.draw(|frame| view::draw_error(frame, theme, message))?;
+
         loop {
             if let Event::Key(key) = event::read()?
                 && key.kind == KeyEventKind::Press

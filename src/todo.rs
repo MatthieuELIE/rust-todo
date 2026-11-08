@@ -38,6 +38,7 @@ impl Todo {
     /// Convert a todo item to a line of text in the todo.txt format.
     pub fn to_line(&self) -> String {
         let mut parts = Vec::new();
+
         if self.done {
             parts.push("x".to_string());
             parts.extend(self.completed.map(|date| date.to_string()));
@@ -121,11 +122,13 @@ impl Todo {
         let text = self.description.clone();
         let mut spans = Vec::new();
         let mut start = None;
+
         for (i, c) in text.char_indices().chain([(text.len(), ' ')]) {
             match (start, c.is_whitespace()) {
                 (None, false) => start = Some(i),
                 (Some(s), true) => {
                     let value = text[s..i].strip_prefix(WAIT).unwrap_or("//");
+
                     if !value.is_empty() && !value.starts_with("//") {
                         spans.push((s, i));
                     }
@@ -138,10 +141,12 @@ impl Todo {
 
         for (s, e) in spans.into_iter().rev() {
             let current = &self.description;
+
             let range = match current[..s].chars().next_back() {
                 Some(c) => s - c.len_utf8()..e,
                 None => s..e + current[e..].chars().next().map_or(0, char::len_utf8),
             };
+
             self.description.replace_range(range, "");
         }
     }
@@ -184,6 +189,7 @@ impl Todo {
     /// Words of the description starting with `prefix`, without it, once each in order of appearance.
     fn words_after(&self, prefix: &str) -> Vec<&str> {
         let mut names = Vec::new();
+
         for name in self.description.split_whitespace().filter_map(|word| word.strip_prefix(prefix)) {
             if !name.is_empty() && !names.contains(&name) {
                 names.push(name);
@@ -196,6 +202,7 @@ impl Todo {
     /// The description without its trailing run of `key:value` words; a `+project` or `@context` ending it stays.
     pub fn text(&self) -> &str {
         let mut text = self.description.as_str();
+
         loop {
             let trimmed = text.trim_end();
             let (rest, last) = trimmed.rsplit_once(char::is_whitespace).unwrap_or(("", trimmed));
@@ -242,10 +249,12 @@ impl Todo {
 /// Take a leading `(A) ` off `rest` and return its letter.
 fn strip_priority(rest: &mut &str) -> Option<char> {
     let mut chars = rest.chars();
+
     let priority = match (chars.next(), chars.next(), chars.next(), chars.next()) {
         (Some('('), Some(p), Some(')'), Some(' ')) if Todo::is_valid_priority(p) => p,
         _ => return None,
     };
+
     *rest = &rest[4..];
     Some(priority)
 }

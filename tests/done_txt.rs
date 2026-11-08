@@ -25,6 +25,7 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
 
     let (text, left) = (std::fs::read_to_string(&file).unwrap(), std::fs::read_to_string(&done).unwrap());
     std::fs::remove_dir_all(&folder).unwrap();
+
     for (output, error) in refused {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
@@ -127,6 +128,7 @@ fn archive_reopen_and_do_refuse_a_task_file_that_is_done_txt_itself() {
 
     let text = std::fs::read_to_string(&file).unwrap();
     std::fs::remove_dir_all(&folder).unwrap();
+
     for output in outputs {
         assert!(!output.status.success());
         assert!(output.stdout.is_empty());

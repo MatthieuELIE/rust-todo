@@ -12,6 +12,7 @@ pub fn read(path: &Path) -> io::Result<String> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => return Ok(String::new()),
         file => file?,
     };
+
     let mut bytes = Vec::new();
     file.take(MAX_BYTES + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > MAX_BYTES {
@@ -56,8 +57,10 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
         Err(e) if e.kind() == io::ErrorKind::NotFound => None,
         Err(e) => return Err(e),
     };
+
     let written = (|| {
         let mut file = fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp)?;
+
         if let Some(permissions) = permissions {
             file.set_permissions(fs::Permissions::from_mode(permissions.mode() & 0o700))?;
         }
@@ -76,12 +79,14 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
 /// Add the tasks to the end of a file, created if it is missing, without rewriting what it holds.
 pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     let mut body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
+
     if read(path)?.chars().last().is_some_and(|last| last != '\n') {
         body.insert(0, '\n');
     }
 
     let mut file = fs::OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
     let mode = file.metadata()?.permissions().mode();
+
     if mode & 0o077 != 0 {
         file.set_permissions(fs::Permissions::from_mode(mode & 0o700))?;
     }

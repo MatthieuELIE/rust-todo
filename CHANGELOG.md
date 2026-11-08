@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- `y` in the popup's normal mode copies to the clipboard what `d` would delete with the same motion or object (`yw`, `ye`, `y$`, `yt:`, `yiw`, `yaw`, `yy`…), and the toast says `Copied to the clipboard`; an empty range says `Nothing to copy` and leaves the clipboard alone.
+
 ## [0.8.2] - 2026-11-05
 
 ### Added

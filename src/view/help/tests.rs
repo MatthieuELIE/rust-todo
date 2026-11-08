@@ -21,7 +21,7 @@ fn header(rows: &[String], column: usize, name: &str) -> Option<usize> {
 
 #[test]
 fn the_help_draws_two_columns_on_a_wide_area_each_section_whole_in_its_own() {
-    let buffer = render_in(&help_app(Focus::List), 109, 36);
+    let buffer = render_in(&help_app(Focus::List), 109, 40);
     let rows = rows(&buffer);
     let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
     let slots = |column: usize| rows[top..].iter().map(|row| slot(row, column)).collect::<Vec<_>>();
@@ -74,14 +74,15 @@ fn the_help_draws_one_column_in_the_order_of_help_on_a_narrow_area() {
     let box_width = rows[top].chars().filter(|c| *c == '─').count() + 2 + " HELP ".chars().count();
     assert!(box_width <= 80, "{}", rows[top]);
 
-    let mut app = help_app(Focus::List);
-    app.focus = Focus::Help(u16::MAX);
-    let rows = rows_of(&app, 80, 36);
-    let order: Vec<usize> = [" INSERT ", " NORMAL ", " DATE "]
-        .iter()
-        .map(|name| rows.iter().position(|row| row.contains(name)).unwrap())
-        .collect();
-    assert!(order[0] < order[1] && order[1] < order[2]);
+    let order = |scroll: u16, names: [&str; 2]| {
+        let mut app = help_app(Focus::List);
+        app.focus = Focus::Help(scroll);
+        let rows = rows_of(&app, 80, 36);
+        let at: Vec<usize> = names.iter().map(|name| rows.iter().position(|row| row.contains(name)).unwrap()).collect();
+        assert!(at[0] < at[1], "{names:?}");
+    };
+    order(24, [" INSERT ", " NORMAL "]);
+    order(u16::MAX, [" NORMAL ", " DATE "]);
 }
 
 fn rows_of(app: &App, width: u16, height: u16) -> Vec<String> {
@@ -108,7 +109,7 @@ fn the_help_box_holds_its_lines_and_padding_on_a_screen_taller_than_them() {
     let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
     let bottom = rows.iter().position(|row| row.contains("─ esc close ╯")).expect("bottom");
 
-    assert_eq!(bottom - top + 1, 30 + 4);
+    assert_eq!(bottom - top + 1, 32 + 4);
 }
 
 #[test]
@@ -156,7 +157,7 @@ fn the_help_opened_from_the_popup_lights_normal_or_date_when_the_date_picker_is_
 fn the_help_bottom_title_says_j_k_scroll_only_when_the_content_overflows() {
     let app = help_app(Focus::List);
 
-    let tall = rows_of(&app, 109, 36);
+    let tall = rows_of(&app, 109, 40);
     assert!(tall.iter().any(|row| row.contains("─ esc close ╯")), "two columns fit");
     assert!(tall.iter().all(|row| !row.contains("j/k scroll")));
     assert!(tall.iter().all(|row| !row.contains('▐')));
@@ -172,10 +173,10 @@ fn the_help_tells_the_app_how_far_the_last_drawing_left_it_to_scroll() {
     let app = help_app(Focus::List);
 
     render_in(&app, 109, 20);
-    assert_eq!(app.help_max.get(), 30 - 15);
+    assert_eq!(app.help_max.get(), 32 - 15);
     render_in(&app, 80, 36);
-    assert_eq!(app.help_max.get(), 61 - 31);
-    render_in(&app, 109, 36);
+    assert_eq!(app.help_max.get(), 63 - 31);
+    render_in(&app, 109, 40);
     assert_eq!(app.help_max.get(), 0);
 }
 
@@ -226,7 +227,7 @@ fn the_help_scrollbar_thumb_is_the_share_of_the_lines_the_box_shows() {
 
 #[test]
 fn the_help_keys_are_bold_their_slashes_greyed_and_their_actions_tertiary_in_mocha() {
-    let buffer = render_in(&help_app(Focus::List), 109, 36);
+    let buffer = render_in(&help_app(Focus::List), 109, 40);
     let rows = rows(&buffer);
     let y = rows.iter().position(|row| row.contains("j/k/↓/↑      move")).expect("line") as u16;
     let x = rows[y as usize].find("j/k").map(|byte| rows[y as usize][..byte].chars().count()).unwrap() as u16;
@@ -240,10 +241,20 @@ fn the_help_keys_are_bold_their_slashes_greyed_and_their_actions_tertiary_in_moc
 #[test]
 fn the_help_says_tab_completes_wait_values_too() {
     assert!(
-        rows_of(&help_app(Focus::List), 109, 36)
+        rows_of(&help_app(Focus::List), 109, 40)
             .iter()
             .any(|row| row.contains("Tab          complete +, @ or wait:"))
     );
+}
+
+#[test]
+fn the_normal_section_lists_y_and_gives_the_word_objects_after_d_c_and_y() {
+    let rows = rows_of(&help_app(Focus::List), 109, 40);
+    let has = |text: &str| rows.iter().any(|row| row.contains(text));
+
+    assert!(has("y + move     copy up to"));
+    assert!(has("yy           copy the line"));
+    assert!(has("iw/aw/iW/aW  after d/c/y: a word"));
 }
 
 #[test]

@@ -32,8 +32,9 @@ The terminal's cursor is a bar in insert mode and a block in normal mode, as in 
 | normal | `;`, `,` | repeat the last of these, reverse it |
 | normal | `x`, `D`, `C` | delete a character, to the end, change to the end |
 | normal | `d` or `c`, then a motion | delete, change up to where it goes |
-| normal | `d` or `c`, then `iw` `aw` `iW` `aW` | delete, change the word under the cursor, with its space for `a` |
-| normal | `dd`, `cc` | delete, change the whole line |
+| normal | `y`, then a motion | copy to the clipboard what `d` would delete with it; the text stays as it is and the cursor goes to the start of the range |
+| normal | `d`, `c` or `y`, then `iw` `aw` `iW` `aW` | delete, change, copy the word under the cursor, with its space for `a` |
+| normal | `dd`, `cc`, `yy` | delete, change, copy the whole line |
 | normal | `i` `a` `I` `A` | insert mode |
 | normal | `u`, `Ctrl-R` | undo, redo |
 | normal | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |

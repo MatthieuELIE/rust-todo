@@ -77,7 +77,9 @@ f/F/t/T x    to, before a char
 x/D/C        delete, to end, change
 d/c + move   delete, change up to
 dd/cc        delete, change the line
-iw/aw/iW/aW  after d/c: a word
+y + move     copy up to
+yy           copy the line
+iw/aw/iW/aW  after d/c/y: a word
 i/a/I/A      insert
 u/Ctrl-r     undo, redo
 p a…e        priority

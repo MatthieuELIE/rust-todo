@@ -8,11 +8,13 @@ use crate::toast::{Kind, Toast};
 /// The toast as one span, coloured by its kind and cut to `room` characters with `…` when it is longer.
 pub(super) fn toast_span(theme: &Theme, icons: bool, toast: &Toast, room: usize) -> Span<'static> {
     let kind = toast.notice.kind();
+
     let colour = match kind {
         Kind::Success => theme.success,
         Kind::Info => theme.secondary,
         Kind::Refusal => theme.alert,
     };
+
     let text = format!("{}{}", icon(icons, glyph(kind)), toast.notice.text());
     cut(&text, room).fg(colour)
 }

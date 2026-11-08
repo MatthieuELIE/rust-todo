@@ -13,6 +13,7 @@ fn status_of(app: &App) -> String {
 fn popup_in(mode: Mode, picker: bool) -> App {
     let mut app = app_of(&["Pay +rent"]);
     app.handle_key(KeyEvent::from(KeyCode::Char('o')), TODAY);
+
     if let Focus::Popup(popup) = &mut app.focus {
         popup.editor.mode = mode;
         popup.picker = picker.then_some(TODAY);

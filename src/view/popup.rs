@@ -16,6 +16,7 @@ use crate::tui::{App, Focus, Popup, Target, WAITING};
 /// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions or the date picker.
 pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
     let theme = &app.theme;
+
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => Line::from(format!(" EDIT {number} ")),
         (Target::Add, Some(term)) if term != WAITING => {
@@ -23,6 +24,7 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
         }
         (Target::Add, _) => Line::from(" ADD "),
     };
+
     let field = Paragraph::new(field(theme, &popup.editor, today))
         .wrap(Wrap { trim: false })
         .block(floating(theme, popup.picker.is_none()).title(title).padding(Padding::right(1)));
@@ -41,6 +43,7 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
         Position::new(cell.x + width, cell.y)
     });
     let cursor = marked(frame, Modifier::RAPID_BLINK).or(after);
+
     for cell in area.positions() {
         frame.buffer_mut()[cell].modifier.remove(Modifier::RAPID_BLINK | Modifier::HIDDEN);
     }
@@ -76,6 +79,7 @@ fn draw_picker(frame: &mut Frame, theme: &Theme, date: Date, today: Date, word: 
     let offset = first.weekday().number_days_from_monday();
     let mut lines = vec![Line::from("Mo Tu We Th Fr Sa Su".fg(theme.tertiary))];
     let mut week = Line::from("   ".repeat(offset.into()));
+
     for day in 1..=date.month().length(date.year()) {
         let style = match first.replace_day(day).map(|shown| shown.cmp(&today)) {
             _ if day == date.day() => Style::new().bold().fg(theme.accent).bg(theme.selected),
@@ -83,7 +87,9 @@ fn draw_picker(frame: &mut Frame, theme: &Theme, date: Date, today: Date, word: 
             Ok(Ordering::Equal) => Style::new().fg(theme.due_today),
             _ => Style::new(),
         };
+
         week.push_span(Span::styled(format!("{day:>2}"), style));
+
         if (offset + day).is_multiple_of(7) {
             lines.push(std::mem::take(&mut week));
         } else {
@@ -129,6 +135,7 @@ fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
     } else {
         word.y.saturating_sub(height)
     };
+
     Rect::new(word.x.saturating_sub(1), y, width, height).intersection(bounds)
 }
 
@@ -138,6 +145,7 @@ fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
         .into_iter()
         .flat_map(|span| span.content.chars().map(|c| Span::styled(c.to_string(), span.style)).collect::<Vec<_>>())
         .collect();
+
     if editor.cursor >= chars.len() {
         chars.push(" ".into());
     }
@@ -147,6 +155,7 @@ fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
     }
 
     chars[editor.cursor].style = chars[editor.cursor].style.rapid_blink();
+
     for before in &mut chars[..editor.cursor] {
         before.style = before.style.hidden();
     }
@@ -159,13 +168,16 @@ fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
     let description = Todo::from_line(text).description;
     let head = &text[..text.len() - description.len()];
     let mut spans = Vec::new();
+
     for word in head.split_inclusive(' ') {
         let letter = word.trim_end().strip_prefix('(').and_then(|rest| rest.strip_suffix(')'));
+
         let style = match letter.and_then(|letter| letter.parse::<char>().ok()) {
             Some(letter) => Style::new().bold().fg(priority(theme, letter)),
             None if parse_date(word.trim_end()).is_some() => Style::new().fg(theme.tertiary),
             None => Style::new(),
         };
+
         spans.push(Span::styled(word.to_string(), style));
     }
 

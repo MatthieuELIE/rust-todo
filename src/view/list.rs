@@ -19,6 +19,7 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
     frame.render_widget(block, area);
     let area = inner;
     let shown = app.shown();
+
     if shown.is_empty() {
         frame.render_widget(
             Paragraph::new(if !app.search.is_empty() || app.filter.is_some() {
@@ -33,6 +34,7 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
         );
     } else {
         let (mut lines, mut rows) = (Vec::new(), Vec::new());
+
         for shown in shown {
             if matches!(shown, Shown::Header(..)) && !lines.is_empty() {
                 lines.push(Line::default());
@@ -72,6 +74,7 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
 
     let mut spans = vec![Span::raw(number)];
     spans.extend(todo.priority.map(|letter| badge(theme, letter)));
+
     if todo.priority.is_some() {
         spans.push(" ".into());
     }
@@ -93,6 +96,7 @@ fn header(theme: &Theme, group: Group, count: usize, folded: bool, width: usize)
         Group::Priority(letter) => (format!("PRIORITY {letter}"), Style::new().bold().fg(priority(theme, letter))),
         Group::Unprioritised => ("NO PRIORITY".to_string(), Style::new().bold().fg(theme.secondary)),
     };
+
     let count = format!(" ({count})");
     let end = if folded { " ▸" } else { "" };
     let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4 + end.chars().count()));

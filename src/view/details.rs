@@ -58,6 +58,7 @@ pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: 
         if late { span.bold() } else { span }
     });
     let mut others = Line::from(" ");
+
     for (i, word) in key_values.iter().filter(|word| !word.starts_with(DUE)).enumerate() {
         let (key, value) = word.split_once(':').unwrap_or_default();
         others.extend([
@@ -106,6 +107,7 @@ fn draw_text(frame: &mut Frame, theme: &Theme, text: Paragraph, area: Rect) {
     frame.render_widget(label, label_area);
     let cut = text.line_count(value_area.width) > value_area.height as usize;
     frame.render_widget(text, value_area);
+
     if cut {
         frame.buffer_mut()[(value_area.right() - 1, value_area.bottom() - 1)].set_symbol("…");
     }
@@ -115,6 +117,7 @@ fn draw_text(frame: &mut Frame, theme: &Theme, text: Paragraph, area: Rect) {
 fn draw_cut(frame: &mut Frame, line: Line, area: Rect) {
     let overflows = line.width() > area.width as usize;
     frame.render_widget(line, area);
+
     if overflows {
         frame.buffer_mut()[(area.right() - 1, area.y)].set_symbol("…");
     }

@@ -275,7 +275,7 @@ fn r_refuses_a_line_todo_reopen_refuses_in_its_words_with_its_number() {
 fn yy_leaves_the_line_of_the_task_under_the_cursor_to_copy() {
     let mut app = app_of(&["one", "(B) 2026-09-01 two +p @c k:v"]);
     assert!(!press(&mut app, "yy"));
-    assert_eq!(app.copy.as_deref(), Some("(B) 2026-09-01 two +p @c k:v"));
+    assert_eq!(app.copy.as_ref().map(Clip::text), Some("(B) 2026-09-01 two +p @c k:v"));
     assert_eq!(told(&app), None);
 }
 
@@ -291,7 +291,7 @@ fn yy_on_a_folded_group_copies_nothing_and_says_so() {
 fn yy_in_the_history_copies_the_line_of_done_txt_without_refusing() {
     let mut app = history_of(&["one"], &["x 2026-09-25 old"]);
     press(&mut app, "Hyy");
-    assert_eq!(app.copy.as_deref(), Some("x 2026-09-25 old"));
+    assert_eq!(app.copy.as_ref().map(Clip::text), Some("x 2026-09-25 old"));
     assert_eq!((told(&app), app.refusal_shown()), (None, false));
 }
 

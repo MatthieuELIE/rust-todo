@@ -18,9 +18,9 @@ impl Editor {
             }
             (Some(_), _) => {}
             (None, KeyCode::Char('y')) => {
-                let start = self.anchor.min(self.cursor);
-                let end = (self.anchor.max(self.cursor) + 1).min(chars.len());
-                self.yank(&chars, start..end);
+                if let Some(range) = self.selection() {
+                    self.yank(&chars, range.start..range.end.min(chars.len()));
+                }
                 self.mode = Mode::Normal;
             }
             (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) => self.finding = Some(kind),

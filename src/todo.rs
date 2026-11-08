@@ -154,8 +154,7 @@ impl Todo {
         }
     }
 
-    /// Mark the task pending again, clearing its completion date and its priority.
-    /// Refused with the reason, the task untouched, when it is not done, its line would still read as done or it has no text word.
+    /// Mark the task pending again, clearing its completion date and priority, or refuse with the reason and leave it untouched.
     pub fn reopen(&mut self) -> Result<(), &'static str> {
         if !self.done {
             return Err("is not done");

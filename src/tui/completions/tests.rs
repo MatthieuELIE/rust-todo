@@ -71,7 +71,6 @@ fn arrows_and_ctrl_n_p_pick_a_name_that_tab_writes_in_place_of_the_tag() {
     let mut app = app_of(&["Pay +bank", "Call +bank", "Read +books"]);
     let pick = |app: &mut App, code: KeyCode, modifiers: KeyModifiers| {
         key(app, code, modifiers);
-
         app.completions().1
     };
 

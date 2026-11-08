@@ -21,7 +21,6 @@ impl App {
 
         if self.in_history && writes {
             self.notify(Notice::HistoryReadOnly);
-
             return false;
         }
 
@@ -117,7 +116,6 @@ impl App {
                 if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {
                     self.filter = None;
                 }
-
                 self.history_read = false;
                 self.cursor = 0;
             }

@@ -71,7 +71,7 @@ A done task still in the task file, one typed by hand, is not listed: `todo arch
 
 ### Help
 
-![The key help over the list: the keys of the list, the filter panel, the search, the popup's insert and normal modes, and the calendar](images/help.png)
+![The key help over the list, LIST in peach: the keys of the list, the filter panel, the search, the popup's insert and normal modes and the first keys of its visual mode, with a scrollbar and a j/k scroll hint for the rest](images/help.png)
 
 `?` shows every key, grouped by mode, each mode's name in a block like the status bar's.
 The mode you opened it from is in peach, the others greyed.
@@ -122,7 +122,7 @@ These steps are not saved: they are lost when the list closes or the file is rel
 
 ### History
 
-![The history view: the lines of done.txt in light grey, the last completed first, and the names of the filter panel in the same grey](images/history.png)
+![The history view: the five lines of done.txt in light grey, numbered from 5 down to 1, the last line first, and the filter panel counting their projects and contexts](images/history.png)
 
 `H` swaps the content of the list for `done.txt`, the file next to the task file that `x` and `todo do` fill, and `H` again brings the task file back.
 The tasks are numbered by their position in `done.txt`, as `todo list --done` numbers them, and listed from the last line up, so the task completed last comes first.

@@ -30,7 +30,6 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         format!("/{}▌", app.search)
     } else {
         let search = (!app.search.is_empty()).then(|| format!("/{}", app.search));
-
         [app.filter.clone(), search].into_iter().flatten().collect::<Vec<_>>().join("  ")
     };
 

@@ -16,7 +16,6 @@ pub(super) fn toast_span(theme: &Theme, icons: bool, toast: &Toast, room: usize)
     };
 
     let text = format!("{}{}", icon(icons, glyph(kind)), toast.notice.text());
-
     cut(&text, room).fg(colour)
 }
 
@@ -36,7 +35,6 @@ fn cut(text: &str, room: usize) -> String {
     }
 
     let kept: String = text.chars().take(room.saturating_sub(1)).collect();
-
     format!("{kept}…")
 }
 

@@ -32,7 +32,6 @@ fn a_late_due_date_is_bold_in_every_theme_and_one_due_today_is_not() {
     for theme in [Theme::LATTE, Theme::FRAPPE, Theme::MACCHIATO, Theme::MOCHA, Theme::TERMINAL, Theme::NONE] {
         let style_of = |token: &str| {
             let line = line(&theme, 1, &Todo::from_line(text), TODAY);
-
             line.iter().find(|span| span.content == token).expect(token).style
         };
         assert_eq!(style_of("due:2026-09-25"), Style::new().bold().fg(theme.alert));

@@ -18,7 +18,6 @@ fn popup_in(mode: Mode, picker: bool) -> App {
         popup.editor.mode = mode;
         popup.picker = picker.then_some(TODAY);
     }
-
     app
 }
 

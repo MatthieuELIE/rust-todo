@@ -36,7 +36,6 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
     let marked = |frame: &mut Frame, mark| area.positions().filter(|&cell| frame.buffer_mut()[cell].modifier.contains(mark)).last();
     let after = marked(frame, Modifier::HIDDEN).map(|cell| {
         let width = Span::raw(frame.buffer_mut()[cell].symbol()).width() as u16;
-
         Position::new(cell.x + width, cell.y)
     });
     let cursor = marked(frame, Modifier::RAPID_BLINK).or(after);
@@ -93,7 +92,6 @@ fn draw_picker(frame: &mut Frame, theme: &Theme, date: Date, today: Date, word: 
             week.push_span(" ");
         }
     }
-
     if !week.spans.is_empty() {
         lines.push(week);
     }
@@ -156,7 +154,6 @@ fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
     for before in &mut chars[..editor.cursor] {
         before.style = before.style.hidden();
     }
-
     Line::from(chars)
 }
 
@@ -177,9 +174,7 @@ fn typed(theme: &Theme, text: &str, today: Date) -> Vec<Span<'static>> {
 
         spans.push(Span::styled(word.to_string(), style));
     }
-
     spans.extend(words(theme, &description, Some(today)));
-
     spans
 }
 

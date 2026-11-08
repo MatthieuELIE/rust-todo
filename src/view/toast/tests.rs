@@ -6,7 +6,6 @@ const WIDTH: u16 = 109;
 
 fn column_of(row: &str, needle: &str) -> u16 {
     let byte = row.find(needle).unwrap_or_else(|| panic!("{needle:?} missing from {row:?}"));
-
     row[..byte].chars().count() as u16
 }
 

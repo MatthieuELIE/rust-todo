@@ -39,11 +39,9 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
             if matches!(shown, Shown::Header(..)) && !lines.is_empty() {
                 lines.push(Line::default());
             }
-
             if !matches!(shown, Shown::Header(_, _, false)) {
                 rows.push(lines.len());
             }
-
             lines.push(match shown {
                 Shown::Header(group, count, folded) => header(theme, group, count, folded, area.width.saturating_sub(2) as usize),
                 Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(theme.secondary),
@@ -78,17 +76,13 @@ pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'sta
     if todo.priority.is_some() {
         spans.push(" ".into());
     }
-
     if let Some(created) = todo.created {
         spans.extend([created.to_string().fg(theme.tertiary), " ".into()]);
     }
-
     spans.extend(words(theme, &todo.description, Some(today)).into_iter().map(|span| {
         let late = span.content.strip_prefix(DUE).and_then(parse_date).is_some_and(|due| due < today);
-
         if late { span.bold() } else { span }
     }));
-
     Line::from(spans)
 }
 
@@ -102,7 +96,6 @@ fn header(theme: &Theme, group: Group, count: usize, folded: bool, width: usize)
     let count = format!(" ({count})");
     let end = if folded { " ▸" } else { "" };
     let rule = "─".repeat(width.saturating_sub(count.len() + title.len() + 4 + end.chars().count()));
-
     Line::from_iter([
         count.fg(theme.tertiary),
         "  ".into(),

@@ -15,15 +15,18 @@ impl Editor {
         let search = match (finding, code) {
             (Some(kind), KeyCode::Char(c)) => {
                 self.find = Some((kind, c));
+
                 Some((kind, c, false))
             }
             (Some(_), _) => return None,
             (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) if free => {
                 (self.pending, self.finding) = (pending, Some(kind));
+
                 return None;
             }
             (None, KeyCode::Char(r @ (';' | ','))) if free => self.find.map(|last| {
                 let (kind, c) = repeated(r, last);
+
                 (kind, c, true)
             }),
             _ => None,

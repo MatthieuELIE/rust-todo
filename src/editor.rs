@@ -80,6 +80,7 @@ impl Editor {
         let modified = key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
         if self.pending == Some('p') && (modified || !matches!(key.code, KeyCode::Char('a'..='e' | ' '))) {
             self.pending = None;
+
             return Outcome::NotPriority;
         }
 
@@ -99,6 +100,7 @@ impl Editor {
         }
 
         self.settle();
+
         match copy {
             Some(text) => Outcome::Copy(text),
             None => Outcome::Continue,
@@ -132,6 +134,7 @@ impl Editor {
         };
         to.push(std::mem::replace(&mut self.rest, rest));
         (self.text, self.cursor) = self.rest.clone();
+
         Outcome::Notice(done)
     }
 
@@ -159,6 +162,7 @@ impl Editor {
     /// The `+project`, `@context` or `wait:` value being typed before the cursor, in insert mode only.
     pub fn tag(&self) -> Option<&str> {
         let word = self.word();
+
         (self.mode == Mode::Insert && (word.starts_with(['+', '@']) || word.starts_with(WAIT))).then_some(word)
     }
 

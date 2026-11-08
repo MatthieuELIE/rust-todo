@@ -260,6 +260,17 @@ fn esc_on_an_add_or_an_edit_whose_text_changed_says_the_changes_are_discarded() 
 }
 
 #[test]
+fn esc_in_insert_on_a_changed_popup_only_leaves_insert_and_says_nothing() {
+    let mut app = app_of(&["one"]);
+
+    press(&mut app, "oLorem");
+    assert!(!app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY));
+
+    assert_eq!((popup(&app).editor.mode, popup(&app).editor.text.as_str()), (Mode::Normal, "Lorem"));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
 fn esc_on_an_empty_add_or_an_edit_without_change_leaves_no_toast() {
     let mut app = app_of(&["one"]);
     let esc = KeyEvent::from(KeyCode::Esc);

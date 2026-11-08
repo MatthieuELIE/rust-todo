@@ -80,6 +80,14 @@ impl App {
                 self.notify(notice);
                 false
             }
+            Outcome::Copy(text) if text.is_empty() => {
+                self.notify(Notice::NothingToCopy);
+                false
+            }
+            Outcome::Copy(text) => {
+                (self.copy, self.copy_is_part) = (Some(text), true);
+                false
+            }
             outcome => self.close_popup(outcome, today),
         }
     }

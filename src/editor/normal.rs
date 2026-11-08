@@ -10,7 +10,7 @@ impl Editor {
         let chars: Vec<char> = self.text.chars().collect();
         let (len, at) = (chars.len(), self.cursor);
         let (pending, scope, finding) = (self.pending.take(), self.scope.take(), self.finding.take());
-        let free = scope.is_none() && matches!(pending, None | Some('d' | 'c'));
+        let free = scope.is_none() && matches!(pending, None | Some('d' | 'c' | 'y'));
         let search = match (finding, code) {
             (Some(kind), KeyCode::Char(c)) => {
                 self.find = Some((kind, c));
@@ -29,11 +29,11 @@ impl Editor {
             return;
         }
         match code {
-            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c')) && scope.is_none() => {
+            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c' | 'y')) && scope.is_none() => {
                 self.pending = pending;
                 self.scope = Some(key);
             }
-            _ if matches!(pending, Some('d' | 'c')) => {
+            _ if matches!(pending, Some('d' | 'c' | 'y')) => {
                 let range = match code {
                     KeyCode::Char(w @ ('w' | 'W')) if scope.is_some() => Some(object(&chars, at, w == 'W', scope == Some('a'))),
                     _ if scope.is_some() => None,
@@ -44,7 +44,9 @@ impl Editor {
                     KeyCode::Char('e' | 'E') => motion(&chars, at, code).map(|end| at..(end + 1).min(len)),
                     code => motion(&chars, at, code).map(|to| at.min(to)..at.max(to)),
                 };
-                if let Some(range) = range {
+                if let (Some(range), Some('y')) = (range.clone(), pending) {
+                    self.yank(&chars, range);
+                } else if let Some(range) = range {
                     self.remove(range.start, range.end);
                     if pending == Some('c') {
                         self.mode = Mode::Insert;
@@ -52,7 +54,7 @@ impl Editor {
                 }
             }
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
-            KeyCode::Char(op @ ('d' | 'c' | 'p')) => self.pending = Some(op),
+            KeyCode::Char(op @ ('d' | 'c' | 'y' | 'p')) => self.pending = Some(op),
             KeyCode::Char('x') => self.remove(at, (at + 1).min(len)),
             KeyCode::Char('D') => self.remove(at, len),
             KeyCode::Char('C') => {
@@ -77,6 +79,12 @@ impl Editor {
         if self.mode == Mode::Normal {
             self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
         }
+    }
+
+    /// Leaves the characters of `range` to copy, the cursor at its start, the text unchanged.
+    pub(super) fn yank(&mut self, chars: &[char], range: std::ops::Range<usize>) {
+        self.cursor = range.start;
+        self.copy = Some(chars[range].iter().collect());
     }
 
     /// Writes priority `c`, `a` to `e` or a space to drop it, at the start of a pending line, the cursor kept on its character.

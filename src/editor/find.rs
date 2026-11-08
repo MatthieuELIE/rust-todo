@@ -23,7 +23,7 @@ fn find(chars: &[char], at: usize, kind: char, target: char, repeat: bool) -> Op
 }
 
 impl Editor {
-    /// Moves the cursor to the character `target` found as `kind` says, or after `d` or `c` (`pending`) acts up to it; nothing happens when it is absent.
+    /// Moves the cursor to the character `target` found as `kind` says, or after `d`, `c` or `y` (`pending`) acts up to it; nothing happens when it is absent.
     pub(super) fn seek(&mut self, chars: &[char], pending: Option<char>, kind: char, target: char, repeat: bool) {
         let at = self.cursor;
         let Some(to) = find(chars, at, kind, target, repeat) else {
@@ -34,6 +34,10 @@ impl Editor {
             return;
         }
         let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
+        if pending == Some('y') {
+            self.yank(chars, range);
+            return;
+        }
         self.remove(range.start, range.end);
         if pending == Some('c') {
             self.mode = Mode::Insert;

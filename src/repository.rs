@@ -42,14 +42,13 @@ pub fn save(path: &Path, todos: &[Todo]) -> io::Result<String> {
     write(path, todos.iter().map(|todo| todo.to_line() + "\n").collect())
 }
 
-/// Replace the content of a file with `body` and return it.
+/// Replace the content of a file with `body` through a sibling file renamed over it, so a crash leaves no half-written file, and return it.
 pub fn write(path: &Path, body: String) -> io::Result<String> {
     let path = fs::canonicalize(path).unwrap_or_else(|_| match fs::read_link(path) {
         Ok(target) => path.with_file_name(target),
         Err(_) => path.to_path_buf(),
     });
 
-    // Write to a sibling file and rename over the target so a crash can't leave a half-written todo file.
     let mut tmp = path.clone().into_os_string();
     tmp.push(format!(".{}.tmp", std::process::id()));
     let tmp = PathBuf::from(tmp);

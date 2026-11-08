@@ -24,8 +24,7 @@ pub(super) fn details_height(theme: &Theme, todo: Option<&Todo>, width: u16, spa
     DETAILS_HEIGHT + text_rows.saturating_sub(1).min(spare)
 }
 
-/// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`.
-/// The text wraps under its value over the rows `area` leaves it, its last row ended by `…` when it is cut; the other rows are cut by `…`.
+/// Draws the detail zone: a ` DETAILS ` rule, then the priority or completion, text, dates, projects, contexts and key:values of `todo`, the text wrapping under its value over the rows `area` leaves it, any cut row ended by `…`.
 pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: Option<&Todo>, area: Rect, today: Date) {
     let block = card(theme, false).title(format!(" {}DETAILS ", icon(icons, DETAILS_ICON)).fg(theme.secondary).bold());
     let inner = block.inner(area);

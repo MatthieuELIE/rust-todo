@@ -13,7 +13,7 @@ use crate::theme::Theme;
 use crate::todo::{DUE, Todo, parse_date};
 use crate::tui::{App, Focus, Popup, Target, WAITING};
 
-/// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, with the tag's completions or the date picker.
+/// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, the terminal's cursor read back from where the text wraps, with the tag's completions or the date picker.
 pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
     let theme = &app.theme;
 
@@ -33,10 +33,6 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
     frame.render_widget(Clear, area);
     frame.render_widget(field, area);
-    // The cursor's cell is marked blinking then read back from the buffer, since the paragraph does not tell where it wrapped
-    // the text; the marks are taken off and the terminal's own cursor stands there. A blank at the end of a wrapped row is not
-    // drawn: the cursor then stands after the last cell drawn before it, marked hidden, in the column kept free on the right.
-    // Reversed is left to the selection.
     let marked = |frame: &mut Frame, mark| area.positions().filter(|&cell| frame.buffer_mut()[cell].modifier.contains(mark)).last();
     let after = marked(frame, Modifier::HIDDEN).map(|cell| {
         let width = Span::raw(frame.buffer_mut()[cell].symbol()).width() as u16;

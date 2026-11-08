@@ -12,7 +12,7 @@ exclude_re = [
     # Without group or other bits, the extra set_permissions(mode & 0o700) can drop only setuid, setgid and sticky: the write clears the first two, the last does nothing on a regular file.
     'src/repository\.rs:81:13: replace & with [|^] in append',
     # RAPID_BLINK and HIDDEN are disjoint flags: `^` gives the same set as `|`.
-    'src/view/popup\.rs:49:72: replace \| with \^ in draw_popup',
+    'src/view/popup\.rs:45:72: replace \| with \^ in draw_popup',
     # `today` only changes the colours of the words, not their width, so the text wraps onto as many rows.
     'src/view/details\.rs:21:31: delete ! in details_height',
     # The help opens from the popup only with the date picker open or in normal or visual mode, so no popup in insert mode is under it.

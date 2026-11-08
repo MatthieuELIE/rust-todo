@@ -38,6 +38,7 @@ impl App {
                 Move::Remove(todo, number) => back.push((todo, number)),
             }
         }
+
         self.history_read &= gone.is_empty() && back.is_empty();
         let appended = if gone.is_empty() && back.is_empty() {
             Ok(())
@@ -63,6 +64,7 @@ impl App {
         {
             self.notify(Notice::Refused(format!("could not save: {e} (done.txt already holds the task)")));
         }
+
         let mut held = false;
         for (todo, number) in back.iter().filter(|_| saved) {
             let verb = if number.is_some() { "reopened" } else { "undone" };
@@ -76,6 +78,7 @@ impl App {
                     if !held {
                         self.notify(Notice::Refused(format!("{verb}, but done.txt still holds the task: {e}")));
                     }
+
                     held = true;
                 }
             }
@@ -90,6 +93,7 @@ impl App {
                 if let Ok(current) = reread {
                     self.reload(repository::parse(&current));
                 }
+
                 self.notify(Notice::Refused(format!("could not save: {e} (file left unchanged)")));
             }
         }
@@ -108,6 +112,7 @@ impl App {
             if !self.refusal_shown() {
                 self.notify(Notice::Refused(format!("could not read done.txt: {e}")));
             }
+
             String::new()
         }));
     }

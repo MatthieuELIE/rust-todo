@@ -14,6 +14,7 @@ impl App {
         } else {
             tasks.retain(|(_, todo)| !todo.done);
         }
+
         tasks
     }
 
@@ -24,6 +25,7 @@ impl App {
         if let Some(filter) = &self.filter {
             tasks.retain(|(_, todo)| shows(todo, filter, self.today));
         }
+
         tasks
     }
 
@@ -37,9 +39,11 @@ impl App {
                 _ => groups.push((group, 1)),
             }
         }
+
         if self.in_history || !groups.iter().any(|(group, _)| matches!(group, Group::Priority(_))) {
             groups.clear();
         }
+
         groups
     }
 
@@ -52,6 +56,7 @@ impl App {
             shown.push(Shown::Header(group, count, folded));
             shown.extend(tasks.by_ref().take(count).filter(|_| !folded));
         }
+
         shown.extend(tasks);
         shown
     }

@@ -20,6 +20,7 @@ impl App {
             self.notify(Notice::HistoryReadOnly);
             return false;
         }
+
         let mut write = false;
         match key.code {
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
@@ -110,6 +111,7 @@ impl App {
                 if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {
                     self.filter = None;
                 }
+
                 self.history_read = false;
                 self.cursor = 0;
             }

@@ -35,6 +35,7 @@ impl App {
             self.open_help();
             return false;
         }
+
         if let Some(date) = popup.picker {
             popup.picker = match key.code {
                 _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => Some(date),
@@ -47,6 +48,7 @@ impl App {
             };
             return false;
         }
+
         let ctrl = key.modifiers.contains(KeyModifiers::CONTROL);
         match (key.code, ctrl) {
             _ if names.is_empty() => {}
@@ -70,6 +72,7 @@ impl App {
         if popup.editor.wants_date() {
             popup.picker = Some(today);
         }
+
         match outcome {
             Outcome::Continue => false,
             Outcome::NotPriority => {
@@ -118,10 +121,12 @@ impl App {
         if self.refusal_shown() {
             self.focus = Focus::Popup(popup);
         }
+
         let earlier_refusal = earlier.as_ref().is_some_and(|toast| toast.notice.kind() == Kind::Refusal);
         if self.toast.is_none() && !earlier_refusal {
             self.toast = earlier;
         }
+
         write
     }
 }

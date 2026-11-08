@@ -71,6 +71,7 @@ fn any_other_key_leaves_the_help_open_and_changes_nothing() {
         assert!(!press(&mut app, keys));
         assert_eq!(scroll(&app), 0);
     }
+
     assert_eq!(shown(&app), ["one", "two", "three"]);
     assert!(app.moves.is_empty());
 }

@@ -21,9 +21,11 @@ impl App {
         for name in self.todos.iter().flat_map(names) {
             *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
         }
+
         for name in self.history.iter().flat_map(names) {
             counts.entry(format!("{sigil}{name}")).or_insert(0);
         }
+
         let tag = tag.to_lowercase();
         let mut names: Vec<(String, usize)> = counts.into_iter().filter(|(name, _)| name.to_lowercase().starts_with(&tag)).collect();
         names.sort_by_key(|(name, count)| (Reverse(*count), name.to_lowercase(), name.clone()));

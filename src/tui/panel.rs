@@ -31,14 +31,17 @@ impl App {
         if due > 0 && !self.in_history {
             filters.push((DUE_NOW.to_string(), due));
         }
+
         let waiting = shown.iter().filter(|(_, todo)| todo.is_waiting()).count();
         if waiting > 0 && !self.in_history {
             filters.push((WAITING.to_string(), waiting));
         }
+
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
             let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
             filters.push((term, count));
         }
+
         filters
     }
 

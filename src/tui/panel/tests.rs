@@ -231,6 +231,22 @@ fn a_task_added_under_due_is_due_today_unless_it_carries_a_due_date() {
 }
 
 #[test]
+fn an_edit_that_leaves_the_panel_filter_is_saved_but_said_hidden() {
+    let mut app = app_of(&["Note +home", "Pay rent"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    app.filter = Some("+home".to_string());
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "Cfree");
+    assert!(app.handle_key(enter, TODAY));
+
+    assert_eq!(app.todos[0].to_line(), "free");
+    assert_eq!(app.filter.as_deref(), Some("+home"));
+    assert!(shown(&app).is_empty());
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: true }));
+}
+
+#[test]
 fn a_task_added_under_waiting_gets_nothing_and_brings_back_all_tasks_with_the_cursor_on_it() {
     let mut app = app_of(&["Design wait:figma", "Pay rent"]);
     app.filter = Some(WAITING.to_string());

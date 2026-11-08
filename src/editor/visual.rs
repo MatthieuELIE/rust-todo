@@ -24,7 +24,6 @@ impl Editor {
                 if let Some(range) = self.selection() {
                     copy = Some(self.yank(&chars, range.start..range.end.min(chars.len())));
                 }
-
                 self.mode = Mode::Normal;
             }
             (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) => self.finding = Some(kind),

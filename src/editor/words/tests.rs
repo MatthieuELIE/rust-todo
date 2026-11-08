@@ -2,7 +2,6 @@ use super::super::tests::{LINE, TAGGED, after, keys, normal};
 
 fn stops(text: &str, from: usize, key: char, count: usize) -> Vec<usize> {
     let mut ed = normal(text, from);
-
     (0..count)
         .map(|_| {
             keys(&mut ed, &key.to_string());

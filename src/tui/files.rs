@@ -1,9 +1,11 @@
 use super::*;
 
 impl App {
-    /// Says how copying the line `yy` asked for went.
+    /// Says how copying the line `yy` or the part `y` of the popup asked for went.
     pub fn copied(&mut self, copied: io::Result<()>) {
+        let part = std::mem::take(&mut self.copy_is_part);
         match copied {
+            Ok(()) if part => self.notify(Notice::CopiedText),
             Ok(()) => self.notify(Notice::Copied),
             Err(e) => self.notify(Notice::Refused(format!("could not copy: {e}"))),
         }

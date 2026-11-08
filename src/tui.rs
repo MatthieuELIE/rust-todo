@@ -97,6 +97,8 @@ pub struct App {
     pub toast: Option<Toast>,
     /// Line of the task `yy` asked to copy, taken by the loop of the list.
     pub copy: Option<String>,
+    /// Whether `copy` is a part of the popup's text, not a task line, for the toast `copied` says.
+    pub copy_is_part: bool,
     /// Where the keys go.
     pub focus: Focus,
     /// Where the keys go back to when the help closes: what the help covers while it is open.

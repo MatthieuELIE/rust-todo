@@ -127,6 +127,8 @@ fn the_other_messages_keep_their_text_with_a_capital_and_a_refusal_is_a_refusal(
     says(Notice::NotPriority, "Priority is a to e, or space", Kind::Refusal);
     says(Notice::HistoryReadOnly, "History is read-only", Kind::Refusal);
     says(Notice::NoTaskUnderCursor, "No task under the cursor", Kind::Refusal);
+    says(Notice::CopiedText, "Copied to the clipboard", Kind::Success);
+    says(Notice::NothingToCopy, "Nothing to copy", Kind::Refusal);
     says(Notice::Refused("could not copy: boom".to_string()), "Could not copy: boom", Kind::Refusal);
     says(
         Notice::GoneFromDone { reopened: true },

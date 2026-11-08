@@ -20,6 +20,8 @@ pub enum Outcome {
     NotPriority,
     /// What an undo or a redo did, to be said in the status bar.
     Notice(Notice),
+    /// The text `y` leaves to copy, empty when its range was.
+    Copy(String),
 }
 
 /// How keys act on the text, as in vim.
@@ -41,9 +43,11 @@ pub struct Editor {
     pub cursor: usize,
     /// Whether keys are typed or are commands.
     pub mode: Mode,
-    /// Key (`d`, `c`, `p`) waiting for its motion or priority; after `d` or `c`, a key completing no command only drops it.
+    /// Key (`d`, `c`, `y`, `p`) waiting for its motion or priority; after `d`, `c` or `y`, a key completing no command only drops it.
     pending: Option<char>,
-    /// `i` or `a` typed after `d` or `c`, waiting for the `w` or `W` of its word.
+    /// Text `y` just took, for `handle_key` to hand over.
+    copy: Option<String>,
+    /// `i` or `a` typed after `d`, `c` or `y`, waiting for the `w` or `W` of its word.
     scope: Option<char>,
     /// `f`, `F`, `t` or `T` waiting for the character to find.
     finding: Option<char>,
@@ -87,7 +91,10 @@ impl Editor {
             (Mode::Normal, code) => self.normal(code),
         }
         self.settle();
-        Outcome::Continue
+        match self.copy.take() {
+            Some(text) => Outcome::Copy(text),
+            None => Outcome::Continue,
+        }
     }
 
     /// Keeps the text before a change for `u`, once normal mode has no command under way: typing up to `Esc` is one change.

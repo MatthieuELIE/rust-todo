@@ -424,3 +424,113 @@ fn a_paste_and_an_edit_treat_a_bidi_character_like_a_control_character() {
     app.paste("a\u{202e}b");
     assert_eq!(app.search, "a b");
 }
+
+const COPIED: &str = "(A) 2026-11-02 Call the bank about the loan +finance due:2026-11-20";
+
+fn opened(line: &str) -> App {
+    let mut app = app_of(&[line]);
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    app
+}
+
+#[test]
+fn y_with_a_motion_or_an_object_leaves_what_d_would_delete_to_copy() {
+    let cases = [
+        ("fCyiw", "Call"),
+        ("fCyaw", "Call "),
+        ("fCyiW", "Call"),
+        ("fCyaW", "Call "),
+        ("fCyw", "Call "),
+        ("fCyW", "Call "),
+        ("fCye", "Call"),
+        ("fCyE", "Call"),
+        ("fbyb", "the "),
+        ("fbyB", "the "),
+        ("fCy0", "(A) 2026-11-02 "),
+        ("fCyh", " "),
+        ("fCyl", "C"),
+        ("fCyt+", "Call the bank about the loan "),
+        ("fCyf+", "Call the bank about the loan +"),
+        ("$yT:", "2026-11-2"),
+        ("fCyfty;", "Call t"),
+        ("fCy$", &COPIED[15..]),
+        ("yy", COPIED),
+    ];
+
+    for (keys, copied) in cases {
+        let mut app = opened(COPIED);
+        press(&mut app, keys);
+        assert_eq!((keys, app.copy.as_deref()), (keys, Some(copied)));
+        assert_eq!(popup(&app).editor.text, COPIED);
+    }
+}
+
+#[test]
+fn y_puts_the_cursor_at_the_start_of_the_range_and_u_does_not_see_the_copy() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fbyb");
+    assert_eq!(popup(&app).editor.cursor, 20);
+
+    press(&mut app, "xyiwu");
+    assert_eq!(popup(&app).editor.text, COPIED);
+}
+
+#[test]
+fn a_copy_from_the_popup_says_so_a_failure_is_refused_and_yy_in_the_list_keeps_its_words() {
+    let mut app = opened(COPIED);
+    press(&mut app, "yy");
+    app.copied(Ok(()));
+    assert_eq!(told(&app), Some(Notice::CopiedText));
+
+    app.copied(Err(io::Error::other("boom")));
+    assert_eq!(told(&app), Some(Notice::Refused("could not copy: boom".to_string())));
+
+    let mut app = app_of(&["one"]);
+    press(&mut app, "yy");
+    app.copied(Ok(()));
+    assert_eq!(told(&app), Some(Notice::Copied));
+}
+
+#[test]
+fn an_empty_range_copies_nothing_and_says_so() {
+    let mut app = opened("one");
+    press(&mut app, "ddyy");
+    assert_eq!((app.copy.clone(), told(&app)), (None, Some(Notice::NothingToCopy)));
+    assert!(app.refusal_shown());
+
+    app.toast = None;
+    press(&mut app, "y$");
+    assert_eq!((app.copy.clone(), told(&app)), (None, Some(Notice::NothingToCopy)));
+}
+
+#[test]
+fn esc_drops_a_pending_y_and_keeps_the_popup_open() {
+    let mut app = opened(COPIED);
+    press(&mut app, "y");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+
+    assert!(matches!(app.focus, Focus::Popup(_)));
+    assert_eq!((popup(&app).editor.pending().as_str(), app.copy), ("", None));
+}
+
+#[test]
+fn deleting_leaves_nothing_to_copy_and_p_still_sets_the_priority() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fCdwxDC");
+    assert_eq!(app.copy, None);
+
+    let mut app = opened(COPIED);
+    press(&mut app, "pb");
+    assert_eq!(popup(&app).editor.text, COPIED.replacen("(A)", "(B)", 1));
+    assert_eq!(app.copy, None);
+}
+
+#[test]
+fn y_copies_the_text_as_it_is_on_screen_unsaved_changes_included() {
+    let mut app = opened("one");
+    press(&mut app, "Atwo");
+    app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
+    press(&mut app, "yy");
+
+    assert_eq!(app.copy.as_deref(), Some("onetwo"));
+}

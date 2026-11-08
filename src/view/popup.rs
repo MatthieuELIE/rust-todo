@@ -31,17 +31,18 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
     let area = bounds.centered(Constraint::Length(width), Constraint::Length(height));
     frame.render_widget(Clear, area);
     frame.render_widget(field, area);
-    // The cursor's cell is marked reversed then read back from the buffer, since the paragraph does not tell where it wrapped
+    // The cursor's cell is marked blinking then read back from the buffer, since the paragraph does not tell where it wrapped
     // the text; the marks are taken off and the terminal's own cursor stands there. A blank at the end of a wrapped row is not
     // drawn: the cursor then stands after the last cell drawn before it, marked hidden, in the column kept free on the right.
+    // Reversed is left to the selection.
     let marked = |frame: &mut Frame, mark| area.positions().filter(|&cell| frame.buffer_mut()[cell].modifier.contains(mark)).last();
     let after = marked(frame, Modifier::HIDDEN).map(|cell| {
         let width = Span::raw(frame.buffer_mut()[cell].symbol()).width() as u16;
         Position::new(cell.x + width, cell.y)
     });
-    let cursor = marked(frame, Modifier::REVERSED).or(after);
+    let cursor = marked(frame, Modifier::RAPID_BLINK).or(after);
     for cell in area.positions() {
-        frame.buffer_mut()[cell].modifier.remove(Modifier::REVERSED | Modifier::HIDDEN);
+        frame.buffer_mut()[cell].modifier.remove(Modifier::RAPID_BLINK | Modifier::HIDDEN);
     }
     if let Some(cursor) = cursor
         && popup.picker.is_none()
@@ -125,7 +126,7 @@ fn drop_down(word: Position, width: u16, height: u16, bounds: Rect) -> Rect {
     Rect::new(word.x.saturating_sub(1), y, width, height).intersection(bounds)
 }
 
-/// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, reversed, those before it hidden.
+/// The popup's text styled as a task is, one span per character, the one under the cursor, or a space past the end, marked, those before it hidden, the selection reversed.
 fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
     let mut chars: Vec<Span<'static>> = typed(theme, &editor.text, today)
         .into_iter()
@@ -134,7 +135,10 @@ fn field(theme: &Theme, editor: &Editor, today: Date) -> Line<'static> {
     if editor.cursor >= chars.len() {
         chars.push(" ".into());
     }
-    chars[editor.cursor].style = chars[editor.cursor].style.reversed();
+    for selected in editor.selection().into_iter().flatten() {
+        chars[selected].style = chars[selected].style.reversed();
+    }
+    chars[editor.cursor].style = chars[editor.cursor].style.rapid_blink();
     for before in &mut chars[..editor.cursor] {
         before.style = before.style.hidden();
     }

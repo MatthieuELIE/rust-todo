@@ -13,6 +13,7 @@ const MAX: u16 = 8;
 fn help_app() -> App {
     let app = app();
     app.help_max.set(MAX);
+
     app
 }
 

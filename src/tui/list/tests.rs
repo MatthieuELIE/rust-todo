@@ -78,6 +78,7 @@ fn the_history_refuses_every_key_that_writes() {
     let char = |c| KeyEvent::from(KeyCode::Char(c));
     let ctrl_r = KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL);
     let enter = KeyEvent::from(KeyCode::Enter);
+
     for keys in [
         vec![char('x')],
         vec![char('d'), char('d')],

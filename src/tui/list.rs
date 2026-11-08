@@ -21,6 +21,7 @@ impl App {
 
         if self.in_history && writes {
             self.notify(Notice::HistoryReadOnly);
+
             return false;
         }
 

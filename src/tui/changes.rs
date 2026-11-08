@@ -22,10 +22,12 @@ impl App {
                 self.todos.push(todo);
                 let hidden = !self.follow(self.todos.len());
                 self.notify(Notice::Added { hidden });
+
                 true
             }
             Err(e) => {
                 self.notify(Notice::Refused(e));
+
                 false
             }
         }
@@ -37,6 +39,7 @@ impl App {
             Ok(todo) => todo,
             Err(e) => {
                 self.notify(Notice::Refused(e));
+
                 return false;
             }
         };
@@ -50,22 +53,26 @@ impl App {
             self.todos.remove(number - 1);
             self.moves.push(Move::Append(todo));
             self.notify(Notice::Done);
+
             return true;
         }
 
         if todo.to_line() == self.todos[number - 1].to_line() {
             self.notify(Notice::NoChanges);
+
             return false;
         }
 
         if let Err(e) = todo.check_text() {
             self.notify(Notice::Refused(e));
+
             return false;
         }
 
         self.todos[number - 1] = todo;
         let hidden = !self.follow(number);
         self.notify(Notice::Updated { hidden });
+
         true
     }
 
@@ -75,12 +82,14 @@ impl App {
 
         if let Err(reason) = todo.reopen() {
             self.notify(Notice::Refused(format!("task {number} {reason}")));
+
             return false;
         }
 
         self.todos.push(todo);
         self.moves.push(Move::Remove(self.history.remove(number - 1), Some(number)));
         self.notify(Notice::Reopened);
+
         true
     }
 
@@ -101,10 +110,12 @@ impl App {
                     moved => moved,
                 }));
                 self.notify(done);
+
                 true
             }
             None => {
                 self.notify(none);
+
                 false
             }
         }

@@ -19,6 +19,7 @@ fn add_months(date: Date, months: i32) -> Date {
     let index = date.year() * 12 + i32::from(u8::from(date.month())) - 1 + months;
     let year = index.div_euclid(12);
     let month = Month::try_from(index.rem_euclid(12) as u8 + 1).expect("a month is 1 to 12");
+
     Date::from_calendar_date(year, month, date.day().min(month.length(year))).unwrap_or(date)
 }
 

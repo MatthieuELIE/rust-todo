@@ -210,6 +210,7 @@ impl App {
 
         if key.code == KeyCode::Char('c') && key.modifiers == KeyModifiers::CONTROL {
             self.quit = true;
+
             return false;
         }
 
@@ -227,21 +228,25 @@ impl App {
         let write = match self.focus {
             Focus::Help(_) => {
                 self.help_key(key, pending);
+
                 false
             }
             Focus::Popup(_) => self.popup_key(key, today),
             Focus::Search => {
                 self.search_key(key);
+
                 false
             }
             Focus::Panel => {
                 self.panel_key(key);
+
                 false
             }
             Focus::List => self.list_key(key, pending, today),
         };
 
         self.clamp_cursor();
+
         write
     }
 

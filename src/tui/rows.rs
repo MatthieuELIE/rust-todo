@@ -63,6 +63,7 @@ impl App {
         }
 
         shown.extend(tasks);
+
         shown
     }
 
@@ -73,6 +74,7 @@ impl App {
             Shown::Header(group, _, true) => Some(Row::Group(group)),
             Shown::Header(..) => None,
         };
+
         self.shown().into_iter().filter_map(row).collect()
     }
 
@@ -104,6 +106,7 @@ impl App {
         match rows.iter().position(|r| *r == row).or_else(|| rows.iter().position(|r| *r == group)) {
             Some(position) => {
                 self.cursor = position;
+
                 true
             }
             None => false,

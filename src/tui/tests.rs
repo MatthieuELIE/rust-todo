@@ -33,6 +33,7 @@ pub(super) fn moved(app: &App) -> Vec<String> {
         Move::Append(todo) => format!("+{}", todo.to_line()),
         Move::Remove(todo, _) => format!("-{}", todo.to_line()),
     };
+
     app.moves.iter().map(line).collect()
 }
 
@@ -51,6 +52,7 @@ pub(super) fn folder(name: &str) -> std::path::PathBuf {
     let folder = std::env::temp_dir().join(format!("todo-{}-tui-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&folder);
     std::fs::create_dir(&folder).unwrap();
+
     folder
 }
 

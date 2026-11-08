@@ -48,6 +48,7 @@ impl Todo {
 
         parts.extend(self.created.map(|date| date.to_string()));
         parts.push(self.description.clone());
+
         parts.join(" ")
     }
 
@@ -77,6 +78,7 @@ impl Todo {
 
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
+
         Ok(todo)
     }
 
@@ -106,6 +108,7 @@ impl Todo {
         }
 
         todo.created.get_or_insert(today);
+
         Ok(todo)
     }
 
@@ -173,6 +176,7 @@ impl Todo {
         }
 
         *self = pending;
+
         Ok(())
     }
 
@@ -239,6 +243,7 @@ impl Todo {
         let Some((key, value)) = word.split_once(':') else {
             return false;
         };
+
         key.starts_with(char::is_alphabetic)
             && key.chars().all(|c| c.is_alphanumeric() || c == '-' || c == '_')
             && !value.is_empty()
@@ -256,6 +261,7 @@ fn strip_priority(rest: &mut &str) -> Option<char> {
     };
 
     *rest = &rest[4..];
+
     Some(priority)
 }
 
@@ -264,6 +270,7 @@ fn strip_date(rest: &mut &str) -> Option<Date> {
     let (token, remainder) = rest.split_once(' ')?;
     let date = parse_date(token)?;
     *rest = remainder;
+
     Some(date)
 }
 

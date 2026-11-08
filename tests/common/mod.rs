@@ -14,5 +14,6 @@ pub fn folder(name: &str) -> std::path::PathBuf {
     let folder = std::env::temp_dir().join(format!("todo-{}-{name}", std::process::id()));
     let _ = std::fs::remove_dir_all(&folder);
     std::fs::create_dir(&folder).unwrap();
+
     folder
 }

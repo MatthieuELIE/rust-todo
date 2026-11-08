@@ -4,6 +4,7 @@ use std::process::{Command, Output};
 
 fn todo_list(terms: &[&str]) -> Output {
     let missing = std::env::temp_dir().join(format!("todo-{}-missing.txt", std::process::id()));
+
     Command::new(env!("CARGO_BIN_EXE_todo"))
         .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")

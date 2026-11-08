@@ -69,6 +69,7 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");
+
                 ExitCode::FAILURE
             }
         };

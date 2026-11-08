@@ -6,6 +6,7 @@ fn todos_of(lines: &[&str]) -> Vec<Todo> {
 
 fn listed(todos: &[Todo], terms: &[&str]) -> Vec<(usize, String)> {
     let terms: Vec<String> = terms.iter().map(|t| t.to_string()).collect();
+
     list(todos, &terms).into_iter().map(|(n, t)| (n, t.to_line())).collect()
 }
 

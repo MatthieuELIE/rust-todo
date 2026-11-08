@@ -29,7 +29,7 @@ The screenshots use the `catppuccin-mocha` theme; the default theme follows the 
 | `r` | in the history, reopen the task: it moves back to the task file |
 | `Tab` | move to the filter panel |
 | `Esc` | drop the filter and the search |
-| `?` | show the keys, also from the filter panel, the popup's normal mode and its calendar |
+| `?` | show the keys, also from the filter panel, the popup's normal and visual modes and its calendar |
 | `q`, `Ctrl-C` | quit |
 
 ## Use it in a herdr popup
@@ -60,7 +60,7 @@ A command under way, such as a first `d`, is dropped.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored.
 The status bar then says `Priority is a to e, or space`.
 
-A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal mode and its calendar unless it is listed.
+A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, the popup's normal and visual modes and its calendar unless it is listed.
 `Ctrl-D` is not `d`, and it drops a command waiting for its second key.
 
 ### Completing a task

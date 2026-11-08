@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - `y` in the popup's normal mode copies to the clipboard what `d` would delete with the same motion or object (`yw`, `ye`, `y$`, `yt:`, `yiw`, `yaw`, `yy`…), and the toast says `Copied to the clipboard`; an empty range says `Nothing to copy` and leaves the clipboard alone.
+- `v` in the popup's normal mode starts a selection shown in reverse video, which `h l 0 $ w W b B e E f F t T ; ,` extend and `y` copies, `Esc` or `v` dropping it; the status bar says `VISUAL` and the help gains a `VISUAL` section.
 
 ## [0.8.2] - 2026-11-05
 

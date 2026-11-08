@@ -29,6 +29,7 @@ fn reopen_moves_a_task_of_done_txt_to_the_end_of_the_task_file_without_its_compl
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+
     assert!(reopened.status.success());
     assert_eq!(String::from_utf8_lossy(&reopened.stdout), "reopened: 2026-09-02 Pay rent\n");
     assert_eq!(untouched, ("Buy milk\n".to_string(), history.to_string()));
@@ -134,6 +135,7 @@ fn archive_reopen_and_do_refuse_a_task_file_that_is_done_txt_itself() {
             format!("the task file is done.txt itself: {}\n", file.display())
         );
     }
+
     assert_eq!(text, "x 2026-09-03 Pay rent\nBuy milk\n");
 }
 

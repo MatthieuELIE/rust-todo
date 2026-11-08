@@ -36,10 +36,12 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
             if app.turn(repository::read(path), &mut text, event, today()) {
                 app.save(path, &mut text);
             }
+
             if let Some(clip) = app.copy.take() {
                 app.copied(&clip, pbcopy(clip.text()));
             }
         }
+
         execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)
     })
 }
@@ -52,6 +54,7 @@ fn pbcopy(line: &str) -> io::Result<()> {
     if !status.success() {
         return Err(io::Error::other(status.to_string()));
     }
+
     written
 }
 

@@ -247,6 +247,7 @@ mod tests {
             assert!(choose(no_color, Some(Name::CatppuccinMocha)) == Theme::MOCHA);
             assert!(choose(no_color, Some(Name::Terminal)) == Theme::TERMINAL);
         }
+
         assert!(choose(true, None) == Theme::NONE);
         assert!(choose(false, None) == Theme::TERMINAL);
     }

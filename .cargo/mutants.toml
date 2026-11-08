@@ -10,7 +10,7 @@ exclude_re = [
     # `pending` is only d, c, y or p: the arm above takes the first three and handle_key stops a `v` after `p`, so `v` arrives here with nothing pending.
     'src/editor/normal\.rs:68:35: replace match guard pending\.is_none\(\) with true in Editor::normal',
     # Without group or other bits, the extra set_permissions(mode & 0o700) can drop only setuid, setgid and sticky: the write clears the first two, the last does nothing on a regular file.
-    'src/repository\.rs:81:13: replace & with [|^] in append',
+    'src/repository\.rs:85:13: replace & with [|^] in append',
     # RAPID_BLINK and HIDDEN are disjoint flags: `^` gives the same set as `|`.
     'src/view/popup\.rs:44:72: replace \| with \^ in draw_popup',
     # `today` only changes the colours of the words, not their width, so the text wraps onto as many rows.

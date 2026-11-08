@@ -33,12 +33,14 @@ fn main() -> ExitCode {
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &config::choose(no_color, None));
             }
+
             return ExitCode::FAILURE;
         }
     };
     if no_color && theme != Theme::NONE {
         force_color_output(true);
     }
+
     let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
         path.with_file_name("done.txt")
     } else {
@@ -53,6 +55,7 @@ fn main() -> ExitCode {
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &theme);
             }
+
             return ExitCode::FAILURE;
         }
     };

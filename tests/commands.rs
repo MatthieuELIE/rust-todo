@@ -34,11 +34,13 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
         assert!(output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stdout), confirmation);
     }
+
     for (output, error) in refused {
         assert!(!output.status.success());
         assert!(output.stdout.is_empty());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+
     assert_eq!(text, "x 2026-08-30 Typed by hand\n(B) 2026-09-02 Buy milk\n");
     let lines: Vec<&str> = history.lines().collect();
     assert_eq!(lines.len(), 2);
@@ -143,6 +145,7 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+
     assert!(unchanged.status.success());
     assert!(unchanged.stderr.is_empty());
     assert_eq!(untouched, before);
@@ -192,6 +195,7 @@ fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+
     assert_eq!(text, before);
 }
 
@@ -218,5 +222,6 @@ fn edit_refuses_a_term_starting_with_a_dash_and_writes_nothing() {
         assert!(!output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stderr), error);
     }
+
     assert_eq!(text, before);
 }

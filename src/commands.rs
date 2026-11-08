@@ -41,6 +41,7 @@ fn pending_match(todos: &[Todo], term: &str) -> Result<usize, String> {
     if term.starts_with('-') {
         return Err(format!("edit takes a term to match, not one to exclude: {term}"));
     }
+
     let numbers: Vec<usize> = filter::list(todos, &[term.to_owned()])
         .into_iter()
         .filter(|(_, todo)| !todo.done)
@@ -78,6 +79,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
             if done {
                 tasks.sort_by_key(|(number, _)| *number);
             }
+
             if tasks.is_empty() {
                 let nothing = if due {
                     "nothing due"
@@ -88,9 +90,11 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 };
                 eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
             }
+
             for (number, todo) in tasks {
                 println!("{}{}", view::number(number), shown(&theme, todo, today));
             }
+
             return ExitCode::SUCCESS;
         }
 
@@ -153,10 +157,12 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                     if todo.to_line() == todos[number - 1].to_line() {
                         return ExitCode::SUCCESS;
                     }
+
                     if let Err(e) = todo.check_text() {
                         eprintln!("{e}");
                         return ExitCode::FAILURE;
                     }
+
                     todos[number - 1] = todo;
                 }
                 Err(e) => {
@@ -185,10 +191,12 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 eprintln!("task {number} {reason}");
                 return ExitCode::FAILURE;
             }
+
             if let Err(e) = std::fs::OpenOptions::new().write(true).open(&done_path) {
                 eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
                 return ExitCode::FAILURE;
             }
+
             confirmed = Some(("reopened", todo.clone()));
             todos.push(todo);
             history = Some(lines.concat());
@@ -200,6 +208,7 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 eprintln!("nothing to archive");
                 return ExitCode::SUCCESS;
             }
+
             archived = Some(done.len());
             moved = done;
             todos = pending;
@@ -212,25 +221,30 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
         return ExitCode::FAILURE;
     }
+
     if !moved.is_empty()
         && let Err(e) = repository::append(&done_path, &moved)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
         return ExitCode::FAILURE;
     }
+
     if let Err(e) = repository::save(&path, &todos) {
         eprintln!("could not save {}: {e} (file left unchanged)", path.display());
         return ExitCode::FAILURE;
     }
+
     if let Some(body) = history
         && let Err(e) = repository::write(&done_path, body)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
         return ExitCode::FAILURE;
     }
+
     if let Some((verb, todo)) = confirmed {
         let _ = writeln!(io::stdout(), "{verb}: {}", shown(&theme, &todo, today()));
     }
+
     if let Some(count) = archived {
         let _ = writeln!(io::stdout(), "{count} task{} archived", if count == 1 { "" } else { "s" });
     }

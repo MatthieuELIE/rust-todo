@@ -36,11 +36,16 @@ The terminal's cursor is a bar in insert mode and a block in normal mode, as in 
 | normal | `d`, `c` or `y`, then `iw` `aw` `iW` `aW` | delete, change, copy the word under the cursor, with its space for `a` |
 | normal | `dd`, `cc`, `yy` | delete, change, copy the whole line |
 | normal | `i` `a` `I` `A` | insert mode |
+| normal | `v` | visual mode, the selection anchored on the character under the cursor |
 | normal | `u`, `Ctrl-R` | undo, redo |
 | normal | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |
 | normal | `Esc` | cancel |
-| both | `Enter` | save |
-| normal, calendar | `?` | show the keys; closing them goes back to the popup as it was |
+| visual | `h` `l` `0` `$`, `w` `b` `e`, `W` `B` `E` | move the cursor, the selection running from the anchor to it |
+| visual | `f` `F` `t` `T`, then a character, `;`, `,` | move to a character, repeat, reverse |
+| visual | `y` | copy the selection to the clipboard and go back to normal mode, the cursor at the start of the selection |
+| visual | `Esc`, `v` | back to normal mode without copying |
+| all modes | `Enter` | save |
+| normal, visual, calendar | `?` | show the keys; closing them goes back to the popup as it was |
 | calendar | `h` `l`, `k` `j`, `H` `L` | move by a day, a week, a month |
 | calendar | `Enter`, `Esc` | write the date, close |
 
@@ -98,6 +103,19 @@ This history is the popup's own and is lost when it closes.
 
 `p` then `a` to `e` writes or replaces the priority at the start of the line, and `p` then `Space` drops it, as in the list.
 A done line is left alone.
+
+### Visual mode
+
+`v` in normal mode selects from the character under the cursor.
+The selection runs from there to the cursor, both characters included, and is drawn in reverse video in every theme, `terminal` and `none` included.
+The terminal's cursor stays on the end of the selection the motions move.
+
+- `h` `l` `0` `$`, `w` `b` `e`, `W` `B` `E`, `f` `F` `t` `T` and `;` `,` move the cursor and so resize the selection, in either direction from the anchor.
+- `y` copies the selection and goes back to normal mode with the cursor at the start of the selection, as `y` with a motion does.
+- `Esc` or `v` go back to normal mode without copying, and `Enter` saves.
+- Any other key does nothing, `d`, `c`, `x`, `i` and `u` included, and so does a paste.
+
+The status bar says `VISUAL`, and `?` shows the keys with that section lit.
 
 ### Pending keys
 

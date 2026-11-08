@@ -48,7 +48,8 @@ H            show, hide history
 r            reopen, in the history
 Tab          panel
 Esc          drop filter and search
-?            help; PANEL NORMAL DATE too
+?            help; PANEL, NORMAL,
+             VISUAL, DATE too
 q            quit
 
 PANEL
@@ -81,11 +82,22 @@ y + move     copy up to
 yy           copy the line
 iw/aw/iW/aW  after d/c/y: a word
 i/a/I/A      insert
+v            visual mode
 u/Ctrl-r     undo, redo
 p a…e        priority
 p Space      no priority
 Enter        save
 Esc          cancel
+
+VISUAL
+h/l/0/$      move
+w/b/e        word
+W/B/E        blank-separated word
+f/F/t/T x    to, before a char
+;/,          repeat, reverse
+y            copy the selection
+Esc/v        normal mode
+Enter        save
 
 DATE
 h/l/←/→      day

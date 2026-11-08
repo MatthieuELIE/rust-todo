@@ -1,7 +1,7 @@
 use super::super::tests::{MOCHA, TODAY, add_popup, app_of, render_in, rows};
 use crate::editor::Mode;
 use crate::tui::{App, Focus};
-use ratatui::buffer::Buffer;
+use ratatui::buffer::{Buffer, Cell};
 use ratatui::style::Modifier;
 
 fn help_app(focus: Focus) -> App {
@@ -45,16 +45,15 @@ fn the_help_draws_two_columns_on_a_wide_area_each_section_whole_in_its_own() {
     );
     order(
         &right,
-        &[
-            "INSERT",
-            "↓/↑/Ctrl-n/p pick a completion",
-            "NORMAL",
-            "Esc          cancel",
-            "DATE",
-            "Enter/Esc    pick, close",
-        ],
+        &["INSERT", "↓/↑/Ctrl-n/p pick a completion", "NORMAL", "Esc          cancel", "VISUAL"],
     );
-    for name in ["INSERT", "NORMAL", "DATE"] {
+    let mut scrolled = help_app(Focus::List);
+    scrolled.focus = Focus::Help(u16::MAX);
+    let bottom = rows_of(&scrolled, 109, 40);
+    let top = bottom.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
+    let right: Vec<String> = bottom[top..].iter().map(|row| slot(row, 1)).collect();
+    order(&right, &["VISUAL", "y            copy the selection", "DATE", "Enter/Esc    pick, close"]);
+    for name in ["INSERT", "NORMAL", "VISUAL", "DATE"] {
         assert_eq!(at(&left, name), None, "{name}");
     }
     for name in ["LIST", "PANEL", "SEARCH"] {
@@ -74,15 +73,30 @@ fn the_help_draws_one_column_in_the_order_of_help_on_a_narrow_area() {
     let box_width = rows[top].chars().filter(|c| *c == '─').count() + 2 + " HELP ".chars().count();
     assert!(box_width <= 80, "{}", rows[top]);
 
-    let order = |scroll: u16, names: [&str; 2]| {
-        let mut app = help_app(Focus::List);
-        app.focus = Focus::Help(scroll);
-        let rows = rows_of(&app, 80, 36);
-        let at: Vec<usize> = names.iter().map(|name| rows.iter().position(|row| row.contains(name)).unwrap()).collect();
-        assert!(at[0] < at[1], "{names:?}");
+    let titled = |rows: &[String], name: &str| {
+        rows.iter()
+            .position(|row| row.chars().skip(20).take(40).collect::<String>().trim() == name)
     };
-    order(24, [" INSERT ", " NORMAL "]);
-    order(u16::MAX, [" NORMAL ", " DATE "]);
+    let order = |names: [&str; 2]| {
+        let seen = (0..=80)
+            .filter(|&scroll| {
+                let mut app = help_app(Focus::List);
+                app.focus = Focus::Help(scroll);
+                let rows = rows_of(&app, 80, 36);
+                match (titled(&rows, names[0]), titled(&rows, names[1])) {
+                    (Some(first), Some(second)) => {
+                        assert!(first < second, "{names:?}");
+                        true
+                    }
+                    _ => false,
+                }
+            })
+            .count();
+        assert!(seen > 0, "{names:?} never show together");
+    };
+    order(["INSERT", "NORMAL"]);
+    order(["NORMAL", "VISUAL"]);
+    order(["VISUAL", "DATE"]);
 }
 
 fn rows_of(app: &App, width: u16, height: u16) -> Vec<String> {
@@ -104,28 +118,35 @@ fn the_help_needs_92_columns_for_its_two_columns() {
 }
 
 #[test]
-fn the_help_box_holds_its_lines_and_padding_on_a_screen_taller_than_them() {
+fn the_help_box_stops_at_its_tallest_on_a_taller_screen_and_scrolls_the_rest() {
     let rows = rows_of(&help_app(Focus::List), 109, 40);
     let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
-    let bottom = rows.iter().position(|row| row.contains("─ esc close ╯")).expect("bottom");
+    let bottom = rows.iter().position(|row| row.contains("─ j/k scroll · esc close ╯")).expect("bottom");
 
     assert_eq!(bottom - top + 1, 32 + 4);
 }
 
+fn header_cell(app: &mut App, name: &str) -> Cell {
+    let column = usize::from(["INSERT", "NORMAL", "VISUAL", "DATE"].contains(&name));
+    for scroll in [0, u16::MAX] {
+        app.focus = Focus::Help(scroll);
+        let buffer = render_in(app, 109, 36);
+        if let Some(y) = header(&rows(&buffer), column, name) {
+            return buffer[(13 + 44 * column as u16, y as u16)].clone();
+        }
+    }
+    panic!("{name} is in no screen of the help");
+}
+
 #[test]
 fn the_help_lights_the_mode_it_was_opened_from_in_accent_and_the_others_in_structure_in_mocha() {
-    let buffer = render_in(&help_app(Focus::Panel), 109, 36);
-    let rows = rows(&buffer);
-    let cell_of = |name: &str| {
-        let column = usize::from(["INSERT", "NORMAL", "DATE"].contains(&name));
-        let y = header(&rows, column, name).expect(name);
-        buffer[(13 + 44 * column as u16, y as u16)].clone()
-    };
+    let mut app = help_app(Focus::Panel);
+    let mut cell_of = |name: &str| header_cell(&mut app, name);
 
     let lit = cell_of("PANEL");
     assert_eq!((lit.fg, lit.bg), (MOCHA.on_accent, MOCHA.accent));
     assert!(lit.modifier.contains(Modifier::BOLD));
-    for name in ["LIST", "SEARCH", "INSERT", "NORMAL", "DATE"] {
+    for name in ["LIST", "SEARCH", "INSERT", "NORMAL", "VISUAL", "DATE"] {
         let cell = cell_of(name);
         assert_eq!((cell.fg, cell.bg), (MOCHA.primary, MOCHA.structure), "{name}");
         assert!(cell.modifier.contains(Modifier::BOLD), "{name}");
@@ -133,24 +154,24 @@ fn the_help_lights_the_mode_it_was_opened_from_in_accent_and_the_others_in_struc
 }
 
 #[test]
-fn the_help_opened_from_the_popup_lights_normal_or_date_when_the_date_picker_is_open() {
-    let lit = |picker: bool| {
+fn the_help_opened_from_the_popup_lights_normal_visual_or_date_when_the_date_picker_is_open() {
+    let lit = |mode: Mode, picker: bool| {
         let mut app = app_of(&["Pay +rent"]);
         add_popup(&mut app, "Ship due:", 0);
         if let Focus::Popup(popup) = &mut app.focus {
-            popup.editor.mode = Mode::Normal;
+            popup.editor.mode = mode;
             popup.picker = picker.then_some(TODAY);
         }
-        let buffer = render_in(&help_app(std::mem::take(&mut app.focus)), 109, 36);
-        let rows = rows(&buffer);
-        ["INSERT", "NORMAL", "DATE"]
+        let mut app = help_app(std::mem::take(&mut app.focus));
+        ["INSERT", "NORMAL", "VISUAL", "DATE"]
             .into_iter()
-            .filter(|name| buffer[(57, header(&rows, 1, name).expect(name) as u16)].bg == MOCHA.accent)
+            .filter(|name| header_cell(&mut app, name).bg == MOCHA.accent)
             .collect::<Vec<_>>()
     };
 
-    assert_eq!(lit(false), ["NORMAL"]);
-    assert_eq!(lit(true), ["DATE"]);
+    assert_eq!(lit(Mode::Normal, false), ["NORMAL"]);
+    assert_eq!(lit(Mode::Visual, false), ["VISUAL"]);
+    assert_eq!(lit(Mode::Normal, true), ["DATE"]);
 }
 
 #[test]
@@ -158,10 +179,9 @@ fn the_help_bottom_title_says_j_k_scroll_only_when_the_content_overflows() {
     let app = help_app(Focus::List);
 
     let tall = rows_of(&app, 109, 40);
-    assert!(tall.iter().any(|row| row.contains("─ esc close ╯")), "two columns fit");
-    assert!(tall.iter().all(|row| !row.contains("j/k scroll")));
-    assert!(tall.iter().all(|row| !row.contains('▐')));
-    assert_eq!(app.help_max.get(), 0);
+    assert!(tall.iter().any(|row| row.contains("─ j/k scroll · esc close ╯")), "two columns overflow");
+    assert!(tall.iter().any(|row| row.contains('▐')));
+    assert_eq!(app.help_max.get(), 43 - 32);
 
     let low = rows_of(&app, 109, 20);
     assert!(low.iter().any(|row| row.contains("─ j/k scroll · esc close ╯")));
@@ -173,11 +193,11 @@ fn the_help_tells_the_app_how_far_the_last_drawing_left_it_to_scroll() {
     let app = help_app(Focus::List);
 
     render_in(&app, 109, 20);
-    assert_eq!(app.help_max.get(), 32 - 15);
+    assert_eq!(app.help_max.get(), 43 - 15);
     render_in(&app, 80, 36);
-    assert_eq!(app.help_max.get(), 63 - 31);
+    assert_eq!(app.help_max.get(), 75 - 31);
     render_in(&app, 109, 40);
-    assert_eq!(app.help_max.get(), 0);
+    assert_eq!(app.help_max.get(), 43 - 32);
 }
 
 #[test]
@@ -222,7 +242,7 @@ fn the_help_scrollbar_thumb_is_the_share_of_the_lines_the_box_shows() {
         .filter(|&y| buffer[(98, y)].symbol() == "▐" && buffer[(98, y)].fg == MOCHA.tertiary)
         .count();
 
-    assert_eq!(thumb, 13);
+    assert_eq!(thumb, 9);
 }
 
 #[test]
@@ -255,6 +275,45 @@ fn the_normal_section_lists_y_and_gives_the_word_objects_after_d_c_and_y() {
     assert!(has("y + move     copy up to"));
     assert!(has("yy           copy the line"));
     assert!(has("iw/aw/iW/aW  after d/c/y: a word"));
+    assert!(has("v            visual mode"));
+}
+
+#[test]
+fn the_visual_section_lists_the_motions_y_the_way_out_and_enter_after_normal() {
+    let mut app = help_app(Focus::List);
+    app.focus = Focus::Help(u16::MAX);
+    let rows = rows_of(&app, 109, 40);
+    let column: Vec<String> = rows.iter().map(|row| slot(row, 1)).collect();
+    let start = header(&rows, 1, "VISUAL").expect("VISUAL");
+
+    let section: Vec<&str> = column[start + 1..]
+        .iter()
+        .map(|row| row.trim_end())
+        .take_while(|row| !row.is_empty())
+        .collect();
+    assert_eq!(
+        section,
+        [
+            "h/l/0/$      move",
+            "w/b/e        word",
+            "W/B/E        blank-separated word",
+            "f/F/t/T x    to, before a char",
+            ";/,          repeat, reverse",
+            "y            copy the selection",
+            "Esc/v        normal mode",
+            "Enter        save",
+        ]
+    );
+    assert!(header(&rows, 1, "NORMAL").is_none_or(|normal| normal < start));
+}
+
+#[test]
+fn the_question_mark_line_of_list_names_the_modes_whose_keys_the_help_shows_too() {
+    let rows = rows_of(&help_app(Focus::List), 109, 40);
+    let line = rows.iter().position(|row| slot(row, 0).starts_with("?            help;")).expect("line");
+
+    assert_eq!(slot(&rows[line], 0).trim_end(), "?            help; PANEL, NORMAL,");
+    assert_eq!(slot(&rows[line + 1], 0).trim_end(), "             VISUAL, DATE too");
 }
 
 #[test]

@@ -1,13 +1,22 @@
 use super::*;
 
 /// The other direction of a find key.
-pub(super) fn opposite(kind: char) -> char {
+fn opposite(kind: char) -> char {
     match kind {
         'f' => 'F',
         'F' => 'f',
         't' => 'T',
         _ => 't',
     }
+}
+
+/// The search `;` or `,` (`key`) repeats after `last`: the same one, or its opposite direction.
+pub(super) fn repeated(key: char, (kind, target): (char, char)) -> (char, char) {
+    if key == ';' {
+        return (kind, target);
+    }
+
+    (opposite(kind), target)
 }
 
 /// Where `f`, `F`, `t` or `T` takes a cursor at `at` to `target`; a repeat of `t` or `T` skips the character next to the cursor.

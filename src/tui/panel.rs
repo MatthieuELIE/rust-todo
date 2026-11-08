@@ -10,7 +10,6 @@ impl App {
     /// Whether a task due is left by the search, whatever the filter.
     pub(super) fn tasks_due_in_search(&self) -> bool {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-
         self.listed(&terms).iter().any(|(_, todo)| shows(todo, DUE_NOW, self.today))
     }
 
@@ -25,7 +24,6 @@ impl App {
                 .collect();
             terms.sort_by_key(|term| (term.to_lowercase(), term.clone()));
             terms.dedup();
-
             terms
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
@@ -45,7 +43,6 @@ impl App {
             let count = shown.iter().filter(|(_, todo)| has_word(todo, &term)).count();
             filters.push((term, count));
         }
-
         filters
     }
 

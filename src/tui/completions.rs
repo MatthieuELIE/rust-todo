@@ -24,7 +24,6 @@ impl App {
         for name in self.todos.iter().flat_map(names) {
             *counts.entry(format!("{sigil}{name}")).or_insert(0) += 1;
         }
-
         for name in self.history.iter().flat_map(names) {
             counts.entry(format!("{sigil}{name}")).or_insert(0);
         }
@@ -33,7 +32,6 @@ impl App {
         let mut names: Vec<(String, usize)> = counts.into_iter().filter(|(name, _)| name.to_lowercase().starts_with(&tag)).collect();
         names.sort_by_key(|(name, count)| (Reverse(*count), name.to_lowercase(), name.clone()));
         let selected = popup.selected.min(names.len().saturating_sub(1));
-
         (names, selected)
     }
 }

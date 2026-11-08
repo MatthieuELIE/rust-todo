@@ -88,7 +88,6 @@ impl App {
                     if !held {
                         self.notify(Notice::Refused(format!("{verb}, but done.txt still holds the task: {e}")));
                     }
-
                     held = true;
                 }
             }
@@ -103,7 +102,6 @@ impl App {
                 if let Ok(current) = reread {
                     self.reload(repository::parse(&current));
                 }
-
                 self.notify(Notice::Refused(format!("could not save: {e} (file left unchanged)")));
             }
         }
@@ -122,7 +120,6 @@ impl App {
             if !self.refusal_shown() {
                 self.notify(Notice::Refused(format!("could not read done.txt: {e}")));
             }
-
             String::new()
         }));
     }

@@ -430,7 +430,6 @@ const COPIED: &str = "(A) 2026-11-02 Call the bank about the loan +finance due:2
 fn opened(line: &str) -> App {
     let mut app = app_of(&[line]);
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-
     app
 }
 

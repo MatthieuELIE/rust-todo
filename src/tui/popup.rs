@@ -34,7 +34,6 @@ impl App {
 
         if opens_help {
             self.open_help();
-
             return false;
         }
 
@@ -43,13 +42,11 @@ impl App {
                 _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => Some(date),
                 KeyCode::Enter => {
                     popup.editor.complete(&format!("{DUE}{date}"));
-
                     None
                 }
                 KeyCode::Esc => None,
                 code => Some(shift(date, code)),
             };
-
             return false;
         }
 
@@ -59,18 +56,15 @@ impl App {
             _ if names.is_empty() => {}
             (KeyCode::Down, _) | (KeyCode::Char('n'), true) => {
                 popup.selected = (selected + 1).min(names.len() - 1);
-
                 return false;
             }
             (KeyCode::Up, _) | (KeyCode::Char('p'), true) => {
                 popup.selected = selected.saturating_sub(1);
-
                 return false;
             }
             (KeyCode::Tab, _) => {
                 popup.editor.complete(&names[selected].0);
                 popup.selected = 0;
-
                 return false;
             }
             _ => {}
@@ -87,22 +81,18 @@ impl App {
             Outcome::Continue => false,
             Outcome::NotPriority => {
                 self.notify(Notice::NotPriority);
-
                 false
             }
             Outcome::Notice(notice) => {
                 self.notify(notice);
-
                 false
             }
             Outcome::Copy(text) if text.is_empty() => {
                 self.notify(Notice::NothingToCopy);
-
                 false
             }
             Outcome::Copy(text) => {
                 self.copy = Some(Clip::Part(text));
-
                 false
             }
             outcome => self.close_popup(outcome, today),
@@ -129,7 +119,6 @@ impl App {
             (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
             (Outcome::Cancel, target) if popup.editor.text != self.opening_text(target) => {
                 self.notify(Notice::Discarded);
-
                 false
             }
             _ => false,
@@ -144,7 +133,6 @@ impl App {
         if self.toast.is_none() && !earlier_refusal {
             self.toast = earlier;
         }
-
         write
     }
 }

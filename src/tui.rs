@@ -70,6 +70,24 @@ pub enum Row {
     Group(Group),
 }
 
+/// What is waiting for the clipboard, with the kind that says what the toast tells.
+#[derive(Clone, PartialEq, Debug)]
+pub enum Clip {
+    /// The line of a task.
+    Task(String),
+    /// A part of the popup's text.
+    Part(String),
+}
+
+impl Clip {
+    /// The text to put in the clipboard.
+    pub fn text(&self) -> &str {
+        match self {
+            Clip::Task(text) | Clip::Part(text) => text,
+        }
+    }
+}
+
 /// A line of the list as drawn.
 pub enum Shown<'a> {
     /// A group's header, with its count and whether it is folded.
@@ -95,10 +113,8 @@ pub struct App {
     pub now: Option<Instant>,
     /// What the status bar says, taken down by `tick` once its time is up.
     pub toast: Option<Toast>,
-    /// Line of the task `yy` asked to copy, taken by the loop of the list.
-    pub copy: Option<String>,
-    /// Whether `copy` is a part of the popup's text, not a task line, for the toast `copied` says.
-    pub copy_is_part: bool,
+    /// What `yy` or the popup's `y` asked to copy, taken by the loop of the list.
+    pub copy: Option<Clip>,
     /// Where the keys go.
     pub focus: Focus,
     /// Where the keys go back to when the help closes: what the help covers while it is open.

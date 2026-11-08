@@ -71,7 +71,7 @@ impl App {
             }
             KeyCode::Char('d') => self.pending = Some('d'),
             KeyCode::Char('y') if pending == Some('y') => match self.selected_task() {
-                Some(todo) => self.copy = Some(todo.to_line()),
+                Some(todo) => self.copy = Some(Clip::Task(todo.to_line())),
                 None => self.notify(Notice::NoTaskUnderCursor),
             },
             KeyCode::Char('y') => self.pending = Some('y'),

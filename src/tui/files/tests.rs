@@ -484,9 +484,10 @@ fn a_second_refusal_to_take_a_line_out_of_done_txt_in_the_same_save_does_not_rep
 #[test]
 fn copied_says_copied_in_grey_or_why_it_could_not_in_red() {
     let mut app = app();
-    app.copied(Ok(()));
+    let clip = Clip::Task(String::new());
+    app.copied(&clip, Ok(()));
     assert_eq!((told(&app), app.refusal_shown()), (Some(Notice::Copied), false));
-    app.copied(Err(io::Error::other("boom")));
+    app.copied(&clip, Err(io::Error::other("boom")));
     assert_eq!(
         (told(&app), app.refusal_shown()),
         (Some(Notice::Refused("could not copy: boom".to_string())), true)

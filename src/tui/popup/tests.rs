@@ -460,7 +460,7 @@ fn y_with_a_motion_or_an_object_leaves_what_d_would_delete_to_copy() {
     for (keys, copied) in cases {
         let mut app = opened(COPIED);
         press(&mut app, keys);
-        assert_eq!((keys, app.copy.as_deref()), (keys, Some(copied)));
+        assert_eq!((keys, app.copy.as_ref().map(Clip::text)), (keys, Some(copied)));
         assert_eq!(popup(&app).editor.text, COPIED);
     }
 }
@@ -479,15 +479,17 @@ fn y_puts_the_cursor_at_the_start_of_the_range_and_u_does_not_see_the_copy() {
 fn a_copy_from_the_popup_says_so_a_failure_is_refused_and_yy_in_the_list_keeps_its_words() {
     let mut app = opened(COPIED);
     press(&mut app, "yy");
-    app.copied(Ok(()));
+    let clip = app.copy.take().unwrap();
+    app.copied(&clip, Ok(()));
     assert_eq!(told(&app), Some(Notice::CopiedText));
 
-    app.copied(Err(io::Error::other("boom")));
+    app.copied(&clip, Err(io::Error::other("boom")));
     assert_eq!(told(&app), Some(Notice::Refused("could not copy: boom".to_string())));
 
     let mut app = app_of(&["one"]);
     press(&mut app, "yy");
-    app.copied(Ok(()));
+    let clip = app.copy.take().unwrap();
+    app.copied(&clip, Ok(()));
     assert_eq!(told(&app), Some(Notice::Copied));
 }
 
@@ -532,7 +534,7 @@ fn y_copies_the_text_as_it_is_on_screen_unsaved_changes_included() {
     app.handle_key(KeyEvent::from(KeyCode::Esc), TODAY);
     press(&mut app, "yy");
 
-    assert_eq!(app.copy.as_deref(), Some("onetwo"));
+    assert_eq!(app.copy.as_ref().map(Clip::text), Some("onetwo"));
 }
 
 fn key(app: &mut App, code: KeyCode) {
@@ -564,7 +566,7 @@ fn v_selects_from_the_character_under_the_cursor_and_y_copies_both_ends_in() {
     for (keys, copied) in cases {
         let mut app = opened(COPIED);
         press(&mut app, keys);
-        assert_eq!((keys, app.copy.as_deref()), (keys, Some(copied)));
+        assert_eq!((keys, app.copy.as_ref().map(Clip::text)), (keys, Some(copied)));
         assert_eq!(popup(&app).editor.text, COPIED);
     }
 }
@@ -575,7 +577,8 @@ fn y_in_visual_mode_goes_back_to_normal_with_the_cursor_at_the_start_and_says_so
     press(&mut app, "fbvby");
 
     assert_eq!((popup(&app).editor.mode, popup(&app).editor.cursor), (Mode::Normal, 20));
-    app.copied(Ok(()));
+    let clip = app.copy.take().unwrap();
+    app.copied(&clip, Ok(()));
     assert_eq!(told(&app), Some(Notice::CopiedText));
 
     press(&mut app, "xvey");
@@ -589,7 +592,7 @@ fn y_in_visual_mode_copies_the_text_as_it_is_on_screen_and_an_empty_one_says_not
     press(&mut app, "Atwo");
     key(&mut app, KeyCode::Esc);
     press(&mut app, "0v$y");
-    assert_eq!(app.copy.as_deref(), Some("onetwo"));
+    assert_eq!(app.copy.as_ref().map(Clip::text), Some("onetwo"));
 
     let mut app = opened("one");
     press(&mut app, "ddvy");
@@ -635,7 +638,7 @@ fn any_other_key_in_visual_mode_changes_nothing_and_the_selection_stays() {
     assert_eq!((popup(&app).editor.mode, app.copy.clone()), (Mode::Visual, None));
 
     press(&mut app, "ey");
-    assert_eq!(app.copy.as_deref(), Some("Call"));
+    assert_eq!(app.copy.as_ref().map(Clip::text), Some("Call"));
 }
 
 #[test]

@@ -85,7 +85,7 @@ impl App {
                 false
             }
             Outcome::Copy(text) => {
-                (self.copy, self.copy_is_part) = (Some(text), true);
+                self.copy = Some(Clip::Part(text));
                 false
             }
             outcome => self.close_popup(outcome, today),

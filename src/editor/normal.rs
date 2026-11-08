@@ -1,6 +1,6 @@
 use super::*;
 
-use super::find::opposite;
+use super::find::repeated;
 use super::words::{motion, object, run_end};
 use crate::todo::Todo;
 
@@ -21,7 +21,10 @@ impl Editor {
                 (self.pending, self.finding) = (pending, Some(kind));
                 return;
             }
-            (None, KeyCode::Char(r @ (';' | ','))) if free => self.find.map(|(kind, c)| (if r == ';' { kind } else { opposite(kind) }, c, true)),
+            (None, KeyCode::Char(r @ (';' | ','))) if free => self.find.map(|last| {
+                let (kind, c) = repeated(r, last);
+                (kind, c, true)
+            }),
             _ => None,
         };
         if let Some((kind, c, repeat)) = search {

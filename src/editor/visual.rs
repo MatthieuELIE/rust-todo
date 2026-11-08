@@ -1,4 +1,4 @@
-use super::find::opposite;
+use super::find::repeated;
 use super::words::motion;
 use super::*;
 
@@ -25,8 +25,9 @@ impl Editor {
             }
             (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) => self.finding = Some(kind),
             (None, KeyCode::Char(r @ (';' | ','))) => {
-                if let Some((kind, c)) = self.find {
-                    self.seek(&chars, None, if r == ';' { kind } else { opposite(kind) }, c, true);
+                if let Some(last) = self.find {
+                    let (kind, c) = repeated(r, last);
+                    self.seek(&chars, None, kind, c, true);
                 }
             }
             (None, code) => self.cursor = motion(&chars, self.cursor, code).unwrap_or(self.cursor),

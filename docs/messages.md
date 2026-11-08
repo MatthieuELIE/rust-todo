@@ -79,6 +79,8 @@ With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes fi
 | --- | --- | --- |
 | `Priority is a to e, or space` | red | the key after `p` was not a priority |
 | `Task copied to the clipboard` | green | `yy` put the line of the task under the cursor in the clipboard; the bar does not show the line |
+| `Copied to the clipboard` | green | `y` in the popup put a part of its text in the clipboard |
+| `Nothing to copy` | red | `y` in the popup found an empty range; the clipboard is left as it was |
 | `No task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
 | `Could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
 | `No task due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |

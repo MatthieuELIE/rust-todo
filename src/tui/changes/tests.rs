@@ -35,10 +35,12 @@ fn u_undoes_the_last_hundred_changes_then_has_nothing_to_undo() {
     for _ in 0..101 {
         press(&mut app, "dd");
     }
+
     for _ in 0..100 {
         press(&mut app, "u");
         assert_eq!(told(&app), Some(Notice::ChangeUndone));
     }
+
     press(&mut app, "u");
 
     assert_eq!(told(&app), Some(Notice::NothingToUndo));

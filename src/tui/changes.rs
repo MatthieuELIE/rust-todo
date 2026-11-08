@@ -17,6 +17,7 @@ impl App {
                 {
                     todo.description = format!("{} {term}", todo.description);
                 }
+
                 self.todos.push(todo);
                 let hidden = !self.follow(self.todos.len());
                 self.notify(Notice::Added { hidden });
@@ -42,20 +43,24 @@ impl App {
             if todo.created.is_none() && todo.completed == self.todos[number - 1].created {
                 todo.created = todo.completed.take();
             }
+
             todo.complete(today);
             self.todos.remove(number - 1);
             self.moves.push(Move::Append(todo));
             self.notify(Notice::Done);
             return true;
         }
+
         if todo.to_line() == self.todos[number - 1].to_line() {
             self.notify(Notice::NoChanges);
             return false;
         }
+
         if let Err(e) = todo.check_text() {
             self.notify(Notice::Refused(e));
             return false;
         }
+
         self.todos[number - 1] = todo;
         let hidden = !self.follow(number);
         self.notify(Notice::Updated { hidden });
@@ -69,6 +74,7 @@ impl App {
             self.notify(Notice::Refused(format!("task {number} {reason}")));
             return false;
         }
+
         self.todos.push(todo);
         self.moves.push(Move::Remove(self.history.remove(number - 1), Some(number)));
         self.notify(Notice::Reopened);

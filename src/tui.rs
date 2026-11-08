@@ -178,9 +178,11 @@ impl App {
             if self.undo.len() == MAX_UNDO {
                 self.undo.remove(0);
             }
+
             self.undo.push((before, self.moves.get(queued).cloned()));
             self.redo.clear();
         }
+
         write
     }
 
@@ -206,6 +208,7 @@ impl App {
             self.quit = true;
             return false;
         }
+
         if matches!(self.focus, Focus::List | Focus::Panel)
             && key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
             && key.code != KeyCode::Char('r')
@@ -213,6 +216,7 @@ impl App {
             if pending == Some('p') {
                 self.notify(Notice::NotPriority);
             }
+
             return false;
         }
         let write = match self.focus {

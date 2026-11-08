@@ -21,6 +21,7 @@ pub(super) fn app_of(lines: &[&str]) -> App {
 
 pub(super) fn fold_all(app: &mut App) {
     use ratatui::crossterm::event::{KeyCode, KeyEvent};
+
     for key in ['z', 'M'] {
         app.handle_key(KeyEvent::from(KeyCode::Char(key)), TODAY);
     }
@@ -162,6 +163,7 @@ fn the_terminal_theme_is_the_default_and_paints_no_rgb_cell_on_any_screen() {
     screens.push(render_in(&app, 80, 30));
 
     assert_eq!(app.theme.accent, Color::Blue);
+
     for buffer in screens {
         assert!(
             buffer
@@ -259,6 +261,7 @@ const GLYPHS: [char; 6] = ['\u{f07b}', '\u{f1fa}', '\u{f05a}', '\u{f0ca}', '\u{f
 /// The private-use glyphs on screen with their position.
 pub(super) fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
     let mut found = Vec::new();
+
     for y in 0..buffer.area.height {
         for x in 0..buffer.area.width {
             if let Some(glyph) = buffer[(x, y)].symbol().chars().next().filter(|c| ('\u{e000}'..='\u{f8ff}').contains(c)) {
@@ -291,6 +294,7 @@ fn with_icons_the_six_glyphs_stand_before_their_word_in_its_style() {
     let found = glyph_cells(&buffer);
     let words = ["PROJECTS", "CONTEXTS", "DETAILS", "All tasks", "Due", "Waiting"];
     assert_eq!(found.len(), 6);
+
     for (glyph, word) in GLYPHS.iter().zip(words) {
         let &(_, x, y) = found.iter().find(|(found, ..)| found == glyph).unwrap();
         let after: String = (x + 1..x + 2 + word.len() as u16).map(|x| buffer[(x, y)].symbol()).collect();

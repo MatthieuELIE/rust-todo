@@ -91,6 +91,7 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
     let mut app = app_of(&["Pay rent"]);
     let cursor_at = |app: &mut App, text: &str, cursor: usize| {
         add_popup(app, text, 0);
+
         if let Focus::Popup(popup) = &mut app.focus {
             popup.editor.cursor = cursor;
         }
@@ -103,6 +104,7 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
     }
 
     let words = "abcd ".repeat(13);
+
     for cursor in 0..=words.len() {
         assert!(cursor_at(&mut app, &words, cursor).1.is_some(), "words at {cursor}");
     }
@@ -126,6 +128,7 @@ fn the_popup_keeps_its_cursor_on_screen_wherever_the_line_wraps() {
     assert_eq!(buffer[(cursor.x - 2, cursor.y)].symbol(), "日");
 
     add_popup(&mut app, "abcdefghijklmnopqrstuvwx due:", 0);
+
     if let Focus::Popup(popup) = &mut app.focus {
         popup.picker = Some(TODAY);
     }
@@ -197,6 +200,7 @@ fn the_completions_go_above_the_tag_when_there_is_no_room_below() {
 fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pick_in_the_accent_and_today_yellow_in_mocha() {
     let mut app = app_of(&["Pay rent"]);
     add_popup(&mut app, "Ship due:", 0);
+
     if let Focus::Popup(popup) = &mut app.focus {
         popup.picker = Some(date!(2026 - 09 - 28));
     }
@@ -244,6 +248,7 @@ fn the_date_picker_stays_above_the_status_bar_on_a_small_screen() {
     let mut app = app_of(&["Pay rent"]);
 
     add_popup(&mut app, "Ship the parcel to the bank due:", 0);
+
     if let Focus::Popup(popup) = &mut app.focus {
         popup.picker = Some(TODAY);
     }
@@ -300,6 +305,7 @@ fn visual_app(theme: Theme, keys: &str) -> App {
     let mut app = app_of(&["Pay rent"]);
     app.theme = theme;
     let mut editor = Editor::new("Call the bank about it".to_string());
+
     for c in keys.chars() {
         editor.handle_key(KeyEvent::from(KeyCode::Char(c)));
     }

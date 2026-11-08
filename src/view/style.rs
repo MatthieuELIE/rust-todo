@@ -16,6 +16,7 @@ pub(super) fn icon(icons: bool, glyph: char) -> String {
 /// Words of `text`, a `due:` date styled against `today` when given, any other word by `tag_style`, with the spaces between them kept.
 pub(super) fn words(theme: &Theme, text: &str, today: Option<Date>) -> Vec<Span<'static>> {
     let mut spans = Vec::new();
+
     for (i, word) in text.split(' ').enumerate() {
         if i > 0 {
             spans.push(" ".into());
@@ -31,6 +32,7 @@ pub(super) fn words(theme: &Theme, text: &str, today: Option<Date>) -> Vec<Span<
 /// Style of a due date: red once past `today`, yellow on the day, none when later, not a date, or with no `today`.
 pub(super) fn due_style(theme: &Theme, value: &str, today: Option<Date>) -> Option<Style> {
     let (due, today) = (parse_date(value)?, today?);
+
     match due.cmp(&today) {
         Ordering::Less => Some(Style::new().fg(theme.alert)),
         Ordering::Equal => Some(Style::new().fg(theme.due_today)),

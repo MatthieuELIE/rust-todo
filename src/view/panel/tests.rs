@@ -77,6 +77,7 @@ fn with_icons_the_section_headers_icons_stand_in_the_column_of_the_entries_icons
     let found = glyph_cells(&render_in(&app, 109, 36));
 
     let column = |glyph| found.iter().find(|(found, ..)| *found == glyph).unwrap().1;
+
     for header in ['\u{f07b}', '\u{f1fa}'] {
         assert_eq!(column(header), column('\u{f0ca}'), "{header:?}");
     }

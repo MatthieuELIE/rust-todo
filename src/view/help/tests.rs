@@ -53,6 +53,7 @@ fn the_help_draws_two_columns_on_a_wide_area_each_section_whole_in_its_own() {
     let top = bottom.iter().position(|row| row.contains("╭ HELP ─")).expect("box");
     let right: Vec<String> = bottom[top..].iter().map(|row| slot(row, 1)).collect();
     order(&right, &["VISUAL", "y            copy the selection", "DATE", "Enter/Esc    pick, close"]);
+
     for name in ["INSERT", "NORMAL", "VISUAL", "DATE"] {
         assert_eq!(at(&left, name), None, "{name}");
     }
@@ -84,6 +85,7 @@ fn the_help_draws_one_column_in_the_order_of_help_on_a_narrow_area() {
                 let mut app = help_app(Focus::List);
                 app.focus = Focus::Help(scroll);
                 let rows = rows_of(&app, 80, 36);
+
                 match (titled(&rows, names[0]), titled(&rows, names[1])) {
                     (Some(first), Some(second)) => {
                         assert!(first < second, "{names:?}");
@@ -129,6 +131,7 @@ fn the_help_box_stops_at_its_tallest_on_a_taller_screen_and_scrolls_the_rest() {
 
 fn header_cell(app: &mut App, name: &str) -> Cell {
     let column = usize::from(["INSERT", "NORMAL", "VISUAL", "DATE"].contains(&name));
+
     for scroll in [0, u16::MAX] {
         app.focus = Focus::Help(scroll);
         let buffer = render_in(app, 109, 36);
@@ -148,6 +151,7 @@ fn the_help_lights_the_mode_it_was_opened_from_in_accent_and_the_others_in_struc
     let lit = cell_of("PANEL");
     assert_eq!((lit.fg, lit.bg), (MOCHA.on_accent, MOCHA.accent));
     assert!(lit.modifier.contains(Modifier::BOLD));
+
     for name in ["LIST", "SEARCH", "INSERT", "NORMAL", "VISUAL", "DATE"] {
         let cell = cell_of(name);
         assert_eq!((cell.fg, cell.bg), (MOCHA.primary, MOCHA.structure), "{name}");
@@ -160,6 +164,7 @@ fn the_help_opened_from_the_popup_lights_normal_visual_or_date_when_the_date_pic
     let lit = |mode: Mode, picker: bool| {
         let mut app = app_of(&["Pay +rent"]);
         add_popup(&mut app, "Ship due:", 0);
+
         if let Focus::Popup(popup) = &mut app.focus {
             popup.editor.mode = mode;
             popup.picker = picker.then_some(TODAY);

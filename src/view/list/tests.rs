@@ -65,6 +65,7 @@ fn a_pending_line_keeps_its_text_but_shows_its_priority_as_a_badge_and_colours_d
     assert_eq!(style_of(text, "+bank"), Style::new().fg(MOCHA.project));
     assert_eq!(style_of(text, "@phone"), Style::new().fg(MOCHA.context));
     assert_eq!(style_of(text, "due:2026-10-01"), Style::new().fg(MOCHA.tertiary));
+
     for plain in ["Call", "a+b", "+", "@"] {
         assert_eq!(style_of(text, plain), Style::new(), "{plain}");
     }

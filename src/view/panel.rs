@@ -33,13 +33,16 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
     let filters = app.filters();
     let active = app.filter_row(&filters);
     let (mut lines, mut row) = (Vec::new(), None);
+
     for (i, (term, count)) in filters.iter().enumerate() {
         let sigil = term.chars().next();
+
         let (header, header_icon) = match sigil {
             Some('+') => ("PROJECTS", PROJECTS_ICON),
             Some('@') => ("CONTEXTS", CONTEXTS_ICON),
             _ => ("", ' '),
         };
+
         let style = if term == DUE_NOW {
             let late = app
                 .today
@@ -51,6 +54,7 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         } else {
             tag_style(theme, term)
         };
+
         if !header.is_empty() && filters[i - 1].0.chars().next() != sigil {
             let indent = if app.icons { "  " } else { " " };
             lines.extend([
@@ -65,13 +69,16 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
         } else {
             "  ".into()
         };
+
         let style = if app.in_history { style.fg(theme.secondary) } else { style };
+
         let entry_icon = match term.as_str() {
             "All tasks" => icon(app.icons, ALL_TASKS_ICON),
             DUE_NOW => icon(app.icons, DUE_ICON),
             WAITING => icon(app.icons, WAITING_ICON),
             _ => String::new(),
         };
+
         let name = Span::styled(format!("{:<13.13}", format!("{entry_icon}{term}")), style);
         lines.push(Line::from_iter([marker, name, " ".into(), format!("{count:>3}").fg(theme.tertiary)]));
     }

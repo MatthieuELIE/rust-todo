@@ -110,12 +110,14 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     let theme = &app.theme;
     let lit = opened_from(&app.under_help);
     let sections = sections();
+
     let columns: Vec<Vec<Line<'static>>> = if area.width >= TWO_COLUMNS_WIDTH {
         let (left, right) = sections.split_at(LEFT_SECTIONS);
         vec![column_lines(theme, left, lit), column_lines(theme, right, lit)]
     } else {
         vec![column_lines(theme, &sections, lit)]
     };
+
     let lines = columns.iter().map(Vec::len).max().unwrap_or_default() as u16;
     let width = columns.len() as u16 * COLUMN_WIDTH + (columns.len() as u16 - 1) * COLUMN_GAP + BOX_MARGIN;
     let height = (lines + 4).min(HELP_MAX_HEIGHT).min(area.height);
@@ -133,6 +135,7 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     let slots = Layout::horizontal(vec![Constraint::Length(COLUMN_WIDTH); columns.len()])
         .spacing(COLUMN_GAP)
         .split(inner);
+
     for (column, slot) in columns.into_iter().zip(slots.iter()) {
         frame.render_widget(Paragraph::new(column).scroll((scroll.min(max), 0)), *slot);
     }
@@ -174,6 +177,7 @@ fn sections() -> Vec<&'static str> {
 /// The lines of `sections` one under the other, a blank line between two sections, the one named `lit` lit.
 fn column_lines(theme: &Theme, sections: &[&'static str], lit: &str) -> Vec<Line<'static>> {
     let mut lines = Vec::new();
+
     for (i, section) in sections.iter().enumerate() {
         if i > 0 {
             lines.push(Line::default());
@@ -194,6 +198,7 @@ fn help_lines(theme: &Theme, text: &'static str) -> Vec<Line<'static>> {
             let (key, action) = line.split_at(line.char_indices().nth(13).map_or(line.len(), |(i, _)| i));
             let alternatives: Vec<&str> = if key.trim_end() == "/" { vec![key] } else { key.split('/').collect() };
             let mut spans = Vec::new();
+
             for (i, alternative) in alternatives.into_iter().enumerate() {
                 if i > 0 {
                     spans.push("/".fg(theme.separator));

@@ -32,7 +32,6 @@ impl Drop for Pty {
 
 fn sized_command(args: &[&str]) -> Vec<String> {
     let run = r#"/bin/stty cols 109 rows 36; exec "$0" "$@""#;
-
     [
         vec![
             "/bin/sh".to_string(),
@@ -54,7 +53,6 @@ fn script(command: &[String]) -> Command {
         let quoted: Vec<String> = command.iter().map(|word| format!("'{}'", word.replace('\'', r"'\''"))).collect();
         script.args(["-qec", &quoted.join(" "), "/dev/null"]);
     }
-
     script
 }
 
@@ -125,7 +123,6 @@ impl Pty {
         loop {
             if let Some(status) = self.child.try_wait().unwrap() {
                 self.reader.take().unwrap().join().unwrap();
-
                 return (status, self.screen());
             }
 
@@ -143,7 +140,6 @@ fn dir_with(name: &str, tasks: &str) -> PathBuf {
     std::fs::create_dir_all(dir.join("bin")).unwrap();
     std::fs::create_dir_all(dir.join("config/todo")).unwrap();
     std::fs::write(dir.join("todo.txt"), tasks).unwrap();
-
     dir
 }
 

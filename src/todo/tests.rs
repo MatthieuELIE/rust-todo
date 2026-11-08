@@ -152,7 +152,6 @@ fn completing_a_task_records_the_day_before_its_creation_date_and_drops_the_prio
 fn completed_line(line: &str) -> String {
     let mut task = Todo::from_line(line);
     task.complete(date!(2026 - 09 - 01));
-
     task.description
 }
 

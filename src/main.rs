@@ -35,7 +35,6 @@ fn main() -> ExitCode {
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &config::choose(no_color, None));
             }
-
             return ExitCode::FAILURE;
         }
     };
@@ -59,7 +58,6 @@ fn main() -> ExitCode {
             if cli.command.is_none() {
                 let _ = terminal::show_error(&message, &theme);
             }
-
             return ExitCode::FAILURE;
         }
     };
@@ -69,7 +67,6 @@ fn main() -> ExitCode {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");
-
                 ExitCode::FAILURE
             }
         };

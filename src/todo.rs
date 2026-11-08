@@ -45,10 +45,8 @@ impl Todo {
         } else if let Some(priority) = self.priority {
             parts.push(format!("({priority})"));
         }
-
         parts.extend(self.created.map(|date| date.to_string()));
         parts.push(self.description.clone());
-
         parts.join(" ")
     }
 
@@ -78,7 +76,6 @@ impl Todo {
 
         let mut todo = Todo::from_line(text);
         todo.description.truncate(todo.description.trim_end().len());
-
         Ok(todo)
     }
 
@@ -108,7 +105,6 @@ impl Todo {
         }
 
         todo.created.get_or_insert(today);
-
         Ok(todo)
     }
 
@@ -135,7 +131,6 @@ impl Todo {
                     if !value.is_empty() && !value.starts_with("//") {
                         spans.push((s, i));
                     }
-
                     start = None;
                 }
                 _ => {}
@@ -175,7 +170,6 @@ impl Todo {
         }
 
         *self = pending;
-
         Ok(())
     }
 
@@ -198,7 +192,6 @@ impl Todo {
                 names.push(name);
             }
         }
-
         names
     }
 
@@ -260,7 +253,6 @@ fn strip_priority(rest: &mut &str) -> Option<char> {
     };
 
     *rest = &rest[4..];
-
     Some(priority)
 }
 
@@ -269,7 +261,6 @@ fn strip_date(rest: &mut &str) -> Option<Date> {
     let (token, remainder) = rest.split_once(' ')?;
     let date = parse_date(token)?;
     *rest = remainder;
-
     Some(date)
 }
 

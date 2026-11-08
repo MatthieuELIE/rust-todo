@@ -642,6 +642,18 @@ fn any_other_key_in_visual_mode_changes_nothing_and_the_selection_stays() {
 }
 
 #[test]
+fn y_with_ctrl_or_alt_in_visual_mode_copies_nothing_and_the_selection_stays() {
+    let mut app = opened(COPIED);
+    press(&mut app, "fCve");
+
+    for modifiers in [KeyModifiers::CONTROL, KeyModifiers::ALT] {
+        app.handle_key(KeyEvent::new(KeyCode::Char('y'), modifiers), TODAY);
+    }
+
+    assert_eq!((popup(&app).editor.mode, app.copy.clone()), (Mode::Visual, None));
+}
+
+#[test]
 fn only_y_leaves_a_text_to_copy_in_visual_mode() {
     let mut app = opened(COPIED);
     press(&mut app, "fCvewbBeEh0$ft;,");

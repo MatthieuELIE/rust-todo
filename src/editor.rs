@@ -50,8 +50,6 @@ pub struct Editor {
     pending: Option<char>,
     /// Character the selection started on in visual mode, the cursor being its other end.
     anchor: usize,
-    /// Text `y` just took, for `handle_key` to hand over.
-    copy: Option<String>,
     /// `i` or `a` typed after `d`, `c` or `y`, waiting for the `w` or `W` of its word.
     scope: Option<char>,
     /// `f`, `F`, `t` or `T` waiting for the character to find.
@@ -85,19 +83,20 @@ impl Editor {
             return Outcome::NotPriority;
         }
         let busy = self.pending.is_some() || self.finding.is_some();
+        let mut copy = None;
         match (self.mode, key.code) {
             (Mode::Normal, KeyCode::Enter | KeyCode::Esc) if busy => (self.pending, self.scope, self.finding) = (None, None, None),
             (_, KeyCode::Enter) => return Outcome::Submit,
-            (Mode::Visual, _) => self.visual(key),
+            (Mode::Visual, _) => copy = self.visual(key),
             (Mode::Normal, KeyCode::Esc) => return Outcome::Cancel,
             (Mode::Normal, KeyCode::Char('r')) if !busy && key.modifiers.contains(KeyModifiers::CONTROL) => return self.step(false),
             (Mode::Normal, _) if modified => (self.pending, self.scope, self.finding) = (None, None, None),
             (Mode::Normal, KeyCode::Char('u')) if !busy => return self.step(true),
             (Mode::Insert, _) => self.insert(key),
-            (Mode::Normal, code) => self.normal(code),
+            (Mode::Normal, code) => copy = self.normal(code),
         }
         self.settle();
-        match self.copy.take() {
+        match copy {
             Some(text) => Outcome::Copy(text),
             None => Outcome::Continue,
         }

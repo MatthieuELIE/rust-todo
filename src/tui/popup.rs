@@ -1,3 +1,4 @@
+use super::changes::Saved;
 use super::picker::shift;
 use super::*;
 
@@ -114,17 +115,17 @@ impl App {
         };
         let earlier = self.toast.take();
 
-        let write = match (outcome, &popup.target) {
+        let saved = match (outcome, &popup.target) {
             (Outcome::Submit, Target::Add) => self.add(&popup.editor.text, today),
             (Outcome::Submit, Target::Edit(number)) => self.edit(*number, &popup.editor.text, today),
             (Outcome::Cancel, target) if popup.editor.text != self.opening_text(target) => {
                 self.notify(Notice::Discarded);
-                false
+                Saved::Unchanged
             }
-            _ => false,
+            _ => Saved::Unchanged,
         };
 
-        if self.refusal_shown() {
+        if saved == Saved::Refused {
             self.focus = Focus::Popup(popup);
         }
 
@@ -133,7 +134,7 @@ impl App {
         if self.toast.is_none() && !earlier_refusal {
             self.toast = earlier;
         }
-        write
+        saved == Saved::Written
     }
 }
 

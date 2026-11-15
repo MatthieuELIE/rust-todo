@@ -22,5 +22,5 @@ exclude_re = [
     # CONTROL and ALT are disjoint flags: `^` gives the same set as `|`.
     'src/tui\.rs:215:63: replace \| with \^ in App::apply',
     'src/tui/help\.rs:18:65: replace \| with \^ in App::help_key',
-    'src/tui/popup\.rs:(32:64|42:69): replace \| with \^ in App::popup_key',
+    'src/tui/popup\.rs:(33:64|43:69): replace \| with \^ in App::popup_key',
 ]

@@ -26,10 +26,15 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
         let looped = (|| {
             execute!(io::stdout(), EnableBracketedPaste)?;
 
+            let mut last = None;
+            let mut draw = true;
+
             while !app.quit {
-                app.refresh_history(path);
-                terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
-                execute!(io::stdout(), app.cursor_shape())?;
+                if draw {
+                    app.refresh_history(path);
+                    terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
+                    execute!(io::stdout(), app.cursor_shape())?;
+                }
 
                 let event = if event::poll(Duration::from_millis(250))? {
                     Some(event::read()?)
@@ -37,9 +42,22 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
                     None
                 };
 
+                let toast_shown = app.toast.is_some();
                 app.tick(Instant::now());
 
-                if app.turn(repository::read(path), &mut text, event, today()) {
+                let now = idle::stamp_of(path);
+                let reread = idle::must_read(&last, &now);
+                let read = reread.then(|| {
+                    now.as_ref()
+                        .map_err(|e| io::Error::new(e.kind(), e.to_string()))
+                        .and_then(|_| repository::read(path))
+                });
+                last = idle::remembered(now, read.as_ref().is_some_and(|read| read.is_err()));
+                let day = today();
+
+                draw = idle::must_draw(event.is_some(), reread, toast_shown && app.toast.is_none(), app.today != Some(day));
+
+                if draw && app.turn(read.unwrap_or_else(|| Ok(text.clone())), &mut text, event, day) {
                     app.save(path, &mut text);
                 }
 
@@ -96,6 +114,8 @@ pub fn show_error(message: &str, theme: &Theme) -> io::Result<()> {
         }
     })
 }
+
+mod idle;
 
 #[cfg(test)]
 mod tests;

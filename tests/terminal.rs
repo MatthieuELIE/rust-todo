@@ -242,3 +242,19 @@ fn a_task_written_to_the_file_while_the_list_runs_shows_on_screen() {
 
     assert!(status.success(), "{output:?}");
 }
+
+#[test]
+fn a_list_at_rest_receives_no_byte_for_a_second_after_the_first_drawing() {
+    let dir = dir_with("pty-rest", "call the bank\n");
+    let mut pty = Pty::open(&dir, &[], false);
+
+    pty.wait_for("bank");
+    std::thread::sleep(Duration::from_millis(700));
+    let drawn = pty.screen().len();
+    std::thread::sleep(Duration::from_secs(1));
+    let at_rest = pty.screen().len();
+    pty.press("q");
+    pty.finish();
+
+    assert_eq!(at_rest, drawn, "bytes arrived at rest");
+}

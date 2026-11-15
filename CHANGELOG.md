@@ -7,6 +7,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- The list puts bracketed paste and the cursor shape back when its loop ends on an error, instead of leaving them on in the shell.
 - `do`, `archive` and `x` append to `done.txt` by reading only its last byte, so a `done.txt` holding a byte that is not UTF-8 or larger than 10 MiB no longer makes them fail.
 - A rewrite of the file keeps the priority of a done line, so `x (A) 2026-01-01 foo` no longer turns into `x 2026-01-01 foo`, whose creation date read as a completion date.
 - `Enter` then `Enter` on a task whose line holds a tab or another control character no longer rewrites the file and says `No changes to save`.

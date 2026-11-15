@@ -33,7 +33,7 @@ fn save_then_load_round_trips_the_list() {
 }
 
 #[test]
-fn save_writes_through_a_symlink_and_keeps_the_file_mode() {
+fn save_writes_through_a_symlink_and_reduces_the_mode_to_the_owner_bits() {
     let dir = folder("target");
     let (target, link) = (dir.join("target"), dir.join("link"));
     std::fs::write(&target, "Lorem ipsum\n").unwrap();
@@ -154,14 +154,17 @@ fn save_does_not_write_through_a_symlink_left_at_the_temporary_name() {
     std::fs::write(&path, "Lorem ipsum\n").unwrap();
     std::fs::write(&victim, "kept\n").unwrap();
     let mut planted = std::fs::canonicalize(&path).unwrap().into_os_string();
-    planted.push(".tmp");
-    let _ = std::fs::remove_file(&planted);
+    planted.push(format!(".{}.tmp", std::process::id()));
     std::os::unix::fs::symlink(&victim, &planted).unwrap();
 
-    save(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+    assert!(save(&path, &[Todo::from_line("Consectetur adipiscing")]).is_err());
 
     assert_eq!(std::fs::read_to_string(&victim).unwrap(), "kept\n");
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "Lorem ipsum\n");
     assert!(!std::fs::symlink_metadata(&path).unwrap().is_symlink());
+    assert!(std::fs::symlink_metadata(&planted).is_err());
+    save(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "Consectetur adipiscing\n");
 }
 
 #[test]

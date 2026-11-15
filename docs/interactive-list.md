@@ -142,7 +142,7 @@ These keys are refused there with `history is read-only`:
 - `p`, `u`, `Ctrl-R`, `D`
 
 `r` reopens the task under the cursor, as `todo reopen` does with its number.
-The task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `Task reopened, press u to undo`.
+The task goes to the end of the task file, pending and without its completion date or its priority, its line leaves `done.txt`, whose other lines are left as written, and the status bar says `Task reopened, press H then u to undo`.
 A line that is not a done task, or that `todo reopen` would refuse, is refused in the same words, a task with no text word included.
 
 Outside the history `r` does nothing.

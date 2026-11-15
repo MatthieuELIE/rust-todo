@@ -95,7 +95,7 @@ With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes fi
 | `Priority set to B, press u to undo`, `Priority removed, press u to undo` | green | `p` and a letter `a` to `e` gave the task that priority, `p Space` removed it |
 | `Changes discarded` | grey | `Esc` in the popup's normal mode closed it on a text different from the one it opened with; an empty add or an edit left as it was closes with no toast |
 | `No changes to save` | grey | `Enter` in the popup found the line as it was; nothing is written |
-| `Task reopened, press u to undo` | green | `r` brought a task of the history back to the task file |
+| `Task reopened, press H then u to undo` | green | `r` brought a task of the history back to the task file |
 | `Undone, the task was no longer in done.txt`, `Reopened, the task was no longer in done.txt` | green | `u` brought back a completed task, or `r` a task of the history, whose line was not found in `done.txt`, changed elsewhere since it was read; nothing is lost |
 | `Undone, but done.txt still holds the task: <reason>`, `Reopened, but done.txt still holds the task: <reason>` | red | `u` or `r` brought a task back and `done.txt` could not be read or written: the task is in both files, and the `u` and `Ctrl-R` history is cleared; when one save brings back several tasks, only the first refusal is shown, and others may be in both files too |
 | `A task needs more than +projects, @contexts and key: words` | red | the popup was saved empty, or with only `+projects`, `@contexts`, `key:` words, a priority or a date, for an add or a changed edit; the popup stays open. An `x` typed in front, or an unchanged line, is not checked |

@@ -13,7 +13,7 @@ fn copied_says_the_task_went_to_the_clipboard() {
 
 #[test]
 fn reopened_says_how_to_undo() {
-    says(Notice::Reopened, "Task reopened, press u to undo", Kind::Success);
+    says(Notice::Reopened, "Task reopened, press H then u to undo", Kind::Success);
 }
 
 #[test]

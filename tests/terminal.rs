@@ -212,3 +212,33 @@ fn a_theme_named_in_the_config_colours_todo_list_on_a_terminal_despite_no_color(
     assert!(status.success(), "{output:?}");
     assert!(colours(&output), "{output:?}");
 }
+
+#[test]
+fn x_on_a_task_writes_todo_and_done_files_and_says_so() {
+    let dir = dir_with("pty-done", "call the bank\n");
+    let mut pty = Pty::open(&dir, &[], false);
+
+    pty.wait_for("bank");
+    pty.press("x");
+    pty.wait_for("Task done, press u to undo");
+    pty.press("q");
+    pty.finish();
+
+    assert_eq!(std::fs::read_to_string(dir.join("todo.txt")).unwrap(), "");
+    let done = std::fs::read_to_string(dir.join("done.txt")).unwrap();
+    assert!(done.starts_with("x ") && done.contains("call the bank"), "{done:?}");
+}
+
+#[test]
+fn a_task_written_to_the_file_while_the_list_runs_shows_on_screen() {
+    let dir = dir_with("pty-outside", "call the bank\n");
+    let mut pty = Pty::open(&dir, &[], false);
+
+    pty.wait_for("bank");
+    std::fs::write(dir.join("todo.txt"), "call the bank\nwater the plants\n").unwrap();
+    pty.wait_for("plants");
+    pty.press("q");
+    let (status, output) = pty.finish();
+
+    assert!(status.success(), "{output:?}");
+}

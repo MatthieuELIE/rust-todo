@@ -1,5 +1,5 @@
 use std::io::{self, IsTerminal, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use ratatui::backend::IntoCrossterm;
@@ -55,17 +55,21 @@ fn pending_match(todos: &[Todo], term: &str) -> Result<usize, String> {
     }
 }
 
+fn refuse_done_itself(path: &Path) -> ExitCode {
+    eprintln!("the task file is done.txt itself: {}", path.display());
+    ExitCode::FAILURE
+}
+
 /// Runs `command` on the tasks of the file at `path`, writes what it changed and returns the exit code.
 pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme) -> ExitCode {
     let done_path = path.with_file_name("done.txt");
 
     if matches!(command, Commands::Archive | Commands::Reopen { .. } | Commands::Do { .. }) && repository::same_file(&path, &done_path) {
-        eprintln!("the task file is done.txt itself: {}", path.display());
-        return ExitCode::FAILURE;
+        return refuse_done_itself(&path);
     }
 
     let mut archived = None;
-    let mut history = None;
+    let mut reopened = None;
     let mut moved = Vec::new();
     let mut confirmed = None;
 
@@ -185,27 +189,23 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
                 }
             };
 
-            let mut lines: Vec<&str> = text.split_inclusive('\n').collect();
+            let lines: Vec<&str> = text.split_inclusive('\n').collect();
             let mut tasks = (0..lines.len()).filter(|&i| !lines[i].trim().is_empty());
             let Some(index) = tasks.nth(number.wrapping_sub(1)) else {
                 eprintln!("no task numbered {number}");
                 return ExitCode::FAILURE;
             };
-            let mut todo = Todo::from_line(lines.remove(index).trim_end_matches(['\n', '\r']));
+            let mut todo = Todo::from_line(lines[index].trim_end_matches(['\n', '\r']));
+            let line = todo.to_line();
 
             if let Err(reason) = todo.reopen() {
                 eprintln!("task {number} {reason}");
                 return ExitCode::FAILURE;
             }
 
-            if let Err(e) = std::fs::OpenOptions::new().write(true).open(&done_path) {
-                eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
-                return ExitCode::FAILURE;
-            }
-
             confirmed = Some(("reopened", todo.clone()));
             todos.push(todo);
-            history = Some(lines.concat());
+            reopened = Some((number, line));
         }
 
         Commands::Archive => {
@@ -222,27 +222,17 @@ pub fn run(command: Commands, path: PathBuf, mut todos: Vec<Todo>, theme: Theme)
         }
     }
 
-    if !moved.is_empty()
-        && let Err(e) = std::fs::OpenOptions::new().write(true).open(&path)
-    {
-        eprintln!("could not save {}: {e} (file left unchanged)", path.display());
-        return ExitCode::FAILURE;
+    match repository::move_to_done(&path, &done_path, &todos, &moved, reopened.is_some(), reopened.is_some()) {
+        Ok(_) => {}
+        Err(repository::MoveError::SameFile) => return refuse_done_itself(&path),
+        Err(repository::MoveError::Failed { path, error, .. }) => {
+            eprintln!("could not save {}: {error} (file left unchanged)", path.display());
+            return ExitCode::FAILURE;
+        }
     }
 
-    if !moved.is_empty()
-        && let Err(e) = repository::append(&done_path, &moved)
-    {
-        eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
-        return ExitCode::FAILURE;
-    }
-
-    if let Err(e) = repository::save(&path, &todos) {
-        eprintln!("could not save {}: {e} (file left unchanged)", path.display());
-        return ExitCode::FAILURE;
-    }
-
-    if let Some(body) = history
-        && let Err(e) = repository::write(&done_path, body)
+    if let Some((number, line)) = reopened
+        && let Err(e) = repository::remove_task(&done_path, Some(number), &line)
     {
         eprintln!("could not save {}: {e} (file left unchanged)", done_path.display());
         return ExitCode::FAILURE;

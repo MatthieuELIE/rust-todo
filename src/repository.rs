@@ -1,4 +1,5 @@
 use crate::todo::Todo;
+use std::fmt;
 use std::fs;
 use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
@@ -117,6 +118,51 @@ pub fn remove_task(path: &Path, number: Option<usize>, line: &str) -> io::Result
 /// Whether both paths lead to one existing file.
 pub fn same_file(a: &Path, b: &Path) -> bool {
     fs::canonicalize(a).is_ok_and(|a| fs::canonicalize(b).is_ok_and(|b| a == b))
+}
+
+/// Why `move_to_done` stopped: the task file is `done.txt`, or a write failed on `path`, `moved` telling that `done.txt` already holds the tasks.
+#[derive(Debug)]
+pub enum MoveError {
+    SameFile,
+    Failed { path: PathBuf, error: io::Error, moved: bool },
+}
+
+impl fmt::Display for MoveError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::SameFile => write!(f, "the task file is done.txt itself"),
+            Self::Failed { error, .. } => write!(f, "{error}"),
+        }
+    }
+}
+
+fn writable(path: &Path) -> io::Result<()> {
+    fs::OpenOptions::new().write(true).open(path).map(drop)
+}
+
+/// Save `todos` to `path` once the tasks `gone` are appended to `done_path`, destination first, and return the text saved.
+/// Refuses a `path` that is `done_path` when a task moves (`gone`, or `back` for tasks leaving `done_path`), and checks `path`, then `done_path` when it `reopens`, open for writing before writing either.
+pub fn move_to_done(path: &Path, done_path: &Path, todos: &[Todo], gone: &[Todo], back: bool, reopens: bool) -> Result<String, MoveError> {
+    let failed = |at: &Path, error, moved| MoveError::Failed {
+        path: at.to_path_buf(),
+        error,
+        moved,
+    };
+
+    if (!gone.is_empty() || back) && same_file(path, done_path) {
+        return Err(MoveError::SameFile);
+    }
+
+    if reopens {
+        writable(done_path).map_err(|e| failed(done_path, e, false))?;
+    }
+
+    if !gone.is_empty() {
+        writable(path).map_err(|e| failed(path, e, false))?;
+        append(done_path, gone).map_err(|e| failed(done_path, e, false))?;
+    }
+
+    save(path, todos).map_err(|e| failed(path, e, !gone.is_empty()))
 }
 
 #[cfg(test)]

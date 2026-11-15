@@ -246,6 +246,21 @@ fn do_leaves_the_task_file_alone_when_done_txt_cannot_be_written() {
 }
 
 #[test]
+fn reopen_keeps_the_other_lines_of_done_txt_as_written() {
+    let folder = folder("reopen-verbatim");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "Buy milk\n").unwrap();
+    std::fs::write(&done, "x  2026-09-01   Water   plants\n\nx 2026-09-03 Pay rent\nx 2026-09-04 Call  home").unwrap();
+
+    let output = todo(&file, &["reopen", "2"]);
+
+    let kept = std::fs::read_to_string(&done).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(output.status.success());
+    assert_eq!(kept, "x  2026-09-01   Water   plants\n\nx 2026-09-04 Call  home");
+}
+
+#[test]
 fn do_writes_nothing_when_the_task_file_cannot_be_written() {
     use std::os::unix::fs::PermissionsExt;
     let folder = folder("do-unsaved");

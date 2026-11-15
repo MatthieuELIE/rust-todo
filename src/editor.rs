@@ -17,9 +17,7 @@ pub enum Outcome {
     Submit,
     /// The text is to be dropped.
     Cancel,
-    /// The key after `p` was not a priority, and did nothing.
-    NotPriority,
-    /// What an undo or a redo did, to be said in the status bar.
+    /// What an undo, a redo or a key after `p` that is no priority did, to be said in the status bar.
     Notice(Notice),
     /// The text `y` leaves to copy, empty when its range was.
     Copy(String),
@@ -80,7 +78,7 @@ impl Editor {
         let modified = key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
         if self.pending == Some('p') && (modified || !matches!(key.code, KeyCode::Char('a'..='e' | ' '))) {
             self.pending = None;
-            return Outcome::NotPriority;
+            return Outcome::Notice(Notice::NotPriority);
         }
 
         let busy = self.pending.is_some() || self.finding.is_some();

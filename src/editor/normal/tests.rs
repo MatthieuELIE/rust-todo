@@ -215,5 +215,5 @@ fn a_control_key_in_normal_mode_is_not_its_letter() {
 
     ed.handle_key(KeyEvent::from(KeyCode::Esc));
     keys(&mut ed, "p");
-    assert_eq!(ed.handle_key(ctrl('a')), Outcome::NotPriority);
+    assert_eq!(ed.handle_key(ctrl('a')), Outcome::Notice(Notice::NotPriority));
 }

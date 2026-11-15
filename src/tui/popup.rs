@@ -80,10 +80,6 @@ impl App {
 
         match outcome {
             Outcome::Continue => false,
-            Outcome::NotPriority => {
-                self.notify(Notice::NotPriority);
-                false
-            }
             Outcome::Notice(notice) => {
                 self.notify(notice);
                 false

@@ -101,7 +101,7 @@ impl App {
             KeyCode::Enter => {
                 if let Some(number) = selected {
                     self.focus = Focus::Popup(Popup {
-                        editor: Editor::new(self.todos[number - 1].to_line().replace(crate::todo::is_control, " ")),
+                        editor: Editor::new(self.opening_text(&Target::Edit(number))),
                         target: Target::Edit(number),
                         selected: 0,
                         picker: None,

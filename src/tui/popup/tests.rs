@@ -93,10 +93,11 @@ fn a_completion_date_typed_with_the_x_is_the_one_the_task_moves_to_done_txt_with
 fn a_line_holding_a_control_character_opens_for_edit_with_a_space_in_its_place() {
     let mut app = app_of(&["Call\tthe bank"]);
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "A!");
 
     assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
 
-    assert_eq!(app.todos[0].to_line(), "Call the bank");
+    assert_eq!(app.todos[0].to_line(), "Call the bank!");
 }
 
 #[test]
@@ -301,6 +302,23 @@ fn enter_on_an_unchanged_line_says_there_is_nothing_to_save() {
 }
 
 #[test]
+fn enter_on_a_line_with_a_tab_leaves_it_as_written_until_a_real_change() {
+    let mut app = app_of(&["alpha\tbeta +p"]);
+    key(&mut app, KeyCode::Enter);
+
+    assert!(!app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+    assert_eq!(told(&app), Some(Notice::NoChanges));
+    assert_eq!(app.todos[0].to_line(), "alpha\tbeta +p");
+
+    key(&mut app, KeyCode::Enter);
+    press(&mut app, "A!");
+
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: false }));
+    assert_eq!(app.todos[0].to_line(), "alpha beta +p!");
+}
+
+#[test]
 fn a_saved_edit_says_updated_and_a_line_starting_with_x_says_done() {
     let mut app = app_of(&["one", "two"]);
     let enter = KeyEvent::from(KeyCode::Enter);
@@ -428,8 +446,9 @@ fn a_line_replaced_by_a_lone_x_is_refused() {
 fn a_paste_and_an_edit_treat_a_bidi_character_like_a_control_character() {
     let mut app = app_of(&["Call\u{202e}the\u{200b}bank"]);
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    press(&mut app, "A!");
     app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
-    assert_eq!(app.todos[0].to_line(), "Call the bank");
+    assert_eq!(app.todos[0].to_line(), "Call the bank!");
 
     press(&mut app, "/");
     app.paste("a\u{202e}b");

@@ -5,6 +5,10 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- The list no longer reads the task file and redraws four times a second at rest: it reads the file when its modification date or size changes, and redraws on a key, a reload, a toast expiring or a new day.
+
 ### Fixed
 
 - The list puts bracketed paste and the cursor shape back when its loop ends on an error, instead of leaving them on in the shell.

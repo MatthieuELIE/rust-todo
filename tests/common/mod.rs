@@ -1,3 +1,7 @@
+mod guard;
+
+pub use guard::Folder;
+
 use std::path::Path;
 use std::process::{Command, Output};
 
@@ -10,9 +14,6 @@ pub fn todo(file: &Path, args: &[&str]) -> Output {
         .unwrap()
 }
 
-pub fn folder(name: &str) -> std::path::PathBuf {
-    let folder = std::env::temp_dir().join(format!("todo-{}-{name}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir(&folder).unwrap();
-    folder
+pub fn folder(name: &str) -> Folder {
+    Folder::new(name)
 }

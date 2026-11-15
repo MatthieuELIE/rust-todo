@@ -1,4 +1,5 @@
 use super::*;
+use crate::guard::Folder;
 use std::time::Duration;
 use time::macros::date;
 
@@ -47,11 +48,8 @@ pub(super) fn shown(app: &App) -> Vec<String> {
     app.tasks().into_iter().map(|(_, todo)| todo.to_line()).collect()
 }
 
-pub(super) fn folder(name: &str) -> std::path::PathBuf {
-    let folder = std::env::temp_dir().join(format!("todo-{}-tui-{name}", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir(&folder).unwrap();
-    folder
+pub(super) fn folder(name: &str) -> Folder {
+    Folder::new(&format!("tui-{name}"))
 }
 
 #[test]

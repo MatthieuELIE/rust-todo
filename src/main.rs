@@ -3,6 +3,9 @@ mod commands;
 mod config;
 mod editor;
 mod filter;
+#[cfg(test)]
+#[path = "../tests/common/guard.rs"]
+mod guard;
 mod repository;
 mod terminal;
 mod theme;

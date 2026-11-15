@@ -100,7 +100,7 @@ impl App {
     }
 
     /// The text the popup held when it opened.
-    fn opening_text(&self, target: &Target) -> String {
+    pub(super) fn opening_text(&self, target: &Target) -> String {
         match target {
             Target::Add => String::new(),
             Target::Edit(number) => self.todos[number - 1].to_line().replace(crate::todo::is_control, " "),

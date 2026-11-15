@@ -53,7 +53,7 @@ impl App {
             return true;
         }
 
-        if todo.to_line() == self.todos[number - 1].to_line() {
+        if todo.to_line() == self.opening_text(&Target::Edit(number)) {
             self.notify(Notice::NoChanges);
             return false;
         }

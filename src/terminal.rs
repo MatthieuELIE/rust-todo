@@ -23,31 +23,35 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
     let mut scroll = ListState::default();
 
     on_terminal(|terminal| {
-        execute!(io::stdout(), EnableBracketedPaste)?;
+        let looped = (|| {
+            execute!(io::stdout(), EnableBracketedPaste)?;
 
-        while !app.quit {
-            app.refresh_history(path);
-            terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
-            execute!(io::stdout(), app.cursor_shape())?;
+            while !app.quit {
+                app.refresh_history(path);
+                terminal.draw(|frame| view::draw(frame, &app, &mut scroll, today()))?;
+                execute!(io::stdout(), app.cursor_shape())?;
 
-            let event = if event::poll(Duration::from_millis(250))? {
-                Some(event::read()?)
-            } else {
-                None
-            };
+                let event = if event::poll(Duration::from_millis(250))? {
+                    Some(event::read()?)
+                } else {
+                    None
+                };
 
-            app.tick(Instant::now());
+                app.tick(Instant::now());
 
-            if app.turn(repository::read(path), &mut text, event, today()) {
-                app.save(path, &mut text);
+                if app.turn(repository::read(path), &mut text, event, today()) {
+                    app.save(path, &mut text);
+                }
+
+                if let Some(clip) = app.copy.take() {
+                    app.copied(&clip, pbcopy(clip.text()));
+                }
             }
 
-            if let Some(clip) = app.copy.take() {
-                app.copied(&clip, pbcopy(clip.text()));
-            }
-        }
+            Ok(())
+        })();
 
-        execute!(io::stdout(), DisableBracketedPaste, SetCursorStyle::DefaultUserShape)
+        reset_after(&mut io::stdout(), looped)
     })
 }
 
@@ -71,6 +75,13 @@ fn on_terminal(f: impl FnOnce(&mut DefaultTerminal) -> io::Result<()>) -> io::Re
     result
 }
 
+/// Writes the sequences that undo the list's terminal modes to `out`, whatever `looped` holds, and gives back `looped`'s error before the write's.
+fn reset_after(out: &mut impl Write, looped: io::Result<()>) -> io::Result<()> {
+    let reset = execute!(out, DisableBracketedPaste, SetCursorStyle::DefaultUserShape);
+
+    looped.and(reset)
+}
+
 /// Shows `message` full screen until a key is pressed, so a popup that closes when the program exits does not swallow it.
 pub fn show_error(message: &str, theme: &Theme) -> io::Result<()> {
     on_terminal(|terminal| {
@@ -85,3 +96,6 @@ pub fn show_error(message: &str, theme: &Theme) -> io::Result<()> {
         }
     })
 }
+
+#[cfg(test)]
+mod tests;

@@ -51,6 +51,24 @@ fn add_do_and_remove_rewrite_the_file_and_a_refused_command_leaves_it_alone() {
 }
 
 #[test]
+fn edit_refuses_a_text_holding_a_line_separator_and_leaves_the_file_alone() {
+    let folder = folder("edit-separator");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent\n").unwrap();
+
+    let output = todo(&file, &["edit", "1", "Pay\u{2028}rent"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "a task is one line, without control characters\n"
+    );
+    assert_eq!(text, "Pay rent\n");
+}
+
+#[test]
 fn add_refuses_a_text_holding_a_line_separator() {
     let folder = folder("separator");
     let file = folder.join("todo.txt");

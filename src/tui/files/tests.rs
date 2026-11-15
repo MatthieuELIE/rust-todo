@@ -493,3 +493,21 @@ fn copied_says_copied_in_grey_or_why_it_could_not_in_red() {
         (Some(Notice::Refused("could not copy: boom".to_string())), true)
     );
 }
+
+#[test]
+fn move_to_done_writes_neither_file_when_the_task_file_is_read_only_and_names_it() {
+    use crate::repository::{MoveError, move_to_done};
+    use std::os::unix::fs::PermissionsExt;
+    let folder = folder("move-readonly");
+    let (path, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&path, "one\ntwo\n").unwrap();
+    std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o444)).unwrap();
+
+    let moved = move_to_done(&path, &done, &[Todo::from_line("two")], &[Todo::from_line("x one")], false, false);
+
+    let (text, created) = (std::fs::read_to_string(&path).unwrap(), done.exists());
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(matches!(moved, Err(MoveError::Failed { path: at, moved: false, .. }) if at == path));
+    assert_eq!(text, "one\ntwo\n");
+    assert!(!created);
+}

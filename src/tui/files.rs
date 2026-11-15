@@ -44,24 +44,10 @@ impl App {
 
         self.history_read &= gone.is_empty() && back.is_empty();
 
-        let appended = if gone.is_empty() && back.is_empty() {
-            Ok(())
-        } else if repository::same_file(path, &done_path) {
-            Err(io::Error::other("the task file is done.txt itself"))
-        } else {
-            let writable = |path: &Path| std::fs::OpenOptions::new().write(true).open(path).map(drop);
-            let reopens = back.iter().any(|(_, number)| number.is_some());
-            let checked = if reopens { writable(&done_path) } else { Ok(()) };
-
-            if gone.is_empty() {
-                checked
-            } else {
-                checked.and_then(|()| writable(path)).and_then(|()| repository::append(&done_path, &gone))
-            }
-        };
-
-        let moved = !gone.is_empty() && appended.is_ok();
-        let written = appended.and_then(|()| repository::save(path, &self.todos));
+        let reopens = back.iter().any(|(_, number)| number.is_some());
+        let written = repository::move_to_done(path, &done_path, &self.todos, &gone, !back.is_empty(), reopens);
+        let moved = matches!(written, Err(repository::MoveError::Failed { moved: true, .. }));
+        let written = written.map_err(|e| io::Error::other(e.to_string()));
         let failed = written.as_ref().err().map(|e| e.to_string());
         let saved = failed.is_none();
         self.saved(written, text, repository::read(path));

@@ -78,7 +78,7 @@ impl Notice {
             Notice::Copied => "Task copied to the clipboard".to_string(),
             Notice::CopiedText => "Copied to the clipboard".to_string(),
             Notice::NothingToCopy => "Nothing to copy".to_string(),
-            Notice::Reopened => "Task reopened, press u to undo".to_string(),
+            Notice::Reopened => "Task reopened, press H then u to undo".to_string(),
             Notice::ChangeUndone => "Change undone, press Ctrl-r to redo".to_string(),
             Notice::ChangeRedone => "Change redone, press u to undo".to_string(),
             Notice::Undone => "Undone".to_string(),

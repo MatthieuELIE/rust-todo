@@ -47,15 +47,14 @@ fn an_empty_filtered_list_says_nothing_matched() {
 
 #[test]
 fn without_todo_file_the_list_is_todo_txt_in_the_home_folder() {
-    let home = std::env::temp_dir().join(format!("todo-{}-home", std::process::id()));
-    std::fs::create_dir_all(&home).unwrap();
+    let home = common::folder("home");
     std::fs::write(home.join("todo.txt"), "Call the bank\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
         .env("XDG_CONFIG_HOME", "/nonexistent")
         .arg("list")
         .env_remove("TODO_FILE")
-        .env("HOME", &home)
+        .env("HOME", &*home)
         .output()
         .unwrap();
     std::fs::remove_dir_all(&home).unwrap();
@@ -65,7 +64,8 @@ fn without_todo_file_the_list_is_todo_txt_in_the_home_folder() {
 
 #[test]
 fn a_piped_listing_carries_no_colour_codes_nor_the_done_tasks() {
-    let file = std::env::temp_dir().join(format!("todo-{}-colour.txt", std::process::id()));
+    let dir = common::folder("colour");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, "(A) Call the bank\nx 2026-09-03 Buy milk\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
@@ -81,7 +81,8 @@ fn a_piped_listing_carries_no_colour_codes_nor_the_done_tasks() {
 
 #[test]
 fn a_listing_replaces_the_control_characters_of_the_file() {
-    let file = std::env::temp_dir().join(format!("todo-{}-control.txt", std::process::id()));
+    let dir = common::folder("control");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, "Call \u{1b}]0;title\u{7}\u{1b}[2Jthe bank\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
@@ -100,7 +101,8 @@ fn a_listing_replaces_the_control_characters_of_the_file() {
 
 #[test]
 fn a_listing_replaces_the_paragraph_separator_of_the_file() {
-    let file = std::env::temp_dir().join(format!("todo-{}-separator.txt", std::process::id()));
+    let dir = common::folder("separator");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, "Call\u{2029}the bank\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
@@ -116,7 +118,8 @@ fn a_listing_replaces_the_paragraph_separator_of_the_file() {
 
 #[test]
 fn due_keeps_the_pending_tasks_due_today_or_before() {
-    let file = std::env::temp_dir().join(format!("todo-{}-due.txt", std::process::id()));
+    let dir = common::folder("due");
+    let file = dir.join("todo.txt");
     let lines =
         "Pay rent due:2020-01-01\nBuy milk due:2999-01-01\nx 2020-01-02 Call the bank due:2020-01-01\n(A) Fix the roof +house due:2020-06-01\n";
     std::fs::write(&file, lines).unwrap();
@@ -150,9 +153,7 @@ fn due_keeps_the_pending_tasks_due_today_or_before() {
 
 #[test]
 fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
-    let folder = std::env::temp_dir().join(format!("todo-{}-list-done", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir(&folder).unwrap();
+    let folder = common::folder("list-done");
     std::fs::write(folder.join("todo.txt"), "Buy milk +home\n").unwrap();
     let history = "x 2026-09-01 Pay rent +home\nx 2026-09-02 Call the bank\n(A) Stray line +home\n";
     std::fs::write(folder.join("done.txt"), history).unwrap();
@@ -183,9 +184,7 @@ fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
 
 #[test]
 fn done_without_a_done_txt_is_an_empty_list() {
-    let folder = std::env::temp_dir().join(format!("todo-{}-list-done-absent", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir(&folder).unwrap();
+    let folder = common::folder("list-done-absent");
     std::fs::write(folder.join("todo.txt"), "Buy milk\n").unwrap();
 
     let output = Command::new(env!("CARGO_BIN_EXE_todo"))
@@ -203,9 +202,7 @@ fn done_without_a_done_txt_is_an_empty_list() {
 
 #[test]
 fn done_reads_done_txt_only_and_fails_when_it_cannot_be_read() {
-    let folder = std::env::temp_dir().join(format!("todo-{}-list-done-unreadable", std::process::id()));
-    let _ = std::fs::remove_dir_all(&folder);
-    std::fs::create_dir(&folder).unwrap();
+    let folder = common::folder("list-done-unreadable");
     std::fs::write(folder.join("todo.txt"), b"\xff\n").unwrap();
     std::fs::write(folder.join("done.txt"), "x 2026-09-01 Pay rent\n").unwrap();
     let list = || {
@@ -231,7 +228,8 @@ fn done_reads_done_txt_only_and_fails_when_it_cannot_be_read() {
 
 #[test]
 fn the_former_all_flag_is_refused_rather_than_read_as_a_term() {
-    let file = std::env::temp_dir().join(format!("todo-{}-all.txt", std::process::id()));
+    let dir = common::folder("all");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, "Call the bank\n").unwrap();
     let list = |flag: &str| {
         Command::new(env!("CARGO_BIN_EXE_todo"))

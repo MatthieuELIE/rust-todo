@@ -5,13 +5,13 @@ mod common;
 
 use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::{Child, ChildStdin, Command, ExitStatus, Stdio};
 use std::sync::{Arc, Mutex};
 use std::thread::JoinHandle;
 use std::time::{Duration, Instant};
 
-use common::folder;
+use common::{Folder, folder};
 
 const DEADLINE: Duration = Duration::from_secs(10);
 
@@ -135,7 +135,7 @@ impl Pty {
     }
 }
 
-fn dir_with(name: &str, tasks: &str) -> PathBuf {
+fn dir_with(name: &str, tasks: &str) -> Folder {
     let dir = folder(name);
     std::fs::create_dir_all(dir.join("bin")).unwrap();
     std::fs::create_dir_all(dir.join("config/todo")).unwrap();

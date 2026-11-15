@@ -87,7 +87,8 @@ fn add_refuses_a_text_holding_a_line_separator() {
 
 #[test]
 fn a_file_that_cannot_be_read_is_left_as_it_is() {
-    let file = std::env::temp_dir().join(format!("todo-{}-unreadable.txt", std::process::id()));
+    let dir = folder("unreadable");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, b"Pay rent\n\xff\n").unwrap();
 
     let output = todo(&file, &["add", "Buy milk"]);
@@ -101,7 +102,8 @@ fn a_file_that_cannot_be_read_is_left_as_it_is() {
 
 #[test]
 fn add_stamps_an_undated_task_with_the_day() {
-    let file = std::env::temp_dir().join(format!("todo-{}-stamp.txt", std::process::id()));
+    let dir = folder("stamp");
+    let file = dir.join("todo.txt");
     let _ = std::fs::remove_file(&file);
 
     assert!(todo(&file, &["add", "Buy bread"]).status.success());
@@ -134,7 +136,8 @@ fn add_leaves_a_done_line_that_carries_a_priority_as_it_is() {
 #[test]
 fn a_file_that_cannot_be_saved_is_left_as_it_is() {
     use std::os::unix::fs::PermissionsExt;
-    let file = std::env::temp_dir().join(format!("todo-{}-unsaved.txt", std::process::id()));
+    let dir = folder("unsaved");
+    let file = dir.join("todo.txt");
     let _ = std::fs::remove_file(&file);
     std::fs::write(&file, "Pay rent\n").unwrap();
     std::fs::set_permissions(&file, std::fs::Permissions::from_mode(0o444)).unwrap();
@@ -154,7 +157,8 @@ fn a_file_that_cannot_be_saved_is_left_as_it_is() {
 
 #[test]
 fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
-    let file = std::env::temp_dir().join(format!("todo-{}-edit.txt", std::process::id()));
+    let dir = folder("edit");
+    let file = dir.join("todo.txt");
     let before = "(C) 2026-09-01 Call the bank\nx 2026-09-03 2026-09-02 Pay rent\n\nBuy milk\n(B) 2026-09-05 Water plants\n";
     std::fs::write(&file, before).unwrap();
 
@@ -191,7 +195,8 @@ fn edit_replaces_a_pending_task_and_keeps_its_creation_date() {
 
 #[test]
 fn edit_by_a_term_replaces_the_one_pending_task_it_matches_and_keeps_its_creation_date() {
-    let file = std::env::temp_dir().join(format!("todo-{}-edit-term.txt", std::process::id()));
+    let dir = folder("edit-term");
+    let file = dir.join("todo.txt");
     std::fs::write(&file, "2026-09-01 Call the bank ticket:demo/01\n(B) 2026-09-02 Pay rent ticket:demo/02\n").unwrap();
 
     let output = todo(&file, &["edit", "TICKET:demo/02", "(A) Pay the rent ticket:demo/02"]);
@@ -207,7 +212,8 @@ fn edit_by_a_term_replaces_the_one_pending_task_it_matches_and_keeps_its_creatio
 
 #[test]
 fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
-    let file = std::env::temp_dir().join(format!("todo-{}-edit-term-refused.txt", std::process::id()));
+    let dir = folder("edit-term-refused");
+    let file = dir.join("todo.txt");
     let before = "Call the bank ticket:demo/01\nPay rent ticket:demo/02\nx 2026-09-03 Water plants ticket:demo/03\n";
     std::fs::write(&file, before).unwrap();
 
@@ -236,7 +242,8 @@ fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
 
 #[test]
 fn edit_refuses_a_term_starting_with_a_dash_and_writes_nothing() {
-    let file = std::env::temp_dir().join(format!("todo-{}-edit-term-dash.txt", std::process::id()));
+    let dir = folder("edit-term-dash");
+    let file = dir.join("todo.txt");
     let before = "Call the bank ticket:demo/01\nx 2026-09-03 Pay rent ticket:demo/02\n";
     std::fs::write(&file, before).unwrap();
 

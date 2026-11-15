@@ -1,13 +1,15 @@
 use super::*;
+use crate::guard::Folder;
 use std::path::PathBuf;
 
-fn temp_path(name: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("todo-{}-{name}.txt", std::process::id()))
+fn folder(name: &str) -> Folder {
+    Folder::new(&format!("repository-{name}"))
 }
 
 #[test]
 fn read_refuses_a_file_over_ten_mebibytes_and_accepts_one_of_exactly_ten() {
-    let path = temp_path("limit");
+    let dir = folder("limit");
+    let path = dir.join("limit");
     std::fs::write(&path, vec![b'a'; 10 * 1024 * 1024]).unwrap();
     assert_eq!(read(&path).unwrap().len(), 10 * 1024 * 1024);
 
@@ -18,7 +20,8 @@ fn read_refuses_a_file_over_ten_mebibytes_and_accepts_one_of_exactly_ten() {
 
 #[test]
 fn save_then_load_round_trips_the_list() {
-    let path = temp_path("roundtrip");
+    let dir = folder("roundtrip");
+    let path = dir.join("roundtrip");
     let todos = vec![Todo::from_line("(A) Lorem ipsum dolor"), Todo::from_line("x Consectetur adipiscing")];
 
     let written = save(&path, &todos).unwrap();
@@ -31,7 +34,8 @@ fn save_then_load_round_trips_the_list() {
 
 #[test]
 fn save_writes_through_a_symlink_and_keeps_the_file_mode() {
-    let (target, link) = (temp_path("target"), temp_path("link"));
+    let dir = folder("target");
+    let (target, link) = (dir.join("target"), dir.join("link"));
     std::fs::write(&target, "Lorem ipsum\n").unwrap();
     std::fs::set_permissions(&target, std::fs::Permissions::from_mode(0o640)).unwrap();
     let _ = std::fs::remove_file(&link);
@@ -46,7 +50,8 @@ fn save_writes_through_a_symlink_and_keeps_the_file_mode() {
 
 #[test]
 fn save_drops_the_group_and_other_bits_of_an_open_file() {
-    let path = temp_path("open-save");
+    let dir = folder("open-save");
+    let path = dir.join("open-save");
     std::fs::write(&path, "Lorem ipsum\n").unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
 
@@ -57,7 +62,8 @@ fn save_drops_the_group_and_other_bits_of_an_open_file() {
 
 #[test]
 fn append_drops_the_group_and_other_bits_of_an_open_file() {
-    let path = temp_path("open-append");
+    let dir = folder("open-append");
+    let path = dir.join("open-append");
     std::fs::write(&path, "Lorem ipsum\n").unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o644)).unwrap();
 
@@ -68,7 +74,8 @@ fn append_drops_the_group_and_other_bits_of_an_open_file() {
 
 #[test]
 fn append_keeps_the_bytes_of_a_file_that_is_not_utf8() {
-    let path = temp_path("non-utf8-append");
+    let dir = folder("non-utf8-append");
+    let path = dir.join("non-utf8-append");
     std::fs::write(&path, b"Lorem \xff ipsum\n").unwrap();
 
     append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
@@ -78,7 +85,8 @@ fn append_keeps_the_bytes_of_a_file_that_is_not_utf8() {
 
 #[test]
 fn append_starts_a_new_line_after_a_file_without_a_final_newline() {
-    let path = temp_path("no-newline-append");
+    let dir = folder("no-newline-append");
+    let path = dir.join("no-newline-append");
     std::fs::write(&path, "Lorem ipsum").unwrap();
 
     append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
@@ -88,7 +96,8 @@ fn append_starts_a_new_line_after_a_file_without_a_final_newline() {
 
 #[test]
 fn append_adds_no_newline_to_an_empty_or_absent_file() {
-    let (empty, absent) = (temp_path("empty-append"), temp_path("absent-append"));
+    let dir = folder("empty-append");
+    let (empty, absent) = (dir.join("empty-append"), dir.join("absent-append"));
     std::fs::write(&empty, "").unwrap();
     let _ = std::fs::remove_file(&absent);
 
@@ -101,7 +110,8 @@ fn append_adds_no_newline_to_an_empty_or_absent_file() {
 
 #[test]
 fn save_creates_the_target_of_a_symlink_that_has_none_yet() {
-    let (target, link) = (temp_path("absent"), temp_path("dangling"));
+    let dir = folder("absent");
+    let (target, link) = (dir.join("absent"), dir.join("dangling"));
     let _ = std::fs::remove_file(&target);
     let _ = std::fs::remove_file(&link);
     std::os::unix::fs::symlink(target.file_name().unwrap(), &link).unwrap();
@@ -114,7 +124,8 @@ fn save_creates_the_target_of_a_symlink_that_has_none_yet() {
 
 #[test]
 fn save_refuses_a_file_that_is_read_only() {
-    let path = temp_path("readonly");
+    let dir = folder("readonly");
+    let path = dir.join("readonly");
     let _ = std::fs::remove_file(&path);
     std::fs::write(&path, "Lorem ipsum\n").unwrap();
     std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o464)).unwrap();
@@ -127,7 +138,8 @@ fn save_refuses_a_file_that_is_read_only() {
 
 #[test]
 fn save_creates_a_new_file_readable_by_its_owner_only() {
-    let path = temp_path("new");
+    let dir = folder("new");
+    let path = dir.join("new");
     let _ = std::fs::remove_file(&path);
 
     save(&path, &[Todo::from_line("Lorem ipsum")]).unwrap();
@@ -137,7 +149,8 @@ fn save_creates_a_new_file_readable_by_its_owner_only() {
 
 #[test]
 fn save_does_not_write_through_a_symlink_left_at_the_temporary_name() {
-    let (path, victim) = (temp_path("planted"), temp_path("victim"));
+    let dir = folder("planted");
+    let (path, victim) = (dir.join("planted"), dir.join("victim"));
     std::fs::write(&path, "Lorem ipsum\n").unwrap();
     std::fs::write(&victim, "kept\n").unwrap();
     let mut planted = std::fs::canonicalize(&path).unwrap().into_os_string();
@@ -153,7 +166,8 @@ fn save_does_not_write_through_a_symlink_left_at_the_temporary_name() {
 
 #[test]
 fn a_failed_save_leaves_no_temporary_file_behind() {
-    let path = temp_path("directory");
+    let dir = folder("directory");
+    let path = dir.join("directory");
     std::fs::create_dir_all(path.join("kept")).unwrap();
 
     assert!(save(&path, &[Todo::from_line("Lorem ipsum")]).is_err());
@@ -165,7 +179,8 @@ fn a_failed_save_leaves_no_temporary_file_behind() {
 
 #[test]
 fn load_drops_blank_lines_from_the_tasks_but_not_from_the_raw_text() {
-    let path = temp_path("blank");
+    let dir = folder("blank");
+    let path = dir.join("blank");
     std::fs::write(&path, "Lorem ipsum\n\n   \nConsectetur adipiscing\n").unwrap();
 
     let (text, todos) = load(&path).unwrap();
@@ -175,7 +190,8 @@ fn load_drops_blank_lines_from_the_tasks_but_not_from_the_raw_text() {
 
 #[test]
 fn load_returns_an_empty_list_when_the_file_is_missing() {
-    let path = temp_path("missing");
+    let dir = folder("missing");
+    let path = dir.join("missing");
     let _ = std::fs::remove_file(&path);
 
     let (text, todos) = load(&path).unwrap();
@@ -185,7 +201,8 @@ fn load_returns_an_empty_list_when_the_file_is_missing() {
 
 #[test]
 fn load_fails_on_a_file_it_cannot_decode() {
-    let path = temp_path("invalid");
+    let dir = folder("invalid");
+    let path = dir.join("invalid");
     std::fs::write(&path, b"Lorem ipsum\n\xff\n").unwrap();
 
     assert!(load(&path).is_err());
@@ -193,7 +210,8 @@ fn load_fails_on_a_file_it_cannot_decode() {
 
 #[test]
 fn read_fails_on_a_path_it_cannot_open_for_another_reason_than_absence() {
-    let file = temp_path("not-a-folder");
+    let dir = folder("not-a-folder");
+    let file = dir.join("not-a-folder");
     std::fs::write(&file, "Lorem ipsum\n").unwrap();
 
     assert_eq!(read(&file.join("todo.txt")).unwrap_err().kind(), io::ErrorKind::NotADirectory);
@@ -201,7 +219,8 @@ fn read_fails_on_a_path_it_cannot_open_for_another_reason_than_absence() {
 
 #[test]
 fn remove_task_finds_a_done_line_that_carries_a_priority() {
-    let path = temp_path("remove-done-priority");
+    let dir = folder("remove-done-priority");
+    let path = dir.join("remove-done-priority");
     std::fs::write(&path, "x 2026-02-02 (C) 2026-01-01 kept\nx (A) 2026-01-01 gone\n").unwrap();
     let line = Todo::from_line("x (A) 2026-01-01 gone").to_line();
 

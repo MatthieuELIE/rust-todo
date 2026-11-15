@@ -121,6 +121,15 @@ fn the_help_needs_92_columns_for_its_two_columns() {
 }
 
 #[test]
+fn the_help_draws_on_a_terminal_one_or_two_columns_wide() {
+    let app = help_app(Focus::List);
+
+    for width in [1, 2] {
+        render_in(&app, width, 36);
+    }
+}
+
+#[test]
 fn the_help_box_stops_at_its_tallest_on_a_taller_screen_and_scrolls_the_rest() {
     let rows = rows_of(&help_app(Focus::List), 109, 40);
     let top = rows.iter().position(|row| row.contains("╭ HELP ─")).expect("box");

@@ -141,7 +141,7 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     }
 
     if max > 0 {
-        let bar = Rect::new(area.right() - 3, inner.y, 1, inner.height);
+        let bar = Rect::new(area.right().saturating_sub(3), inner.y, 1, inner.height);
         let scrollbar = Scrollbar::new(ScrollbarOrientation::VerticalRight)
             .track_symbol(Some("▐"))
             .thumb_symbol("▐")

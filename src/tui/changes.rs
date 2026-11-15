@@ -1,8 +1,16 @@
 use super::*;
 
+/// What `add` or `edit` did with the submitted text.
+#[derive(PartialEq)]
+pub(super) enum Saved {
+    Written,
+    Refused,
+    Unchanged,
+}
+
 impl App {
     /// Adds the task typed as `text`, cursor on it, the panel term appended when missing; a rejected text is told in a toast.
-    pub(super) fn add(&mut self, text: &str, today: Date) -> bool {
+    pub(super) fn add(&mut self, text: &str, today: Date) -> Saved {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
                 if self.filter.as_deref() == Some(WAITING) {
@@ -22,22 +30,22 @@ impl App {
                 self.todos.push(todo);
                 let hidden = !self.follow(self.todos.len());
                 self.notify(Notice::Added { hidden });
-                true
+                Saved::Written
             }
             Err(e) => {
                 self.notify(Notice::Refused(e));
-                false
+                Saved::Refused
             }
         }
     }
 
     /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; a task with no text word is refused, an unchanged line told in a toast.
-    pub(super) fn edit(&mut self, number: usize, text: &str, today: Date) -> bool {
+    pub(super) fn edit(&mut self, number: usize, text: &str, today: Date) -> Saved {
         let mut todo = match Todo::from_input(text) {
             Ok(todo) => todo,
             Err(e) => {
                 self.notify(Notice::Refused(e));
-                return false;
+                return Saved::Refused;
             }
         };
 
@@ -50,23 +58,23 @@ impl App {
             self.todos.remove(number - 1);
             self.moves.push(Move::Append(todo));
             self.notify(Notice::Done);
-            return true;
+            return Saved::Written;
         }
 
         if todo.to_line() == self.opening_text(&Target::Edit(number)) {
             self.notify(Notice::NoChanges);
-            return false;
+            return Saved::Unchanged;
         }
 
         if let Err(e) = todo.check_text() {
             self.notify(Notice::Refused(e));
-            return false;
+            return Saved::Refused;
         }
 
         self.todos[number - 1] = todo;
         let hidden = !self.follow(number);
         self.notify(Notice::Updated { hidden });
-        true
+        Saved::Written
     }
 
     /// Brings task `number` of the history back, pending, at the end of the tasks, as `todo reopen` does and refuses.

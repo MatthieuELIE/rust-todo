@@ -4,10 +4,10 @@ use ratatui::style::{Style, Stylize};
 use ratatui::text::Line;
 use ratatui::widgets::{Clear, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState};
 
+use super::status::mode_name;
 use super::style::{floating, mode_block};
-use crate::editor::Mode;
 use crate::theme::Theme;
-use crate::tui::{App, Focus};
+use crate::tui::App;
 
 /// Width of a column of keys: the longest line of `HELP`.
 const COLUMN_WIDTH: u16 = 40;
@@ -108,7 +108,7 @@ Enter/Esc    pick, close";
 /// Draws the key help in a rounded box, centred in `area`: two columns of sections when the width allows, else one, scrolling when the height falls short, and tells the app how far it can scroll.
 pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
     let theme = &app.theme;
-    let lit = opened_from(&app.under_help);
+    let lit = mode_name(&app.under_help);
     let sections = sections();
 
     let columns: Vec<Vec<Line<'static>>> = if area.width >= TWO_COLUMNS_WIDTH {
@@ -153,19 +153,6 @@ pub(super) fn draw_help(frame: &mut Frame, app: &App, scroll: u16, area: Rect) {
             .viewport_content_length(inner.height as usize)
             .position(scroll.min(max) as usize);
         frame.render_stateful_widget(scrollbar, bar, &mut state);
-    }
-}
-
-/// The name of the mode the status bar shows for `focus`, which the help lights.
-fn opened_from(focus: &Focus) -> &'static str {
-    match focus {
-        Focus::Search => "SEARCH",
-        Focus::Panel => "PANEL",
-        Focus::Popup(popup) if popup.picker.is_some() => "DATE",
-        Focus::Popup(popup) if popup.editor.mode == Mode::Insert => "INSERT",
-        Focus::Popup(popup) if popup.editor.mode == Mode::Visual => "VISUAL",
-        Focus::Popup(_) => "NORMAL",
-        Focus::List | Focus::Help(_) => "LIST",
     }
 }
 

@@ -9,11 +9,9 @@ use super::toast::toast_span;
 use crate::editor::Mode;
 use crate::tui::{App, Focus};
 
-/// Draws the status bar: mode block and active filters on the left, or the toast in their place, the keys of a command under way and `? help` on the right.
-pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
-    let theme = &app.theme;
-
-    let mode = match &app.focus {
+/// The name of the mode the status bar shows for `focus`.
+pub(super) fn mode_name(focus: &Focus) -> &'static str {
+    match focus {
         Focus::Search => "SEARCH",
         Focus::Popup(popup) if popup.picker.is_some() => "DATE",
         Focus::Popup(popup) => match popup.editor.mode {
@@ -24,7 +22,14 @@ pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
         Focus::Panel => "PANEL",
         Focus::List => "LIST",
         Focus::Help(_) => "HELP",
-    };
+    }
+}
+
+/// Draws the status bar: mode block and active filters on the left, or the toast in their place, the keys of a command under way and `? help` on the right.
+pub(super) fn draw_status(frame: &mut Frame, app: &App, area: Rect) {
+    let theme = &app.theme;
+
+    let mode = mode_name(&app.focus);
 
     let filters = if matches!(app.focus, Focus::Search) {
         format!("/{}▌", app.search)

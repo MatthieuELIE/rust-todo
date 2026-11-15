@@ -19,10 +19,21 @@ impl App {
                 self.reload(repository::parse(&current));
                 *text = current;
             }
-            (read, Some(Event::Key(key))) if key.kind == KeyEventKind::Press && self.handle_key(key, today) => match read {
-                Ok(_) => return true,
-                Err(e) => self.notify(Notice::Refused(format!("could not read the file: {e} (file left unchanged)"))),
-            },
+            (Ok(_), Some(Event::Key(key))) if key.kind == KeyEventKind::Press => return self.handle_key(key, today),
+            (Err(e), Some(Event::Key(key))) if key.kind == KeyEventKind::Press => {
+                let before = (
+                    self.todos.clone(),
+                    self.undo.clone(),
+                    self.redo.clone(),
+                    self.moves.clone(),
+                    self.history.clone(),
+                );
+
+                if self.handle_key(key, today) {
+                    (self.todos, self.undo, self.redo, self.moves, self.history) = before;
+                    self.notify(Notice::Refused(format!("could not read the file: {e} (file left unchanged)")));
+                }
+            }
             (_, Some(Event::Paste(pasted))) => self.paste(&pasted),
             _ => {}
         }

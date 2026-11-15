@@ -12,6 +12,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Enter` then `Enter` on a task whose line holds a tab or another control character no longer rewrites the file and says `No changes to save`.
 - The toast of `r` in the history says `Task reopened, press H then u to undo`, since `u` is refused in the history.
 - The help no longer panics when it opens on a terminal one or two columns wide.
+- A key that writes, pressed while the task file cannot be read, is refused and leaves the list as it was, instead of showing a change the file does not have.
 
 ## [0.8.3] - 2026-11-08
 

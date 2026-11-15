@@ -101,7 +101,7 @@ With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes fi
 | `A task needs more than +projects, @contexts and key: words` | red | the popup was saved empty, or with only `+projects`, `@contexts`, `key:` words, a priority or a date, for an add or a changed edit; the popup stays open. An `x` typed in front, or an unchanged line, is not checked |
 | `Cannot add a task that is already done` | red | a task added in the popup starts with `x `, the `x` and a space; the popup stays open |
 | `Could not save: <reason> (file left unchanged)` | red | the task file, or `done.txt` for `x`, for an `x` typed in the popup and for `r` in the history, could not be written, or the task file is `done.txt` itself; the list goes back to what the task file holds |
-| `Could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving, because it cannot be read or is larger than 10 MiB; the change stays on screen and is saved with the next one, once the file reads again |
+| `Could not read the file: <reason> (file left unchanged)` | red | the file could not be read back before saving, because it cannot be read or is larger than 10 MiB; a key that writes (`x`, `dd`, `p`, `u`, `Ctrl-R`, `r`, a popup saved) is refused and the list stays as it was before it |
 | `Could not save: <reason> (done.txt already holds the task)` | red | `x` added the task to `done.txt` and the task file then could not be saved: the task is in both files |
 | `File reloaded` | grey | the file changed on disk; the key pressed at that moment was ignored and a command under way was dropped |
 | `File reloaded, edit cancelled` | grey | the file changed on disk while a task was being edited |

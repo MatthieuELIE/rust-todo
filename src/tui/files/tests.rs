@@ -262,6 +262,42 @@ fn a_turn_does_not_ask_to_save_over_a_file_it_could_not_read() {
 }
 
 #[test]
+fn a_key_that_writes_leaves_the_list_as_it_was_when_the_file_could_not_be_read() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    let key = |c| Some(Event::Key(KeyEvent::from(KeyCode::Char(c))));
+
+    assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key('x'), TODAY));
+
+    assert_eq!(lines(&app), ["one", "two", "three"]);
+    assert!(moved(&app).is_empty());
+    assert!(app.refusal_shown());
+    assert!(!press(&mut app, "u"));
+
+    press(&mut app, "x");
+    assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key('u'), TODAY));
+
+    assert_eq!(lines(&app), ["two", "three"]);
+    assert_eq!(moved(&app), ["+x 2026-09-26 one"]);
+    assert!(press(&mut app, "u"));
+    assert_eq!(lines(&app), ["one", "two", "three"]);
+}
+
+#[test]
+fn a_reopen_refused_for_an_unreadable_file_keeps_the_task_in_the_history() {
+    let mut app = app();
+    let mut text = "one\ntwo\nthree\n".to_string();
+    app.set_history(Ok("x 2026-09-20 old\n".to_string()));
+    press(&mut app, "H");
+    let r = Some(Event::Key(KeyEvent::from(KeyCode::Char('r'))));
+
+    assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, r, TODAY));
+
+    assert_eq!(shown(&app), ["x 2026-09-20 old"]);
+    assert_eq!(lines(&app), ["one", "two", "three"]);
+}
+
+#[test]
 fn a_reload_forgets_the_history() {
     let mut app = app();
 
@@ -276,9 +312,8 @@ fn a_reload_forgets_the_history() {
 fn a_reload_drops_the_moves_still_waiting_with_the_history_they_belong_to() {
     let mut app = app();
     let mut text = "one\ntwo\nthree\n".to_string();
-    let x = Some(Event::Key(KeyEvent::from(KeyCode::Char('x'))));
 
-    assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, x, TODAY));
+    press(&mut app, "x");
     assert_eq!(moved(&app), ["+x 2026-09-26 one"]);
     app.turn(Ok("one\ntwo\nthree\nfour\n".to_string()), &mut text, None, TODAY);
 
@@ -441,7 +476,7 @@ fn a_refusal_to_take_a_line_out_of_done_txt_is_not_replaced_by_a_later_removal_o
         .to_string();
     std::fs::write(locked.join("done.txt"), format!("{kept}\n")).unwrap();
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
-    app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key(), TODAY);
+    app.turn(Ok(text.clone()), &mut text.clone(), key(), TODAY);
     let saves = app.turn(Ok(text.clone()), &mut text.clone(), key(), TODAY);
     app.save(&file, &mut text);
 
@@ -468,7 +503,7 @@ fn a_second_refusal_to_take_a_line_out_of_done_txt_in_the_same_save_does_not_rep
     press(&mut app, "x");
     app.save(&file, &mut text);
     std::fs::set_permissions(&locked, std::fs::Permissions::from_mode(0o555)).unwrap();
-    app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key('u'), TODAY);
+    app.turn(Ok(text.clone()), &mut text.clone(), key('u'), TODAY);
     press(&mut app, "H");
     app.refresh_history(&file);
     press(&mut app, "j");

@@ -1,6 +1,6 @@
 use crate::todo::Todo;
 use std::fs;
-use std::io::{self, Read, Write};
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::path::{Path, PathBuf};
 
@@ -78,12 +78,19 @@ pub fn write(path: &Path, body: String) -> io::Result<String> {
 pub fn append(path: &Path, todos: &[Todo]) -> io::Result<()> {
     let mut body: String = todos.iter().map(|todo| todo.to_line() + "\n").collect();
 
-    if read(path)?.chars().last().is_some_and(|last| last != '\n') {
-        body.insert(0, '\n');
-    }
+    let mut file = fs::OpenOptions::new().read(true).append(true).create(true).mode(0o600).open(path)?;
+    let metadata = file.metadata()?;
+    let mode = metadata.permissions().mode();
 
-    let mut file = fs::OpenOptions::new().append(true).create(true).mode(0o600).open(path)?;
-    let mode = file.metadata()?.permissions().mode();
+    if metadata.len() > 0 {
+        let mut last = [0u8];
+        file.seek(SeekFrom::End(-1))?;
+        file.read_exact(&mut last)?;
+
+        if last[0] != b'\n' {
+            body.insert(0, '\n');
+        }
+    }
 
     if mode & 0o077 != 0 {
         file.set_permissions(fs::Permissions::from_mode(mode & 0o700))?;
@@ -180,6 +187,39 @@ mod tests {
         append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
 
         assert_eq!(std::fs::metadata(&path).unwrap().permissions().mode() & 0o777, 0o600);
+    }
+
+    #[test]
+    fn append_keeps_the_bytes_of_a_file_that_is_not_utf8() {
+        let path = temp_path("non-utf8-append");
+        std::fs::write(&path, b"Lorem \xff ipsum\n").unwrap();
+
+        append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert_eq!(std::fs::read(&path).unwrap(), b"Lorem \xff ipsum\nConsectetur adipiscing\n");
+    }
+
+    #[test]
+    fn append_starts_a_new_line_after_a_file_without_a_final_newline() {
+        let path = temp_path("no-newline-append");
+        std::fs::write(&path, "Lorem ipsum").unwrap();
+
+        append(&path, &[Todo::from_line("Consectetur adipiscing")]).unwrap();
+
+        assert_eq!(std::fs::read_to_string(&path).unwrap(), "Lorem ipsum\nConsectetur adipiscing\n");
+    }
+
+    #[test]
+    fn append_adds_no_newline_to_an_empty_or_absent_file() {
+        let (empty, absent) = (temp_path("empty-append"), temp_path("absent-append"));
+        std::fs::write(&empty, "").unwrap();
+        let _ = std::fs::remove_file(&absent);
+
+        append(&empty, &[Todo::from_line("Lorem ipsum")]).unwrap();
+        append(&absent, &[Todo::from_line("Lorem ipsum")]).unwrap();
+
+        assert_eq!(std::fs::read_to_string(&empty).unwrap(), "Lorem ipsum\n");
+        assert_eq!(std::fs::read_to_string(&absent).unwrap(), "Lorem ipsum\n");
     }
 
     #[test]

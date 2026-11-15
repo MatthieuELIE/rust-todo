@@ -100,6 +100,20 @@ fn add_stamps_an_undated_task_with_the_day() {
 }
 
 #[test]
+fn add_leaves_a_done_line_that_carries_a_priority_as_it_is() {
+    let folder = folder("done-priority");
+    let file = folder.join("todo.txt");
+    let lines = "x (A) 2026-01-01 imported done\nx 2026-02-02 (C) 2026-01-01 done with prio\n";
+    std::fs::write(&file, lines).unwrap();
+
+    assert!(todo(&file, &["add", "new task"]).status.success());
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    std::fs::remove_dir_all(&folder).unwrap();
+    assert!(text.starts_with(lines), "{text}");
+}
+
+#[test]
 fn a_file_that_cannot_be_saved_is_left_as_it_is() {
     use std::os::unix::fs::PermissionsExt;
     let file = std::env::temp_dir().join(format!("todo-{}-unsaved.txt", std::process::id()));

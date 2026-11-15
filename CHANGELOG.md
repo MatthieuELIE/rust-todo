@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- A rewrite of the file keeps the priority of a done line, so `x (A) 2026-01-01 foo` no longer turns into `x 2026-01-01 foo`, whose creation date read as a completion date.
+
 ## [0.8.3] - 2026-11-08
 
 ### Added

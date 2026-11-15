@@ -25,12 +25,13 @@ the creation date on a pending task, the completion date followed by the creatio
 
 `add` records the creation date.
 `do` records the completion date and drops the priority, as `todo.sh` does, and moves the line to `done.txt`, which holds the same format.
+`x` in the list does the same and `reopen` drops the priority too; any other rewrite of the file keeps the priority of a done line, where it stands between the completion and the creation date.
 
 ### A description that starts with a marker
 
 A description that starts with a marker is only safe behind a creation date.
 In `(A) (B) Call the bank`, written by hand without a date, `(B)` is text for as long as `(A)` stands before it.
-Once the task is done or its priority dropped, `(B)` is read as the priority, and a done task loses it.
+Once its priority is dropped, by `do`, `x` or `reopen`, `(B)` is read as the priority, and the task loses it.
 
 The same goes for a description starting with `x `, read as the done marker once the priority is gone.
 `add` and the popup's `o` write the creation date, which keeps such a description as typed.

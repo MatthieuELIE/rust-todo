@@ -26,7 +26,7 @@ pub struct Todo {
     pub description: String,
     /// Whether the line starts with the `x` marker.
     pub done: bool,
-    /// Priority letter, `A` to `E`, dropped once the task is done.
+    /// Priority letter, `A` to `E`, dropped when the task is completed or reopened.
     pub priority: Option<char>,
     /// Creation date.
     pub created: Option<Date>,
@@ -42,12 +42,26 @@ impl Todo {
         if self.done {
             parts.push("x".to_string());
             parts.extend(self.completed.map(|date| date.to_string()));
-        } else if let Some(priority) = self.priority {
+        }
+        if let Some(priority) = self.priority {
             parts.push(format!("({priority})"));
         }
         parts.extend(self.created.map(|date| date.to_string()));
         parts.push(self.description.clone());
         parts.join(" ")
+    }
+
+    /// The line as listed: a done task shows no priority, which only its file keeps.
+    pub fn shown_line(&self) -> String {
+        if !self.done {
+            return self.to_line();
+        }
+
+        Todo {
+            priority: None,
+            ..self.clone()
+        }
+        .to_line()
     }
 
     /// Parse a todo.txt line, leaving anything unrecognised in the description.

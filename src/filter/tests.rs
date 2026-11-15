@@ -21,6 +21,13 @@ fn a_filtered_list_keeps_the_numbers_of_the_file() {
 }
 
 #[test]
+fn a_term_cannot_match_the_priority_of_a_done_task_that_is_not_shown() {
+    let todos = todos_of(&["x (A) 2026-01-01 foo", "(A) bar"]);
+
+    assert_eq!(listed(&todos, &["(a)"]), [(2, "(A) bar".into())]);
+}
+
+#[test]
 fn every_term_must_appear_in_the_line() {
     let todos = todos_of(&["Call the bank +finance", "Pay rent +finance @home", "Call mom @phone"]);
 

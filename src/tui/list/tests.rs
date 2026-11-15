@@ -36,7 +36,7 @@ fn h_swaps_the_list_for_done_txt_from_its_last_line_without_groups_and_h_swaps_b
     assert_eq!(shown(&app), ["(A) one"]);
 
     assert!(!press(&mut app, "H"));
-    assert_eq!(shown(&app), ["kept as written", "x 2026-09-25 new", "x old"]);
+    assert_eq!(shown(&app), ["kept as written", "x 2026-09-25 new", "x (A) old"]);
     assert_eq!(app.tasks().iter().map(|(number, _)| *number).collect::<Vec<_>>(), [3, 2, 1]);
     assert!(app.groups().is_empty());
     assert_eq!(app.selected_task().map(Todo::to_line).as_deref(), Some("kept as written"));

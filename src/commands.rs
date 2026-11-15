@@ -24,7 +24,7 @@ fn shown(theme: &Theme, todo: &Todo, today: Date) -> String {
     if std::io::stdout().is_terminal() {
         styled(&view::line(theme, 0, todo, today))
     } else {
-        clean(&todo.to_line())
+        clean(&todo.shown_line())
     }
 }
 

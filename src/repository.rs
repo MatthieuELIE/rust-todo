@@ -281,4 +281,18 @@ mod tests {
 
         assert_eq!(read(&file.join("todo.txt")).unwrap_err().kind(), io::ErrorKind::NotADirectory);
     }
+
+    #[test]
+    fn remove_task_finds_a_done_line_that_carries_a_priority() {
+        let path = temp_path("remove-done-priority");
+        std::fs::write(&path, "x 2026-02-02 (C) 2026-01-01 kept\nx (A) 2026-01-01 gone\n").unwrap();
+        let line = Todo::from_line("x (A) 2026-01-01 gone").to_line();
+
+        let removed = remove_task(&path, Some(2), &line).unwrap();
+
+        let text = std::fs::read_to_string(&path).unwrap();
+        std::fs::remove_file(&path).unwrap();
+        assert!(removed);
+        assert_eq!(text, "x 2026-02-02 (C) 2026-01-01 kept\n");
+    }
 }

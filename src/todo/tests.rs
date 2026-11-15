@@ -74,8 +74,28 @@ fn a_canonical_line_with_unrecognised_tokens_survives_a_round_trip() {
 }
 
 #[test]
-fn serialising_a_done_task_drops_its_priority() {
-    assert_eq!(Todo::from_line("x (A) Lorem ipsum").to_line(), "x Lorem ipsum");
+fn a_done_line_with_a_priority_survives_a_round_trip_and_reads_the_same() {
+    for line in [
+        "x (A) foo",
+        "x 2026-01-02 (B) bar",
+        "x (A) 2026-01-01 baz",
+        "x 2026-02-02 (C) 2026-01-01 qux",
+    ] {
+        let todo = Todo::from_line(line);
+        let again = Todo::from_line(&todo.to_line());
+
+        assert_eq!(todo.to_line(), line);
+        assert_eq!(
+            (again.description, again.done, again.priority, again.created, again.completed),
+            (todo.description, todo.done, todo.priority, todo.created, todo.completed),
+        );
+    }
+}
+
+#[test]
+fn a_done_line_is_listed_without_its_priority_and_a_pending_one_with_it() {
+    assert_eq!(Todo::from_line("x (A) 2026-01-01 baz").shown_line(), "x 2026-01-01 baz");
+    assert_eq!(Todo::from_line("(A) 2026-01-01 baz").shown_line(), "(A) 2026-01-01 baz");
 }
 
 #[test]

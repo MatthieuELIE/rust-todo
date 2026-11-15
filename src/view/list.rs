@@ -44,7 +44,7 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
             }
             lines.push(match shown {
                 Shown::Header(group, count, folded) => header(theme, group, count, folded, area.width.saturating_sub(2) as usize),
-                Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.to_line()).fg(theme.secondary),
+                Shown::Task(number, todo) if app.in_history => Line::from(self::number(number) + &todo.shown_line()).fg(theme.secondary),
                 Shown::Task(number, todo) => line(theme, number, todo, today),
             });
         }
@@ -67,7 +67,7 @@ pub fn number(number: usize) -> String {
 pub fn line(theme: &Theme, number: usize, todo: &Todo, today: Date) -> Line<'static> {
     let number = self::number(number);
     if todo.done {
-        return Line::from_iter([number.into(), todo.to_line().fg(theme.tertiary).crossed_out()]);
+        return Line::from_iter([number.into(), todo.shown_line().fg(theme.tertiary).crossed_out()]);
     }
 
     let mut spans = vec![Span::raw(number)];

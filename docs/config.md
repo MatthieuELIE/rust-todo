@@ -63,6 +63,44 @@ The list and `todo list` on a terminal keep the bold, the strike-through and the
 The active zone is then read from the mode block alone, which is bold and has no background; the border of a focused card is not told apart.
 A `name` in `config.toml` wins over `NO_COLOR`, and the list takes that theme's colours.
 
+### `[open]`
+
+`[open]` names, for a key, the program that `gx` in the [interactive list](interactive-list.md#opening-a-keyvalue) runs on a key:value of the task with that key:
+
+```toml
+[open]
+ticket = "~/.config/todo/open-ticket"
+```
+
+Each key of the table is the key of a key:value, `ticket` for `ticket:audit-03/09`, and its value the path of the program.
+A leading `~/` of the path is replaced by your home folder; nothing else is expanded, neither a variable nor `~user`.
+With no `[open]`, `gx` has nothing to open.
+
+The program gets:
+
+- the value of the key:value, `audit-03/09` here, as its only argument;
+- the task's projects in `TODO_PROJECTS` and its contexts in `TODO_CONTEXTS`, without their `+` and `@`, separated by spaces, added to the environment of `todo`.
+
+It runs without a shell, so a value cannot run a command, and must be executable.
+It is detached from the list, which does not wait for it: the list stays open, and the program outlives a popup that closes.
+Its standard input and output are cut off, so what it prints is lost and its exit code is not shown.
+
+`todo` knows nothing of what the value points to: the program decides.
+This one, made executable with `chmod +x`, opens the pull requests of the task's first project for a task with `@review`, and a note named after the ticket otherwise:
+
+```sh
+#!/bin/sh
+project=${TODO_PROJECTS%% *}
+
+case " $TODO_CONTEXTS " in
+  *" review "*) exec open "https://github.com/me/$project/pulls" ;;
+esac
+
+exec open "$HOME/notes/$project/tickets/$1.md"
+```
+
+`open` is the macOS command; on Linux, `xdg-open` takes its place.
+
 ### A refused file
 
 A file is refused, with the path, the line and the fault, when it holds:
@@ -70,6 +108,7 @@ A file is refused, with the path, the line and the fault, when it holds:
 - text that is not valid TOML;
 - a `name` that is not in the table above;
 - an `icons` that is not `true` or `false`;
+- a value under `[open]` that is not a string;
 - a key or section this page does not describe.
 
 An unknown `name` also lists the valid names.

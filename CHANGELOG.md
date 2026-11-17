@@ -10,6 +10,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - A `t:2026-11-18` in a pending task puts it to sleep until that day: `todo list`, with or without terms or `--due`, leaves it out, and `todo list --sleeping` lists only the sleeping tasks; `do`, `remove` and `edit` still act on them.
 - The interactive list leaves the sleeping tasks out of `All tasks`, `Due`, `Waiting`, the projects and the contexts, and shows them under a new `Sleeping` entry of the filter panel; typing `t:` in the popup opens the date picker, as `due:` does. See [Line format](docs/line-format.md#recognised-keys).
 - `gx` on a task of the interactive list runs the program that a new `[open]` table of `config.toml` sets for the key of one of its key:value, such as `ticket = "~/.config/todo/open-ticket"` for `ticket:audit-03/09`: the first key:value of the line with a program set is opened, its value is the program's only argument, and the task's projects and contexts arrive in `TODO_PROJECTS` and `TODO_CONTEXTS`; the program runs without a shell, detached from the list, which does not wait for it.
+- `gx` says in the status bar `No key:value of the task has a program under [open]` when nothing on the task has a program, and `Could not open <program path>: <reason>` when the program cannot be started; it works in the history too, and the help lists it. See [Configuration](docs/config.md#open) for an example program.
 
 ## [0.8.4] - 2026-11-17
 

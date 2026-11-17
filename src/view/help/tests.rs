@@ -211,7 +211,7 @@ fn the_help_tells_the_app_how_far_the_last_drawing_left_it_to_scroll() {
     render_in(&app, 109, 20);
     assert_eq!(app.help_max.get(), 44 - 15);
     render_in(&app, 80, 36);
-    assert_eq!(app.help_max.get(), 76 - 31);
+    assert_eq!(app.help_max.get(), 77 - 31);
     render_in(&app, 109, 40);
     assert_eq!(app.help_max.get(), 44 - 32);
 }
@@ -330,6 +330,15 @@ fn the_question_mark_line_of_list_names_the_modes_whose_keys_the_help_shows_too(
 
     assert_eq!(slot(&rows[line], 0).trim_end(), "?            help; PANEL, NORMAL,");
     assert_eq!(slot(&rows[line + 1], 0).trim_end(), "             VISUAL, DATE too");
+}
+
+#[test]
+fn the_list_section_lists_gx_after_yy() {
+    let rows = rows_of(&help_app(Focus::List), 109, 40);
+    let left: Vec<String> = rows.iter().map(|row| slot(row, 0).trim_end().to_string()).collect();
+    let yy = left.iter().position(|row| row == "yy           copy the task").expect("yy");
+
+    assert_eq!(left[yy + 1], "gx           open a key:value");
 }
 
 #[test]

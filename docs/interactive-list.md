@@ -19,6 +19,7 @@ The screenshots use the `catppuccin-mocha` theme; the default theme follows the 
 | `x` | complete: the task moves to `done.txt` |
 | `dd` | delete |
 | `yy` | copy the task's line to the clipboard, through `pbcopy`; in the history too |
+| `gx` | open a key:value of the task with the program set for its key in [config](config.md#open); in the history too |
 | `p` then `a` to `e` | set the priority; `p` then `Space` clears it |
 | `u`, `Ctrl-R` | undo, redo |
 | `zM`, `zR` | fold, unfold every priority group |
@@ -56,7 +57,7 @@ A command under way, such as a first `d`, is dropped.
 
 ### Two-key commands
 
-`gg`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
+`gg`, `gx`, `dd`, `yy`, `p`, `zM`, `zR` and `za` wait for their second key without a timer, and any other key drops them and acts.
 After `p`, in the list and the popup alike, any key but `a` to `e` and `Space` is ignored.
 The status bar then says `Priority is a to e, or space`.
 
@@ -68,6 +69,18 @@ A key pressed with `Ctrl` or `Alt` does nothing in the list, the filter panel, t
 `x` stamps the task with today's date, adds it to the end of `done.txt` and takes it off the list, as `todo do` does.
 `u` is the way back.
 A done task still in the task file, one typed by hand, is not listed: `todo archive` moves it to `done.txt`.
+
+### Opening a key:value
+
+`gx` runs the program that the `[open]` table of [`config.toml`](config.md#open) sets for the key of a key:value of the task under the cursor, with the value as its only argument.
+The first key:value of the line whose key is in the table is the one opened, without a menu: with `ticket = …` set, `gx` on `Review ticket:audit-03/09 pr:42` opens `audit-03/09`.
+The program runs detached and the list does not wait for it, so the list stays as it was; what the program gets is described under [`[open]`](config.md#open).
+
+When no key:value of the task has a program, the status bar says `No key:value of the task has a program under [open]`, as it does when the table is empty or missing.
+When the program cannot be started, because it does not exist or is not executable, it says `Could not open <program path>: <reason>`, the reason as the system gives it.
+A program that starts and then fails says nothing.
+
+`gx` writes nothing, so it works in the history, on the task of `done.txt` under the cursor, and while the task file cannot be read.
 
 ### Help
 
@@ -162,7 +175,7 @@ When a task on screen has a priority, the list is grouped under `PRIORITY A` to 
 Each header shows how many tasks it holds, with a blank row before each group but the first.
 
 `zM` folds every group into its header, `zR` unfolds them all, and `za` folds or unfolds one.
-The cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing and `yy` says `no task under the cursor`.
+The cursor can stand on a folded header, where `x`, `dd`, `p` and `Enter` do nothing and `yy` and `gx` say `no task under the cursor`.
 Folds are not remembered: the list opens unfolded, and a group that leaves the screen comes back unfolded.
 
 ### Details card

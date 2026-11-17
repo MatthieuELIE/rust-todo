@@ -37,6 +37,7 @@ o            add
 x            done: moves to done.txt
 dd           delete
 yy           copy the task
+gx           open a key:value
 p a…e        priority
 p Space      no priority
 u/Ctrl-r     undo, redo

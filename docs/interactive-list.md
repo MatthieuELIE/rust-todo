@@ -131,9 +131,9 @@ There are no groups.
 Their lines are in light grey, not struck through, and the names of the filter panel turn the same grey: that is the only sign that the history is on screen.
 The details keep their colours.
 
-The panel lists the `+projects` and `@contexts` of the history, without `Due` and `Waiting`.
+The panel lists the `+projects` and `@contexts` of the history, without `Due`, `Waiting` and `Sleeping`.
 `/` searches it, and the search in use is kept when `H` is pressed, either way, with a `+project` or `@context` filter.
-`H` pressed under `Due` or `Waiting`, which the history panel does not have, switches to `All tasks`, and the list stays on it when `H` is pressed back.
+`H` pressed under `Due`, `Waiting` or `Sleeping`, which the history panel does not have, switches to `All tasks`, and the list stays on it when `H` is pressed back.
 
 The history is read-only but for one key.
 These keys are refused there with `history is read-only`:
@@ -184,6 +184,7 @@ The panel on the left lists these entries:
 - `All tasks`
 - `Due` when a task is due
 - `Waiting` when a task shown waits
+- `Sleeping` when a task sleeps
 - every `+project` and `@context` of the tasks shown, under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows
 
 Moving through it with `j` and `k`, or the arrows, filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
@@ -200,6 +201,10 @@ With no task due it says `No task due`, and when the search hides every task due
 
 `Waiting` shows the tasks holding a `wait:` key:value, such as `Update the drawing wait:designer`.
 `/wait:figma` narrows it to one.
+
+`Sleeping` shows the pending tasks whose `t:` date is after today, as `todo list --sleeping` does, and only there are they shown: `All tasks`, `Due`, `Waiting` and every project and context leave them out, and do not count them.
+A task wakes up on the day of its `t:`, and comes back under the other entries.
+The keys act on a sleeping task as on any other, and a task added under `Sleeping` gets nothing and the panel goes back to `All tasks`.
 
 ### Search
 

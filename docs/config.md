@@ -44,10 +44,10 @@ Pick one of the `catppuccin-` themes there.
 
 ### Icons
 
-`icons = true` shows nine [Nerd Font](https://www.nerdfonts.com) icons, each before its word and followed by a space, in the word's own style:
+`icons = true` shows ten [Nerd Font](https://www.nerdfonts.com) icons, each before its word and followed by a space, in the word's own style:
 
 - the `PROJECTS` and `CONTEXTS` headers of the panel;
-- its `All tasks`, `Due` and `Waiting` entries;
+- its `All tasks`, `Due`, `Waiting` and `Sleeping` entries;
 - the `DETAILS` title;
 - a toast in the status bar: a check mark for a success, an `i` for an information and a cross for a refusal.
 

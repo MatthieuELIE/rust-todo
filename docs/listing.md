@@ -13,7 +13,7 @@ todo list +finance -@phone
 
 `+` and `@` are plain characters, so `-+work` hides the `+work` tasks.
 Terms are compared as case-insensitive literal substrings.
-`--due` keeps the pending tasks due today or past, and `--done` lists `done.txt`; both are described below.
+`--due` keeps the pending tasks due today or past, `--sleeping` the sleeping ones, and `--done` lists `done.txt`; all three are described below.
 
 ## Details
 
@@ -28,6 +28,14 @@ In `todo list +work --due`, `--due` is one more term, excluding `-due`, and the 
 `--due` keeps the pending tasks holding a `due:` date that is today or past.
 It combines with the terms after it: `todo list --due +work`.
 A done task is never due, and a `due:` that is not a `YYYY-MM-DD` date is ignored.
+A sleeping task stays out of it even when it is due.
+
+### Sleeping tasks
+
+A pending task whose `t:` date is after today is sleeping: `list` leaves it out, with or without terms, until that day.
+`--sleeping` lists the sleeping tasks only, and combines with the terms after it: `todo list --sleeping +work`.
+With none, it says `nothing sleeping`.
+`--sleeping` does not combine with `--due` nor with `--done`.
 
 ### Done tasks
 
@@ -37,6 +45,7 @@ Blank lines are not counted.
 
 A line of `done.txt` that is not a done task is listed as it is.
 A done one is listed as `todo` would write it, without the priority a line such as `x (A) Pay rent` holds.
+A done task is never sleeping, so its `t:` hides nothing here.
 `--done` does not combine with `--due`.
 
 ### Pending tasks only

@@ -142,12 +142,12 @@ Only the task file is counted, and a name found in `done.txt` alone comes last, 
 
 ![The popup adding a task, with the calendar of October 2026 under due:, the 31st, today, picked in peach](images/calendar.png)
 
-When a key leaves `due:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it.
+When a key leaves `due:` or `t:` alone before the cursor, typed or with its value erased, a calendar of the month drops down under it.
 Weeks start on Monday, and the calendar opens on today: the picked date peach, today yellow, past days greyed.
 
 - `h` `l` move by a day, `k` `j` by a week, `H` `L` by a month, the arrows as their letters.
-- `Enter` writes the date after `due:`, followed by a space.
-- `Esc` closes it, leaving `due:` to be typed by hand.
+- `Enter` writes the date after `due:` or `t:`, followed by a space.
+- `Esc` closes it, leaving the key to be typed by hand.
 
 Any other key and a paste are ignored while it is open.
 
@@ -157,7 +157,7 @@ An added task is stamped with today's date.
 Under a panel filter, it gets the filter's term appended when it lacks that exact word:
 
 - under `Due` it gets `due:` with today's date unless its line holds a `due:` date or value, the popup being titled `ADD (Due)`;
-- under `Waiting` it gets nothing and the panel goes back to `All tasks`.
+- under `Waiting` or `Sleeping` it gets nothing and the panel goes back to `All tasks`.
 
 An edited line replaces the task as typed, marker, priority and dates included.
 Only a line with no text word, as for `todo edit`, is refused: one made of `+projects`, `@contexts`, `key:` words, a priority and dates.

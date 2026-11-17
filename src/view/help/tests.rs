@@ -197,7 +197,7 @@ fn the_help_bottom_title_says_j_k_scroll_only_when_the_content_overflows() {
     let tall = rows_of(&app, 109, 40);
     assert!(tall.iter().any(|row| row.contains("─ j/k scroll · esc close ╯")), "two columns overflow");
     assert!(tall.iter().any(|row| row.contains('▐')));
-    assert_eq!(app.help_max.get(), 43 - 32);
+    assert_eq!(app.help_max.get(), 44 - 32);
 
     let low = rows_of(&app, 109, 20);
     assert!(low.iter().any(|row| row.contains("─ j/k scroll · esc close ╯")));
@@ -209,11 +209,11 @@ fn the_help_tells_the_app_how_far_the_last_drawing_left_it_to_scroll() {
     let app = help_app(Focus::List);
 
     render_in(&app, 109, 20);
-    assert_eq!(app.help_max.get(), 43 - 15);
+    assert_eq!(app.help_max.get(), 44 - 15);
     render_in(&app, 80, 36);
-    assert_eq!(app.help_max.get(), 75 - 31);
+    assert_eq!(app.help_max.get(), 76 - 31);
     render_in(&app, 109, 40);
-    assert_eq!(app.help_max.get(), 43 - 32);
+    assert_eq!(app.help_max.get(), 44 - 32);
 }
 
 #[test]

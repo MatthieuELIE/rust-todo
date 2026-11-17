@@ -44,11 +44,16 @@ fn shows(listing: Listing, todo: &Todo, today: Date) -> bool {
     }
 }
 
+/// Whether `todo` was completed on `since` or after, any task without `since`.
+fn completed_since(todo: &Todo, since: Option<Date>) -> bool {
+    since.is_none_or(|since| todo.completed.is_some_and(|completed| completed >= since))
+}
+
 /// Prints the tasks `list` shows and returns its exit code.
-pub(super) fn list(todos: &[Todo], listing: Listing, terms: &[String], theme: &Theme) -> ExitCode {
+pub(super) fn list(todos: &[Todo], listing: Listing, since: Option<Date>, terms: &[String], theme: &Theme) -> ExitCode {
     let today = today();
     let mut tasks = filter::list(todos, terms);
-    tasks.retain(|(_, todo)| shows(listing, todo, today));
+    tasks.retain(|(_, todo)| shows(listing, todo, today) && completed_since(todo, since));
 
     if listing == Listing::Done {
         tasks.sort_by_key(|(number, _)| *number);

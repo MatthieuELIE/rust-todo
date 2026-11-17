@@ -239,7 +239,7 @@ pub fn run(command: Commands, path: PathBuf, todos: Vec<Todo>, theme: Theme) -> 
             }
             .exit();
         }
-        Commands::List { flags, terms } => return list::list(&todos, flags.listing(), &terms, &theme),
+        Commands::List { flags, since, terms } => return list::list(&todos, flags.listing(), since, &terms, &theme),
         Commands::Add { text } => add(todos, &text),
         Commands::Remove { number } => remove(todos, number),
         Commands::Do { number } => do_task(todos, number),

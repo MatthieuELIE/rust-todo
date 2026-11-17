@@ -43,7 +43,7 @@ fn edit_takes_a_number_made_only_of_digits_and_a_term_otherwise() {
 #[test]
 fn list_flags_come_before_terms_which_may_start_with_a_dash() {
     let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
-        Some(Commands::List { flags, terms }) => (flags.listing(), terms),
+        Some(Commands::List { flags, terms, .. }) => (flags.listing(), terms),
         _ => panic!("not a list command"),
     };
 

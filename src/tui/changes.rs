@@ -11,32 +11,26 @@ pub(super) enum Saved {
 impl App {
     /// Adds the task typed as `text`, cursor on it, the panel term appended when missing; a rejected text is told in a toast.
     pub(super) fn add(&mut self, text: &str, today: Date) -> Saved {
-        match Todo::new_from_input(text, today) {
-            Ok(mut todo) => {
-                if matches!(self.filter.as_deref(), Some(WAITING | SLEEPING)) {
-                    self.filter = None;
-                } else if self.filter.as_deref() == Some(DUE_NOW) {
-                    let dated = |word: &str| word.strip_prefix(DUE).is_some_and(|value| !value.is_empty());
-
-                    if !todo.description.split_whitespace().any(dated) {
-                        todo.description = format!("{} {DUE}{today}", todo.description);
-                    }
-                } else if let Some(term) = &self.filter
-                    && !has_word(&todo, term)
-                {
-                    todo.description = format!("{} {term}", todo.description);
-                }
-
-                self.todos.push(todo);
-                let hidden = !self.follow(self.todos.len());
-                self.notify(Notice::Added { hidden });
-                Saved::Written
-            }
+        let mut todo = match Todo::new_from_input(text, today) {
+            Ok(todo) => todo,
             Err(e) => {
                 self.notify(Notice::Refused(e));
-                Saved::Refused
+                return Saved::Refused;
             }
+        };
+
+        if let Some(word) = missing_word(&todo, self.filter.as_deref(), today) {
+            todo.description = format!("{} {word}", todo.description);
         }
+
+        if matches!(self.filter.as_deref(), Some(WAITING | SLEEPING)) {
+            self.filter = None;
+        }
+
+        self.todos.push(todo);
+        let hidden = !self.follow(self.todos.len());
+        self.notify(Notice::Added { hidden });
+        Saved::Written
     }
 
     /// Replaces task `number` with `text`, or moves it to `done.txt`, done on `today`, when its `x` was typed; a task with no text word is refused, an unchanged line told in a toast.

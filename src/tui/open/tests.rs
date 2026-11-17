@@ -36,6 +36,31 @@ fn gx_opens_the_first_key_value_of_the_line_whose_key_is_set_skipping_an_empty_v
 }
 
 #[test]
+fn a_program_that_could_not_be_opened_is_named_with_the_system_error_and_the_list_stays_usable() {
+    let mut app = set(app_of(&["one ticket:a/1", "two"]), &["ticket"]);
+
+    press(&mut app, "gx");
+    let opening = app.open.take().unwrap();
+    app.opened(&opening, Err(io::Error::from_raw_os_error(libc::ENOENT)));
+    let said = "could not open /bin/open-ticket: No such file or directory (os error 2)";
+    assert_eq!(told(&app), Some(Notice::Refused(said.to_string())));
+    assert!(app.refusal_shown());
+
+    assert!(press(&mut app, "x"));
+    assert_eq!(lines(&app), vec!["two".to_string()]);
+}
+
+#[test]
+fn a_program_opened_says_nothing() {
+    let mut app = set(app_of(&["one ticket:a/1"]), &["ticket"]);
+
+    press(&mut app, "gx");
+    let opening = app.open.take().unwrap();
+    app.opened(&opening, Ok(()));
+    assert_eq!(told(&app), None);
+}
+
+#[test]
 fn gx_on_a_task_with_no_key_value_set_opens_nothing_and_says_so_and_x_alone_still_completes() {
     let mut app = set(app_of(&["one url:x ticket: ticket://x/1", "two"]), &["ticket"]);
 

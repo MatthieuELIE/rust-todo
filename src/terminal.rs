@@ -69,7 +69,7 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
                 }
 
                 if let Some(opening) = app.open.take() {
-                    let _ = open(&opening);
+                    app.opened(&opening, open(&opening));
                 }
             }
 

@@ -22,6 +22,13 @@ impl App {
             None => self.notify(Notice::NoTaskUnderCursor),
         }
     }
+
+    /// Says why the program `gx` asked for could not be opened, and nothing when it was.
+    pub fn opened(&mut self, opening: &Opening, opened: io::Result<()>) {
+        if let Err(e) = opened {
+            self.notify(Notice::Refused(format!("could not open {}: {e}", opening.program.display())));
+        }
+    }
 }
 
 /// The program `programs` sets for the first key:value of `todo` whose key has one, with its value and the task's projects and contexts.

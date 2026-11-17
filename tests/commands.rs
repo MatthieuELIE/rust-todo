@@ -241,6 +241,43 @@ fn edit_by_a_term_matching_no_pending_task_or_several_writes_nothing() {
 }
 
 #[test]
+fn do_remove_and_edit_act_on_a_sleeping_task() {
+    let dir = folder("sleeping-commands");
+    let file = dir.join("todo.txt");
+    let lines = "Pay rent t:2999-01-01\nCall the bank t:2999-01-01\nBuy milk t:2999-01-01\nWater plants t:2999-01-01\n";
+    std::fs::write(&file, lines).unwrap();
+
+    let outputs = [
+        todo(&file, &["edit", "4", "Water the plants t:2999-01-01"]),
+        todo(&file, &["edit", "milk", "Buy oat milk t:2999-01-01"]),
+        todo(&file, &["rm", "2"]),
+        todo(&file, &["do", "1"]),
+    ];
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    for output in outputs {
+        assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    }
+
+    assert_eq!(text, "Buy oat milk t:2999-01-01\nWater the plants t:2999-01-01\n");
+}
+
+#[test]
+fn edit_by_a_term_matching_a_listed_task_and_a_sleeping_one_writes_nothing() {
+    let dir = folder("sleeping-edit-ambiguous");
+    let file = dir.join("todo.txt");
+    let before = "Pay rent +home\nPay the plumber +home t:2999-01-01\n";
+    std::fs::write(&file, before).unwrap();
+
+    let output = todo(&file, &["edit", "pay", "Lorem"]);
+
+    let text = std::fs::read_to_string(&file).unwrap();
+    assert!(!output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stderr), "2 pending tasks match pay\n");
+    assert_eq!(text, before);
+}
+
+#[test]
 fn edit_refuses_a_term_starting_with_a_dash_and_writes_nothing() {
     let dir = folder("edit-term-dash");
     let file = dir.join("todo.txt");

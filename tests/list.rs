@@ -199,6 +199,48 @@ fn an_unreadable_wake_up_date_leaves_the_task_listed_and_is_accepted_when_added(
 }
 
 #[test]
+fn list_with_terms_leaves_out_the_sleeping_tasks_and_lists_a_woken_one() {
+    let folder = common::folder("sleeping-terms");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent +home t:2999-01-01\nBuy milk +home t:2020-01-01\nCall the bank\n").unwrap();
+
+    let all = common::todo(&file, &["list"]);
+    let narrowed = common::todo(&file, &["list", "+home"]);
+    let none = common::todo(&file, &["list", "rent"]);
+
+    assert_eq!(
+        String::from_utf8_lossy(&all.stdout),
+        "  2  Buy milk +home t:2020-01-01\n  3  Call the bank\n"
+    );
+    assert_eq!(String::from_utf8_lossy(&narrowed.stdout), "  2  Buy milk +home t:2020-01-01\n");
+    assert!(none.status.success());
+    assert!(none.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&none.stderr), "no matching task\n");
+}
+
+#[test]
+fn due_leaves_out_a_sleeping_task_even_when_it_is_due() {
+    let folder = common::folder("sleeping-due");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent t:2999-01-01 due:2020-01-01\nCall the bank due:2020-01-01\n").unwrap();
+
+    let output = common::todo(&file, &["list", "--due"]);
+
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  2  Call the bank due:2020-01-01\n");
+}
+
+#[test]
+fn done_lists_a_done_line_whose_wake_up_date_is_after_today() {
+    let folder = common::folder("sleeping-done");
+    std::fs::write(folder.join("todo.txt"), "").unwrap();
+    std::fs::write(folder.join("done.txt"), "x 2026-11-01 Pay rent t:2999-01-01\n").unwrap();
+
+    let output = common::todo(&folder.join("todo.txt"), &["list", "--done"]);
+
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  1  x 2026-11-01 Pay rent t:2999-01-01\n");
+}
+
+#[test]
 fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
     let folder = common::folder("list-done");
     std::fs::write(folder.join("todo.txt"), "Buy milk +home\n").unwrap();

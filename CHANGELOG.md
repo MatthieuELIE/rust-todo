@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- A `t:2026-11-18` in a pending task puts it to sleep until that day: `todo list`, with or without terms or `--due`, leaves it out, and `todo list --sleeping` lists only the sleeping tasks; `do`, `remove` and `edit` still act on them.
+
 ## [0.8.4] - 2026-11-17
 
 ### Changed

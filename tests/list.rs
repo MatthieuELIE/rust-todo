@@ -241,6 +241,49 @@ fn done_lists_a_done_line_whose_wake_up_date_is_after_today() {
 }
 
 #[test]
+fn sleeping_lists_only_the_sleeping_tasks_narrowed_by_terms() {
+    let folder = common::folder("sleeping-flag");
+    let file = folder.join("todo.txt");
+    let lines = "Pay rent +home t:2999-01-01\nBuy milk +home t:2020-01-01\n(A) Call the bank t:2999-01-01\nx 2026-11-01 Water plants t:2999-01-01\n";
+    std::fs::write(&file, lines).unwrap();
+
+    let all = common::todo(&file, &["list", "--sleeping"]);
+    let narrowed = common::todo(&file, &["list", "--sleeping", "+home"]);
+    let none = common::todo(&file, &["list", "--sleeping", "+garden"]);
+    std::fs::write(&file, "Buy milk t:2020-01-01\n").unwrap();
+    let awake = common::todo(&file, &["list", "--sleeping"]);
+
+    assert_eq!(
+        String::from_utf8_lossy(&all.stdout),
+        "  3  (A) Call the bank t:2999-01-01\n  1  Pay rent +home t:2999-01-01\n"
+    );
+    assert_eq!(String::from_utf8_lossy(&narrowed.stdout), "  1  Pay rent +home t:2999-01-01\n");
+    assert_eq!(String::from_utf8_lossy(&none.stderr), "no matching task\n");
+    assert!(awake.status.success());
+    assert!(awake.stdout.is_empty());
+    assert_eq!(String::from_utf8_lossy(&awake.stderr), "nothing sleeping\n");
+}
+
+#[test]
+fn sleeping_is_refused_with_due_and_with_done() {
+    let folder = common::folder("sleeping-refused");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent t:2999-01-01\n").unwrap();
+
+    let outputs = [
+        common::todo(&file, &["list", "--sleeping", "--due"]),
+        common::todo(&file, &["list", "--done", "--sleeping"]),
+    ];
+
+    for output in outputs {
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(error.contains("--sleeping") && error.contains("cannot be used with"), "{error}");
+    }
+}
+
+#[test]
 fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
     let folder = common::folder("list-done");
     std::fs::write(folder.join("todo.txt"), "Buy milk +home\n").unwrap();

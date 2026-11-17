@@ -25,6 +25,10 @@ pub enum Commands {
         #[arg(long, conflicts_with = "due")]
         done: bool,
 
+        /// Keep only the pending tasks whose t: date is after today, which list leaves out otherwise
+        #[arg(long, conflicts_with_all = ["due", "done"])]
+        sleeping: bool,
+
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
         #[arg(allow_hyphen_values = true)]
         terms: Vec<String>,

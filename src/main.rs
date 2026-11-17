@@ -30,7 +30,12 @@ fn main() -> ExitCode {
     let path = todo_path();
     let no_color = config::no_color(std::env::var_os("NO_COLOR"));
 
-    let (theme, icons) = match config::theme(&config::path(std::env::var_os("XDG_CONFIG_HOME"), std::env::home_dir()), no_color) {
+    let home = std::env::home_dir();
+    let (theme, icons, _) = match config::read(
+        &config::path(std::env::var_os("XDG_CONFIG_HOME"), home.clone()),
+        no_color,
+        home.as_deref(),
+    ) {
         Ok(read) => read,
         Err(message) => {
             eprintln!("{message}");

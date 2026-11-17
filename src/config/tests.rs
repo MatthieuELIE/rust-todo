@@ -9,7 +9,7 @@ fn written(name: &str, text: &str) -> (Folder, PathBuf) {
 }
 
 fn refused(name: &str, text: &str) -> String {
-    match theme(&written(name, text).1, false) {
+    match read(&written(name, text).1, false, Some(Path::new("/h"))) {
         Ok(_) => panic!("{text:?} should be refused"),
         Err(message) => message,
     }
@@ -26,7 +26,7 @@ fn the_path_follows_xdg_config_home_then_the_home_folder() {
 fn an_absent_file_gives_the_default_theme() {
     let folder = Folder::new("config-absent");
 
-    assert!(theme(&folder.join("config.toml"), false).is_ok());
+    assert!(read(&folder.join("config.toml"), false, Some(Path::new("/h"))).is_ok());
 }
 
 #[test]
@@ -35,14 +35,14 @@ fn a_file_that_cannot_be_read_is_refused_with_its_path() {
     let path = folder.join("config.toml");
     std::fs::create_dir(&path).unwrap();
 
-    let message = theme(&path, false).err().unwrap();
+    let message = read(&path, false, Some(Path::new("/h"))).err().unwrap();
 
     assert!(message.starts_with(&format!("could not read {}: ", path.display())), "{message:?}");
 }
 
 #[test]
 fn the_terminal_name_is_read() {
-    assert!(theme(&written("terminal", "[theme]\nname = \"terminal\"\n").1, false).is_ok());
+    assert!(read(&written("terminal", "[theme]\nname = \"terminal\"\n").1, false, Some(Path::new("/h"))).is_ok());
 }
 
 #[test]
@@ -51,7 +51,7 @@ fn the_four_flavours_are_read_and_differ() {
         .iter()
         .map(|flavour| {
             let text = format!("[theme]\nname = \"catppuccin-{flavour}\"\n");
-            theme(&written(flavour, &text).1, false).unwrap().0
+            read(&written(flavour, &text).1, false, Some(Path::new("/h"))).unwrap().0
         })
         .collect();
 
@@ -64,7 +64,7 @@ fn the_four_flavours_are_read_and_differ() {
 fn a_malformed_file_is_refused_with_its_path_and_line() {
     let (_folder, path) = written("malformed", "[theme\n");
 
-    let message = theme(&path, false).err().unwrap();
+    let message = read(&path, false, Some(Path::new("/h"))).err().unwrap();
 
     assert!(message.starts_with(&path.display().to_string()));
     assert!(message.contains("line 1"));
@@ -95,15 +95,23 @@ fn an_unknown_key_is_refused() {
 
 #[test]
 fn icons_are_read_and_default_to_false() {
-    assert!(theme(&written("icons-on", "[theme]\nicons = true\n").1, false).unwrap().1);
-    assert!(!theme(&written("icons-off", "[theme]\nname = \"terminal\"\n").1, false).unwrap().1);
+    assert!(
+        read(&written("icons-on", "[theme]\nicons = true\n").1, false, Some(Path::new("/h")))
+            .unwrap()
+            .1
+    );
+    assert!(
+        !read(&written("icons-off", "[theme]\nname = \"terminal\"\n").1, false, Some(Path::new("/h")))
+            .unwrap()
+            .1
+    );
 }
 
 #[test]
 fn icons_that_are_not_a_boolean_are_refused_with_the_path_and_line() {
     let (_folder, path) = written("icons-text", "[theme]\nicons = \"yes\"\n");
 
-    let message = theme(&path, false).err().unwrap();
+    let message = read(&path, false, Some(Path::new("/h"))).err().unwrap();
 
     assert!(message.starts_with(&path.display().to_string()));
     assert!(message.contains("line 2"));
@@ -167,8 +175,69 @@ fn a_file_without_a_name_follows_no_color_and_one_with_a_name_does_not() {
     let absent_folder = Folder::new("config-nofile");
     let absent = absent_folder.join("config.toml");
 
-    assert!(theme(&nameless, true).unwrap().0 == Theme::NONE);
-    assert!(theme(&absent, true).unwrap().0 == Theme::NONE);
-    assert!(theme(&named, true).unwrap().0 == Theme::TERMINAL);
-    assert!(theme(&nameless, false).unwrap().0 == Theme::TERMINAL);
+    assert!(read(&nameless, true, Some(Path::new("/h"))).unwrap().0 == Theme::NONE);
+    assert!(read(&absent, true, Some(Path::new("/h"))).unwrap().0 == Theme::NONE);
+    assert!(read(&named, true, Some(Path::new("/h"))).unwrap().0 == Theme::TERMINAL);
+    assert!(read(&nameless, false, Some(Path::new("/h"))).unwrap().0 == Theme::TERMINAL);
+}
+
+#[test]
+fn the_open_table_maps_a_key_to_a_program_and_an_absent_one_is_empty() {
+    let (_set_folder, set) = written("open-set", "[open]\nticket = \"/usr/local/bin/open-ticket\"\n");
+    let (_unset_folder, unset) = written("open-unset", "[theme]\nicons = true\n");
+    let absent_folder = Folder::new("config-open-nofile");
+
+    let open = read(&set, false, Some(Path::new("/h"))).unwrap().2;
+
+    assert_eq!(open, HashMap::from([("ticket".to_string(), PathBuf::from("/usr/local/bin/open-ticket"))]));
+    assert!(read(&unset, false, Some(Path::new("/h"))).unwrap().2.is_empty());
+    assert!(
+        read(&absent_folder.join("config.toml"), false, Some(Path::new("/h")))
+            .unwrap()
+            .2
+            .is_empty()
+    );
+}
+
+#[test]
+fn only_a_leading_tilde_slash_of_a_program_is_expanded_to_the_home_folder() {
+    for (name, program, expected) in [
+        ("tilde-slash", "~/bin/open-ticket", "/h/bin/open-ticket"),
+        ("tilde-alone", "~", "~"),
+        ("tilde-user", "~u/bin/open-ticket", "~u/bin/open-ticket"),
+        ("dollar-home", "$HOME/bin/open-ticket", "$HOME/bin/open-ticket"),
+        ("tilde-inside", "bin/~/open-ticket", "bin/~/open-ticket"),
+    ] {
+        let (_folder, path) = written(name, &format!("[open]\nticket = \"{program}\"\n"));
+
+        let open = read(&path, false, Some(Path::new("/h"))).unwrap().2;
+
+        assert_eq!(open["ticket"], PathBuf::from(expected), "{program:?}");
+    }
+}
+
+#[test]
+fn a_leading_tilde_slash_is_kept_when_the_home_folder_is_unknown() {
+    let (_folder, path) = written("tilde-no-home", "[open]\nticket = \"~/open-ticket\"\n");
+
+    let open = read(&path, false, None).unwrap().2;
+
+    assert_eq!(open["ticket"], PathBuf::from("~/open-ticket"));
+}
+
+#[test]
+fn a_malformed_open_table_is_refused_with_the_path_and_line() {
+    for (name, text, line) in [
+        ("open-number", "[open]\nticket = 3\n", "line 2"),
+        ("open-table", "[open.ticket]\nprogram = \"x\"\n", "line 1"),
+        ("open-string", "open = \"x\"\n", "line 1"),
+    ] {
+        let (_folder, path) = written(name, text);
+
+        let message = read(&path, false, Some(Path::new("/h"))).err().unwrap();
+
+        assert!(message.starts_with(&path.display().to_string()), "{message:?}");
+        assert!(message.contains(line), "{message:?}");
+        assert!(message.contains("invalid type"), "{message:?}");
+    }
 }

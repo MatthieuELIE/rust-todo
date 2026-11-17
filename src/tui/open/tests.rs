@@ -1,4 +1,4 @@
-use super::super::tests::{app_of, lines, press, told};
+use super::super::tests::{TODAY, app_of, history_of, lines, press, told};
 use super::super::*;
 
 fn set(app: App, keys: &[&str]) -> App {
@@ -90,4 +90,29 @@ fn gx_on_a_folded_group_or_an_empty_list_opens_nothing_and_says_so() {
     let mut empty = set(app_of(&[]), &["ticket"]);
     press(&mut empty, "gx");
     assert_eq!((empty.open.clone(), told(&empty)), (None, Some(Notice::NoTaskUnderCursor)));
+}
+
+#[test]
+fn gx_in_the_history_leaves_the_program_set_for_a_key_of_the_done_task_to_open_and_writes_nothing() {
+    let mut app = set(history_of(&["one"], &["x 2026-09-25 old ticket:open/01 +rust-todo"]), &["ticket"]);
+
+    assert!(!press(&mut app, "Hgx"));
+    let opened = app.open.take().map(|opening| (opening.program, opening.value, opening.projects));
+    let program = PathBuf::from("/bin/open-ticket");
+    assert_eq!(opened, Some((program, "open/01".to_string(), "rust-todo".to_string())));
+    assert_eq!((told(&app), app.history.len(), lines(&app)), (None, 1, vec!["one".to_string()]));
+}
+
+#[test]
+fn gx_leaves_the_program_to_open_when_the_task_file_could_not_be_read() {
+    let mut app = set(app_of(&["one ticket:a/1"]), &["ticket"]);
+    let mut text = "one ticket:a/1\n".to_string();
+
+    for c in ['g', 'x'] {
+        let key = Some(Event::Key(KeyEvent::from(KeyCode::Char(c))));
+        assert!(!app.turn(Err(io::ErrorKind::PermissionDenied.into()), &mut text, key, TODAY));
+    }
+
+    assert_eq!(app.open.take().map(|opening| opening.value), Some("a/1".to_string()));
+    assert_eq!((told(&app), lines(&app)), (None, vec!["one ticket:a/1".to_string()]));
 }

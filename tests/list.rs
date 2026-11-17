@@ -152,6 +152,53 @@ fn due_keeps_the_pending_tasks_due_today_or_before() {
 }
 
 #[test]
+fn list_leaves_out_a_pending_task_whose_wake_up_date_is_after_today() {
+    let folder = common::folder("sleeping");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent t:2999-01-01\nCall the bank\n").unwrap();
+
+    let output = common::todo(&file, &["list"]);
+
+    assert!(output.status.success());
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  2  Call the bank\n");
+}
+
+#[test]
+fn the_latest_of_several_wake_up_dates_decides() {
+    let folder = common::folder("sleeping-latest");
+    let file = folder.join("todo.txt");
+    std::fs::write(
+        &file,
+        "Pay rent t:2020-01-01 t:2999-01-01\nCall the bank t:2999-01-01 t:2020-01-01\nBuy milk\n",
+    )
+    .unwrap();
+
+    let output = common::todo(&file, &["list"]);
+
+    assert_eq!(String::from_utf8_lossy(&output.stdout), "  3  Buy milk\n");
+}
+
+#[test]
+fn an_unreadable_wake_up_date_leaves_the_task_listed_and_is_accepted_when_added() {
+    let folder = common::folder("sleeping-unreadable");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "").unwrap();
+
+    let added = [
+        common::todo(&file, &["add", "2026-11-01 Pay rent t:demain"]),
+        common::todo(&file, &["add", "2026-11-01 Buy milk t:2026-99-99"]),
+        common::todo(&file, &["add", "2026-11-01 Call the bank t:2999-01-01"]),
+    ];
+    let output = common::todo(&file, &["list"]);
+
+    assert!(added.iter().all(|output| output.status.success()));
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "  1  2026-11-01 Pay rent t:demain\n  2  2026-11-01 Buy milk t:2026-99-99\n"
+    );
+}
+
+#[test]
 fn done_lists_done_txt_alone_in_file_order_numbered_by_position() {
     let folder = common::folder("list-done");
     std::fs::write(folder.join("todo.txt"), "Buy milk +home\n").unwrap();

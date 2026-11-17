@@ -289,3 +289,57 @@ fn do_writes_nothing_when_the_task_file_cannot_be_written() {
     assert!(String::from_utf8_lossy(&output.stderr).starts_with("could not save "));
     assert!(!created);
 }
+
+#[test]
+fn list_done_since_keeps_the_tasks_completed_on_the_date_or_after_in_file_order() {
+    let folder = folder("list-since");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "").unwrap();
+    let history =
+        "x 2026-11-09 2026-11-01 Pay rent\nx 2026-11-12 Buy milk\nx Water plants\n2026-11-11 Stray line\nx 2026-11-10 2026-11-09 Call the bank\n";
+    std::fs::write(folder.join("done.txt"), history).unwrap();
+
+    let output = todo(&file, &["list", "--done", "--since", "2026-11-10"]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "  2  x 2026-11-12 Buy milk\n  5  x 2026-11-10 2026-11-09 Call the bank\n"
+    );
+}
+
+#[test]
+fn list_done_since_with_terms_keeps_the_tasks_of_the_period_carrying_every_term() {
+    let folder = folder("list-since-terms");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "").unwrap();
+    let history = "x 2026-11-09 Plan +projet @review\nx 2026-11-10 Fix +projet @review\nx 2026-11-11 Draft +projet\nx 2026-11-12 Read @review\nx 2026-11-13 Merge @review +projet\n";
+    std::fs::write(folder.join("done.txt"), history).unwrap();
+
+    let output = todo(&file, &["list", "--done", "--since", "2026-11-10", "+projet", "@review"]);
+
+    assert!(output.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "  2  x 2026-11-10 Fix +projet @review\n  5  x 2026-11-13 Merge @review +projet\n"
+    );
+}
+
+#[test]
+fn list_done_since_a_period_with_nothing_done_says_so_and_succeeds() {
+    let folder = folder("list-since-empty");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "").unwrap();
+    std::fs::write(folder.join("done.txt"), "x 2026-11-09 Pay rent +home\nx Water plants +home\n").unwrap();
+
+    let outputs = [
+        (todo(&file, &["list", "--done", "--since", "2026-11-10"]), "nothing done\n"),
+        (todo(&file, &["list", "--done", "--since", "2026-11-10", "+home"]), "no matching task\n"),
+    ];
+
+    for (output, message) in outputs {
+        assert!(output.status.success());
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), message);
+    }
+}

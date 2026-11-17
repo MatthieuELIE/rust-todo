@@ -1,6 +1,9 @@
 use std::num::ParseIntError;
 
 use clap::{Args, Parser, Subcommand};
+use time::Date;
+
+use crate::todo::parse_date;
 
 /// Minimal todo.txt editor.
 #[derive(Parser)]
@@ -19,6 +22,10 @@ pub enum Commands {
     List {
         #[command(flatten)]
         flags: ListFlags,
+
+        /// Keep the done tasks completed on this YYYY-MM-DD date or after
+        #[arg(long, value_parser = date)]
+        since: Option<Date>,
 
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
         #[arg(allow_hyphen_values = true)]
@@ -127,6 +134,11 @@ fn task(arg: &str) -> Result<Task, ParseIntError> {
     }
 
     Ok(Task::Term(arg.to_owned()))
+}
+
+/// An argument as a `YYYY-MM-DD` date.
+fn date(arg: &str) -> Result<Date, &'static str> {
+    parse_date(arg).ok_or("not a YYYY-MM-DD date")
 }
 
 #[cfg(test)]

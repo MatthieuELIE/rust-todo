@@ -23,6 +23,8 @@ pub enum Notice {
     CopiedText,
     /// `y` in the popup found an empty range.
     NothingToCopy,
+    /// `gx` found no key:value of the task whose key has a program under `[open]`.
+    NothingToOpen,
     /// `r` brought a task of the history back.
     Reopened,
     /// `u` undid a change of the list.
@@ -78,6 +80,7 @@ impl Notice {
             Notice::Copied => "Task copied to the clipboard".to_string(),
             Notice::CopiedText => "Copied to the clipboard".to_string(),
             Notice::NothingToCopy => "Nothing to copy".to_string(),
+            Notice::NothingToOpen => "No key:value of the task has a program under [open]".to_string(),
             Notice::Reopened => "Task reopened, press H then u to undo".to_string(),
             Notice::ChangeUndone => "Change undone, press Ctrl-r to redo".to_string(),
             Notice::ChangeRedone => "Change redone, press u to undo".to_string(),
@@ -120,7 +123,12 @@ impl Notice {
             | Notice::NothingDueMatchesSearch
             | Notice::Discarded
             | Notice::NoChanges => Kind::Info,
-            Notice::NotPriority | Notice::HistoryReadOnly | Notice::NoTaskUnderCursor | Notice::NothingToCopy | Notice::Refused(_) => Kind::Refusal,
+            Notice::NotPriority
+            | Notice::HistoryReadOnly
+            | Notice::NoTaskUnderCursor
+            | Notice::NothingToCopy
+            | Notice::NothingToOpen
+            | Notice::Refused(_) => Kind::Refusal,
             _ => Kind::Success,
         }
     }

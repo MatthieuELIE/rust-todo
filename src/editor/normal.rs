@@ -52,15 +52,8 @@ impl Editor {
                     code => motion(&chars, at, code).map(|to| at.min(to)..at.max(to)),
                 };
 
-                if let Some(range) = range {
-                    if pending == Some('y') {
-                        copy = Some(self.yank(&chars, range));
-                    } else {
-                        self.remove(range.start, range.end);
-                        if pending == Some('c') {
-                            self.mode = Mode::Insert;
-                        }
-                    }
+                if let (Some(range), Some(op)) = (range, pending) {
+                    copy = self.operate(&chars, op, range);
                 }
             }
             KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
@@ -96,6 +89,23 @@ impl Editor {
         }
 
         copy
+    }
+
+    /// Applies `d`, `c` or `y` (`op`) to `range`, and returns what `y` copies.
+    pub(super) fn operate(&mut self, chars: &[char], op: char, range: std::ops::Range<usize>) -> Option<String> {
+        match op {
+            'y' => Some(self.yank(chars, range)),
+            'c' => {
+                self.remove(range.start, range.end);
+                self.mode = Mode::Insert;
+                None
+            }
+            _ => {
+                self.remove(range.start, range.end);
+                self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+                None
+            }
+        }
     }
 
     /// Puts the cursor at the start of `range` and returns its characters to copy, the text unchanged.

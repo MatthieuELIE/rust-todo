@@ -222,10 +222,11 @@ fn the_tag_is_the_word_before_the_cursor_when_it_starts_with_a_plus_an_at_or_wai
 }
 
 #[test]
-fn a_bare_due_before_the_cursor_wants_a_date_in_insert_mode_only() {
-    assert!(editor("Pay due:", 8).wants_date());
-    assert!(!editor("Pay due:2026", 12).wants_date());
-    assert!(!normal("Pay due: rent", 8).wants_date());
+fn a_bare_due_or_t_before_the_cursor_wants_a_date_in_insert_mode_only() {
+    assert_eq!(editor("Pay due:", 8).date_key(), Some("due:"));
+    assert_eq!(editor("Pay t:", 6).date_key(), Some("t:"));
+    assert_eq!(editor("Pay due:2026", 12).date_key(), None);
+    assert_eq!(normal("Pay due: rent", 8).date_key(), None);
 }
 
 #[test]

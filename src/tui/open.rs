@@ -14,10 +14,11 @@ pub struct Opening {
 }
 
 impl App {
-    /// Leaves to open the program set for a key:value of the task under the cursor, or says there is no task there.
+    /// Leaves to open the program set for a key:value of the task under the cursor, or says there is no task there or no program for it.
     pub(super) fn open_selected(&mut self) {
         match self.selected_task().map(|todo| opening(todo, &self.programs)) {
-            Some(opening) => self.open = opening,
+            Some(Some(opening)) => self.open = Some(opening),
+            Some(None) => self.notify(Notice::NothingToOpen),
             None => self.notify(Notice::NoTaskUnderCursor),
         }
     }

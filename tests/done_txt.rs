@@ -343,3 +343,32 @@ fn list_done_since_a_period_with_nothing_done_says_so_and_succeeds() {
         assert_eq!(String::from_utf8_lossy(&output.stderr), message);
     }
 }
+
+#[test]
+fn list_since_without_done_is_refused_by_the_arguments() {
+    let folder = folder("list-since-pending");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent\n").unwrap();
+
+    let outputs = [
+        (
+            todo(&file, &["list", "--since", "2026-11-10"]),
+            "required arguments were not provided:\n  --done",
+        ),
+        (
+            todo(&file, &["list", "--due", "--since", "2026-11-10"]),
+            "'--due' cannot be used with '--since",
+        ),
+        (
+            todo(&file, &["list", "--sleeping", "--since", "2026-11-10"]),
+            "'--sleeping' cannot be used with '--since",
+        ),
+    ];
+
+    for (output, reason) in outputs {
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(error.contains(reason), "{error}");
+    }
+}

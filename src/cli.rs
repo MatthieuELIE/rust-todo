@@ -24,7 +24,7 @@ pub enum Commands {
         flags: ListFlags,
 
         /// Keep the done tasks completed on this YYYY-MM-DD date or after
-        #[arg(long, value_parser = date)]
+        #[arg(long, value_parser = date, requires = "done", conflicts_with_all = ["due", "sleeping"])]
         since: Option<Date>,
 
         /// Case-insensitive terms every listed task must contain, or lack with a leading -

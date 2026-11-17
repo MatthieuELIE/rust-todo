@@ -31,7 +31,7 @@ fn main() -> ExitCode {
     let no_color = config::no_color(std::env::var_os("NO_COLOR"));
 
     let home = std::env::home_dir();
-    let (theme, icons, _) = match config::read(
+    let (theme, icons, programs) = match config::read(
         &config::path(std::env::var_os("XDG_CONFIG_HOME"), home.clone()),
         no_color,
         home.as_deref(),
@@ -71,7 +71,7 @@ fn main() -> ExitCode {
     };
 
     let Some(command) = cli.command else {
-        return match terminal::run(todos, text, &path, theme, icons) {
+        return match terminal::run(todos, text, &path, theme, icons, programs) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 eprintln!("{e}");

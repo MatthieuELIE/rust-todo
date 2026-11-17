@@ -1,7 +1,8 @@
 use std::cell::Cell;
 use std::cmp::Reverse;
+use std::collections::HashMap;
 use std::io;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 use ratatui::crossterm::cursor::SetCursorStyle;
@@ -105,7 +106,7 @@ pub struct App {
     pub today: Option<Date>,
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
-    /// First key of a two-key command (`gg`, `dd`, `yy`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
+    /// First key of a two-key command (`gg`, `gx`, `dd`, `yy`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
     pending: Option<char>,
     /// Set once the user asked to leave.
     pub quit: bool,
@@ -115,6 +116,10 @@ pub struct App {
     pub toast: Option<Toast>,
     /// What `yy` or the popup's `y` asked to copy, taken by the loop of the list.
     pub copy: Option<Clip>,
+    /// The program `config.toml` sets under `[open]` for each key.
+    pub programs: HashMap<String, PathBuf>,
+    /// What `gx` asked to open, taken by the loop of the list.
+    pub open: Option<Opening>,
     /// Where the keys go.
     pub focus: Focus,
     /// Where the keys go back to when the help closes: what the help covers while it is open.
@@ -271,12 +276,14 @@ mod completions;
 mod files;
 mod help;
 mod list;
+mod open;
 mod panel;
 mod picker;
 mod popup;
 mod rows;
 mod search;
 
+pub use open::Opening;
 pub use panel::{DUE_NOW, SLEEPING, WAITING};
 use panel::{missing_word, shows};
 pub use popup::{Popup, Target};

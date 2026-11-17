@@ -1616,6 +1616,7 @@ name = "todo"
 version = "0.8.4"
 dependencies = [
  "clap",
+ "libc",
  "ratatui",
  "serde",
  "time",

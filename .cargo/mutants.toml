@@ -18,7 +18,7 @@ exclude_re = [
     # A priority is a letter from A to E, so the index is at most 4 and the bound never applies.
     'src/view/style\.rs:79:96: replace - with [+/] in priority',
     # CONTROL and ALT are disjoint flags: `^` gives the same set as `|`.
-    'src/tui\.rs:215:63: replace \| with \^ in App::apply',
+    'src/tui\.rs:220:63: replace \| with \^ in App::apply',
     'src/tui/help\.rs:18:65: replace \| with \^ in App::help_key',
     'src/tui/popup\.rs:(33:64|43:69): replace \| with \^ in App::popup_key',
 ]

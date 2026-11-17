@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - The list no longer reads the task file and redraws four times a second at rest: it reads the file when its modification date or size changes, and redraws on a key, a reload, a toast expiring or a new day.
+- The code of `todo list` is split out of the code of the other commands; nothing in the commands or the list changes.
 
 ### Fixed
 

@@ -1,11 +1,7 @@
 use std::fmt::Display;
-use std::io::{self, IsTerminal, Write};
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
-
-use ratatui::backend::IntoCrossterm;
-use ratatui::text::Line;
-use time::Date;
 
 use crate::cli::{Commands, Task};
 use crate::filter;
@@ -13,29 +9,6 @@ use crate::repository;
 use crate::theme::Theme;
 use crate::today;
 use crate::todo::Todo;
-use crate::view;
-
-/// `text` with each control character replaced, so that a line of the file cannot drive the terminal.
-fn clean(text: &str) -> String {
-    text.replace(crate::todo::is_control, "\u{fffd}")
-}
-
-/// A task as `list` prints it, without its number: styled on a terminal, its plain line otherwise.
-fn shown(theme: &Theme, todo: &Todo, today: Date) -> String {
-    if std::io::stdout().is_terminal() {
-        styled(&view::line(theme, 0, todo, today))
-    } else {
-        clean(&todo.shown_line())
-    }
-}
-
-/// A listed line, without its number, as text carrying its styles for a terminal.
-fn styled(line: &Line) -> String {
-    line.iter()
-        .skip(1)
-        .map(|span| span.style.into_crossterm().apply(clean(&span.content)).to_string())
-        .collect()
-}
 
 /// The number of the one pending task `term` matches, as `list` matches it, or the message saying how many match.
 fn pending_match(todos: &[Todo], term: &str) -> Result<usize, String> {
@@ -112,34 +85,6 @@ fn in_range(todos: &[Todo], number: usize) -> Result<(), Stop> {
     }
 
     Ok(())
-}
-
-/// Prints the tasks `list` shows and returns its exit code.
-fn list(todos: &[Todo], due: bool, done: bool, terms: &[String], theme: &Theme) -> ExitCode {
-    let today = today();
-    let mut tasks = filter::list(todos, terms);
-    tasks.retain(|(_, todo)| done || (!todo.done && (!due || todo.is_due(today))));
-
-    if done {
-        tasks.sort_by_key(|(number, _)| *number);
-    }
-
-    if tasks.is_empty() {
-        let nothing = if due {
-            "nothing due"
-        } else if done {
-            "nothing done"
-        } else {
-            "nothing to do"
-        };
-
-        eprintln!("{}", if terms.is_empty() { nothing } else { "no matching task" });
-    }
-    for (number, todo) in tasks {
-        println!("{}{}", view::number(number), shown(theme, todo, today));
-    }
-
-    ExitCode::SUCCESS
 }
 
 fn add(mut todos: Vec<Todo>, text: &str) -> Step {
@@ -268,7 +213,7 @@ fn apply(plan: Plan, path: &Path, done_path: &Path, theme: &Theme) -> ExitCode {
     }
 
     if let Some((verb, todo)) = plan.confirmed {
-        let _ = writeln!(io::stdout(), "{verb}: {}", shown(theme, &todo, today()));
+        let _ = writeln!(io::stdout(), "{verb}: {}", list::shown(theme, &todo, today()));
     }
     if let Some(count) = plan.archived {
         let _ = writeln!(io::stdout(), "{count} task{} archived", if count == 1 { "" } else { "s" });
@@ -294,7 +239,7 @@ pub fn run(command: Commands, path: PathBuf, todos: Vec<Todo>, theme: Theme) -> 
             }
             .exit();
         }
-        Commands::List { due, done, terms } => return list(&todos, due, done, &terms, &theme),
+        Commands::List { due, done, terms } => return list::list(&todos, due, done, &terms, &theme),
         Commands::Add { text } => add(todos, &text),
         Commands::Remove { number } => remove(todos, number),
         Commands::Do { number } => do_task(todos, number),
@@ -311,5 +256,4 @@ pub fn run(command: Commands, path: PathBuf, todos: Vec<Todo>, theme: Theme) -> 
     }
 }
 
-#[cfg(test)]
-mod tests;
+mod list;

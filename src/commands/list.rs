@@ -34,10 +34,10 @@ fn styled(line: &Line) -> String {
 }
 
 /// Prints the tasks `list` shows and returns its exit code.
-pub(super) fn list(todos: &[Todo], due: bool, done: bool, terms: &[String], theme: &Theme) -> ExitCode {
+pub(super) fn list(todos: &[Todo], due: bool, done: bool, sleeping: bool, terms: &[String], theme: &Theme) -> ExitCode {
     let today = today();
     let mut tasks = filter::list(todos, terms);
-    tasks.retain(|(_, todo)| done || (!todo.done && !todo.is_sleeping(today) && (!due || todo.is_due(today))));
+    tasks.retain(|(_, todo)| done || (!todo.done && todo.is_sleeping(today) == sleeping && (!due || todo.is_due(today))));
 
     if done {
         tasks.sort_by_key(|(number, _)| *number);
@@ -48,6 +48,8 @@ pub(super) fn list(todos: &[Todo], due: bool, done: bool, terms: &[String], them
             "nothing due"
         } else if done {
             "nothing done"
+        } else if sleeping {
+            "nothing sleeping"
         } else {
             "nothing to do"
         };

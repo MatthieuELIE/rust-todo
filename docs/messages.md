@@ -63,6 +63,7 @@ A `config.toml` that is refused stops every command, and `todo` with no command 
 | --- | --- | --- |
 | `<path>: TOML parse error at line 2, column 8 … unknown variant `nord`, expected one of `catppuccin-latte`, `catppuccin-frappe`, `catppuccin-macchiato`, `catppuccin-mocha`, `terminal`` | `[theme]` has a `name` that is not a valid theme name; the message lists the valid ones | 1 |
 | `<path>: TOML parse error at line 2, column 9 … invalid type: string "yes", expected a boolean` | `icons` in `[theme]` is not `true` or `false` | 1 |
+| `<path>: TOML parse error at line 2, column 10 … invalid type: integer `3`, expected a string` | a key of `[open]` has a value that is not a string, the path of a program | 1 |
 | `<path>: TOML parse error at line 2, column 1 … unknown field `colour`` | the file has a key or a section that `todo` does not know | 1 |
 | `<path>: TOML parse error at line 1, column 7 …` | the file is not valid TOML | 1 |
 | `could not read <path>: <reason>` | `config.toml` exists and cannot be read, or is not UTF-8 text | 1 |
@@ -82,8 +83,10 @@ With `icons = true` ([Configuration](config.md#icons)) a Nerd Font icon comes fi
 | `Task copied to the clipboard` | green | `yy` put the line of the task under the cursor in the clipboard; the bar does not show the line |
 | `Copied to the clipboard` | green | `y` in the popup put a part of its text in the clipboard |
 | `Nothing to copy` | red | `y` in the popup found an empty range; the clipboard is left as it was |
-| `No task under the cursor` | red | `yy` was pressed on a group header or in an empty list; nothing is copied |
+| `No task under the cursor` | red | `yy` or `gx` was pressed on a group header or in an empty list; nothing is copied or opened |
 | `Could not copy: <reason>` | red | `yy` could not run `pbcopy` (it is missing on Linux, for one) or it failed |
+| `No key:value of the task has a program under [open]` | red | `gx` found no key:value of the task whose key has a program under [`[open]`](config.md#open), or that table is empty or missing; nothing is opened |
+| `Could not open <program path>: <reason>` | red | `gx` could not start the program set under `[open]`, because it does not exist or is not executable; the reason is the system's, and the list goes on |
 | `No task due` | grey | `D` was pressed with no pending task due today or before; the filter is kept |
 | `No due task matches the search` | grey | `D` was pressed while the search hides every pending task due today or before; the filter and the search are kept |
 | `History is read-only` | red | `x`, `dd`, `o`, `Enter`, `p`, `u`, `Ctrl-R` or `D` was pressed in the history, the list of `done.txt` shown by `H` |

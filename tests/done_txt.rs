@@ -66,6 +66,19 @@ fn do_writes_the_task_to_done_txt_without_its_wait() {
 }
 
 #[test]
+fn do_writes_a_sleeping_task_to_done_txt_with_its_wake_up_date() {
+    let folder = folder("do-sleeping");
+    let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));
+    std::fs::write(&file, "2026-11-01 Pay rent t:2999-01-01 +home\n").unwrap();
+
+    let output = todo(&file, &["do", "1"]);
+
+    let written = std::fs::read_to_string(&done).unwrap();
+    assert!(output.status.success());
+    assert!(written.trim_end().ends_with(" 2026-11-01 Pay rent t:2999-01-01 +home"), "{written}");
+}
+
+#[test]
 fn archive_moves_the_done_tasks_to_the_end_of_done_txt_in_file_order() {
     let folder = folder("archive");
     let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));

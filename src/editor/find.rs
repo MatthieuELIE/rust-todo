@@ -37,26 +37,14 @@ impl Editor {
         let at = self.cursor;
         let to = find(chars, at, kind, target, repeat)?;
 
-        if pending.is_none() {
+        let Some(op) = pending else {
             self.cursor = to;
             return None;
-        }
+        };
 
         let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
 
-        if pending == Some('y') {
-            return Some(self.yank(chars, range));
-        }
-
-        self.remove(range.start, range.end);
-
-        if pending == Some('c') {
-            self.mode = Mode::Insert;
-        } else {
-            self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
-        }
-
-        None
+        self.operate(chars, op, range)
     }
 }
 

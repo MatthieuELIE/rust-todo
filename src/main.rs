@@ -21,7 +21,7 @@ use clap::Parser;
 use ratatui::crossterm::style::force_color_output;
 use time::{Date, OffsetDateTime};
 
-use cli::{Cli, Commands};
+use cli::{Cli, Commands, Listing};
 use theme::Theme;
 
 /// Entry point for the todo CLI application.
@@ -46,7 +46,7 @@ fn main() -> ExitCode {
         force_color_output(true);
     }
 
-    let path = if matches!(cli.command, Some(Commands::List { done: true, .. })) {
+    let path = if matches!(&cli.command, Some(Commands::List { flags, .. }) if flags.listing() == Listing::Done) {
         path.with_file_name("done.txt")
     } else {
         path

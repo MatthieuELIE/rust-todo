@@ -1,6 +1,6 @@
 use std::num::ParseIntError;
 
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 
 /// Minimal todo.txt editor.
 #[derive(Parser)]
@@ -17,17 +17,8 @@ pub enum Commands {
     /// List pending tasks (--done for done.txt), filtered by terms (-term excludes)
     #[command(alias = "ls")]
     List {
-        /// Keep the pending tasks whose due date is today or past
-        #[arg(long)]
-        due: bool,
-
-        /// List done.txt instead, in the order of the file
-        #[arg(long, conflicts_with = "due")]
-        done: bool,
-
-        /// Keep only the pending tasks whose t: date is after today, which list leaves out otherwise
-        #[arg(long, conflicts_with_all = ["due", "done"])]
-        sleeping: bool,
+        #[command(flatten)]
+        flags: ListFlags,
 
         /// Case-insensitive terms every listed task must contain, or lack with a leading -
         #[arg(allow_hyphen_values = true)]
@@ -75,6 +66,51 @@ pub enum Commands {
 
     /// Move the done tasks to the end of done.txt, next to the task file
     Archive,
+}
+
+/// The flags of `list`, of which at most one is given.
+#[derive(Args)]
+#[group(multiple = false)]
+pub struct ListFlags {
+    /// Keep the pending tasks whose due date is today or past
+    #[arg(long)]
+    due: bool,
+
+    /// List done.txt instead, in the order of the file
+    #[arg(long)]
+    done: bool,
+
+    /// Keep only the pending tasks whose t: date is after today, which list leaves out otherwise
+    #[arg(long)]
+    sleeping: bool,
+}
+
+/// The tasks `list` shows.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Listing {
+    Pending,
+    Due,
+    Done,
+    Sleeping,
+}
+
+impl ListFlags {
+    /// The listing its given flag names, the pending tasks without one.
+    pub fn listing(&self) -> Listing {
+        if self.due {
+            return Listing::Due;
+        }
+
+        if self.done {
+            return Listing::Done;
+        }
+
+        if self.sleeping {
+            return Listing::Sleeping;
+        }
+
+        Listing::Pending
+    }
 }
 
 /// The task a command names: by its number, or by a term.

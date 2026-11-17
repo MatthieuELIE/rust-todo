@@ -43,17 +43,30 @@ fn edit_takes_a_number_made_only_of_digits_and_a_term_otherwise() {
 #[test]
 fn list_flags_come_before_terms_which_may_start_with_a_dash() {
     let terms_of = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
-        Some(Commands::List { due, terms, .. }) => (due, terms),
+        Some(Commands::List { flags, terms }) => (flags.listing(), terms),
         _ => panic!("not a list command"),
     };
 
     assert_eq!(
         terms_of(&["todo", "list", "--due", "+work", "-@home"]),
-        (true, vec!["+work".into(), "-@home".into()])
+        (Listing::Due, vec!["+work".into(), "-@home".into()])
     );
     assert_eq!(
         terms_of(&["todo", "list", "+work", "--due"]),
-        (false, vec!["+work".into(), "--due".into()])
+        (Listing::Pending, vec!["+work".into(), "--due".into()])
     );
     assert!(Cli::try_parse_from(["todo", "list", "--done", "--due"]).is_err());
+}
+
+#[test]
+fn list_flags_name_its_listing() {
+    let listing = |args: &[&str]| match Cli::try_parse_from(args).unwrap().command {
+        Some(Commands::List { flags, .. }) => flags.listing(),
+        _ => panic!("not a list command"),
+    };
+
+    assert_eq!(listing(&["todo", "list"]), Listing::Pending);
+    assert_eq!(listing(&["todo", "list", "--due"]), Listing::Due);
+    assert_eq!(listing(&["todo", "list", "--done"]), Listing::Done);
+    assert_eq!(listing(&["todo", "list", "--sleeping"]), Listing::Sleeping);
 }

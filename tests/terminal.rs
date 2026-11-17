@@ -191,6 +191,42 @@ fn yy_hands_the_task_line_to_pbcopy_and_says_it_was_copied() {
     assert_eq!(std::fs::read_to_string(dir.join("clipboard")).unwrap(), "(A) call the bank");
 }
 
+fn wait_for_file(path: &Path) {
+    let start = Instant::now();
+
+    while !path.exists() {
+        assert!(start.elapsed() < DEADLINE, "{} never showed", path.display());
+        std::thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[test]
+fn gx_runs_the_program_set_for_the_key_unshelled_and_detached_and_the_list_keeps_answering() {
+    let dir = dir_with("pty-open", "call the bank +home +bank @phone ticket:a;b'c$(echo_x)\n");
+    std::fs::write(dir.join("config/todo/config.toml"), "[open]\nticket = \"~/bin/open-ticket\"\n").unwrap();
+    let program = dir.join("bin/open-ticket");
+    let script = format!(
+        "#!/bin/sh\ncd '{}'\nprintf '%s\\n%s\\n%s\\n' \"$1\" \"$TODO_PROJECTS\" \"$TODO_CONTEXTS\" > got.tmp\nmv got.tmp got\ni=0\nwhile [ ! -e release ] && [ $i -lt 200 ]; do sleep 0.05; i=$((i + 1)); done\n: > outlived\n",
+        dir.display()
+    );
+    std::fs::write(&program, script).unwrap();
+    std::fs::set_permissions(&program, std::fs::Permissions::from_mode(0o755)).unwrap();
+    let mut pty = Pty::open(&dir, &[], false);
+
+    pty.wait_for("bank");
+    pty.press("gx");
+    wait_for_file(&dir.join("got"));
+    pty.press("x");
+    pty.wait_for("Task done, press u to undo");
+    pty.press("q");
+    pty.finish();
+    std::fs::write(dir.join("release"), "").unwrap();
+    wait_for_file(&dir.join("outlived"));
+
+    let got = std::fs::read_to_string(dir.join("got")).unwrap();
+    assert_eq!(got, "a;b'c$(echo_x)\nhome bank\nphone\n");
+}
+
 #[test]
 fn todo_list_on_a_terminal_under_no_color_keeps_the_bold_and_has_no_colour() {
     let dir = dir_with("pty-no-color", "(A) call the bank\n");

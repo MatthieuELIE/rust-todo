@@ -58,6 +58,7 @@ impl App {
             KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
             KeyCode::Char('g') => self.pending = Some('g'),
             KeyCode::Char('G') => self.cursor = last,
+            KeyCode::Char('x') if pending == Some('g') => self.open_selected(),
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
                     let mut todo = self.todos.remove(number - 1);

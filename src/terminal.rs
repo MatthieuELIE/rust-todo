@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::io::{self, Write};
-use std::path::Path;
+use std::os::unix::process::CommandExt;
+use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Duration, Instant};
 
@@ -11,14 +13,15 @@ use ratatui::widgets::ListState;
 
 use crate::theme::Theme;
 use crate::todo::Todo;
-use crate::tui::App;
+use crate::tui::{App, Opening};
 use crate::{repository, today, view};
 
-/// Runs the list until the user quits, saving to `path` on each change and reloading when the file no longer matches `text`.
-pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons: bool) -> io::Result<()> {
+/// Runs the list until the user quits, saving to `path` on each change, reloading when the file no longer matches `text`, and opening a key:value with `programs`.
+pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons: bool, programs: HashMap<String, PathBuf>) -> io::Result<()> {
     let mut app = App::new(todos);
     app.theme = theme;
     app.icons = icons;
+    app.programs = programs;
     app.today = Some(today());
     let mut scroll = ListState::default();
 
@@ -64,6 +67,10 @@ pub fn run(todos: Vec<Todo>, mut text: String, path: &Path, theme: Theme, icons:
                 if let Some(clip) = app.copy.take() {
                     app.copied(&clip, pbcopy(clip.text()));
                 }
+
+                if let Some(opening) = app.open.take() {
+                    let _ = open(&opening);
+                }
             }
 
             Ok(())
@@ -83,6 +90,28 @@ fn pbcopy(line: &str) -> io::Result<()> {
     }
 
     written
+}
+
+/// Starts the program of `opening` on its value, without a shell, its standard streams cut, in a session of its own so it outlives a popup that closes, and does not wait for it.
+fn open(opening: &Opening) -> io::Result<()> {
+    let mut command = Command::new(&opening.program);
+    command
+        .arg(&opening.value)
+        .env("TODO_PROJECTS", &opening.projects)
+        .env("TODO_CONTEXTS", &opening.contexts)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+
+    // SAFETY: setsid is async-signal-safe, so it may run between fork and exec.
+    unsafe {
+        command.pre_exec(|| {
+            libc::setsid();
+            Ok(())
+        });
+    }
+
+    command.spawn().map(drop)
 }
 
 /// Runs `f` on the terminal set up for the full screen and puts it back, with an error when it cannot be set up.

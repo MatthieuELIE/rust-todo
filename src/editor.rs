@@ -149,7 +149,7 @@ impl Editor {
         self.cursor += text.chars().count();
 
         if self.mode == Mode::Normal {
-            self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+            self.clamp_cursor();
         }
         self.settle();
     }

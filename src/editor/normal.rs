@@ -85,7 +85,7 @@ impl Editor {
         }
 
         if self.mode == Mode::Normal {
-            self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+            self.clamp_cursor();
         }
 
         copy
@@ -102,7 +102,7 @@ impl Editor {
             }
             _ => {
                 self.remove(range.start, range.end);
-                self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
+                self.clamp_cursor();
                 None
             }
         }
@@ -113,6 +113,11 @@ impl Editor {
         self.cursor = range.start;
 
         chars[range].iter().collect()
+    }
+
+    /// Keeps the cursor on a character, on the last one when it was past the end.
+    pub(super) fn clamp_cursor(&mut self) {
+        self.cursor = self.cursor.min(self.text.chars().count().saturating_sub(1));
     }
 
     /// Writes priority `c`, `a` to `e` or a space to drop it, at the start of a pending line, the cursor kept on its character.

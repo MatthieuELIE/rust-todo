@@ -99,8 +99,26 @@ pub(super) fn shows(todo: &Todo, term: Option<&str>, today: Option<Date>) -> boo
     }
 }
 
+/// The word a task added under the panel entry `term` lacks to show there: today's due date under `Due`, the term itself under a `+project` or an `@context`.
+pub(super) fn missing_word(todo: &Todo, term: Option<&str>, today: Date) -> Option<String> {
+    match term {
+        None | Some(WAITING | SLEEPING) => None,
+        Some(DUE_NOW) if has_due_date(todo) => None,
+        Some(DUE_NOW) => Some(format!("{DUE}{today}")),
+        Some(term) if has_word(todo, term) => None,
+        Some(term) => Some(term.to_owned()),
+    }
+}
+
+/// Whether `todo`'s description carries a `due:` word with a value.
+fn has_due_date(todo: &Todo) -> bool {
+    todo.description
+        .split_whitespace()
+        .any(|word| word.strip_prefix(DUE).is_some_and(|value| !value.is_empty()))
+}
+
 /// Whether `term` is one of the words of `todo`'s description, case included, as the panel names a `+project` or an `@context`.
-pub(super) fn has_word(todo: &Todo, term: &str) -> bool {
+fn has_word(todo: &Todo, term: &str) -> bool {
     todo.description.split_whitespace().any(|word| word == term)
 }
 

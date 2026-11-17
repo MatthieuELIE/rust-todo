@@ -278,7 +278,7 @@ mod rows;
 mod search;
 
 pub use panel::{DUE_NOW, SLEEPING, WAITING};
-use panel::{has_word, shows};
+use panel::{missing_word, shows};
 pub use popup::{Popup, Target};
 
 #[cfg(test)]

@@ -68,6 +68,7 @@ Ctrl-w       erase a word
 Ctrl-u       erase to the start
 Tab          complete +, @ or wait:
 ↓/↑/Ctrl-n/p pick a completion
+due:/t:      pick a due, wake-up date
 
 NORMAL
 h/l/0/$      move

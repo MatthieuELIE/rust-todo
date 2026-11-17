@@ -11,7 +11,7 @@ Each part of the line means one thing:
 - `2026-10-27` is the completion date, and `2026-10-20` the creation date. A pending task has only the creation date.
 - `Call the bank` is the description.
 - `+finance` is a project and `@phone` a context.
-- `due:2026-11-01` is a `key:value` word. `due` and `wait` mean something to `todo`.
+- `due:2026-11-01` is a `key:value` word. `due`, `wait` and `t` mean something to `todo`.
 
 Everything after the dates is the description: `+project`, `@context` and `key:value` are kept verbatim.
 Anything the parser does not recognise stays in the description rather than being dropped.
@@ -38,7 +38,7 @@ The same goes for a description starting with `x `, read as the done marker once
 
 ### Recognised keys
 
-Two `key:value` words mean something to `todo`; any other is kept as written and only greyed.
+Three `key:value` words mean something to `todo`; any other is kept as written and only greyed.
 
 - `due:2026-10-15` is the task's due date:
   - red once past and yellow on the day wherever the task is [listed](listing.md);
@@ -48,3 +48,10 @@ Two `key:value` words mean something to `todo`; any other is kept as written and
   - such tasks are gathered under `Waiting` in the [filter panel](interactive-list.md#filter-panel), and the popup completes the value;
   - the key is dropped when the task is completed: `Mail wait:designer +work` becomes `Mail +work` in `done.txt`, and reopening does not bring it back;
   - an empty `wait:` and a `wait://` link stay.
+- `t:2026-11-18` is the day the task wakes up; until then the task is sleeping:
+  - `todo list` and the interactive list leave it out, `todo list --sleeping` and the `Sleeping` entry of the [filter panel](interactive-list.md#filter-panel) show it;
+  - it wakes up on that day, not the day after, and with several `t:` the latest decides;
+  - it stays sleeping when it is also due, so `todo list --due` and `Due` leave it out too;
+  - a `t:` that is not a `YYYY-MM-DD` date, such as `t:tomorrow`, is an ordinary `key:value` and the task is shown;
+  - it is greyed like any `key:value`, kept when the task is completed, and picked from a calendar in [the popup](popup.md#date-picker);
+  - `do`, `remove` and `edit` act on a sleeping task as on any other.

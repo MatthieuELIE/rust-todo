@@ -8,6 +8,7 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Added
 
 - A `t:2026-11-18` in a pending task puts it to sleep until that day: `todo list`, with or without terms or `--due`, leaves it out, and `todo list --sleeping` lists only the sleeping tasks; `do`, `remove` and `edit` still act on them.
+- The interactive list leaves the sleeping tasks out of `All tasks`, `Due`, `Waiting`, the projects and the contexts, and shows them under a new `Sleeping` entry of the filter panel; typing `t:` in the popup opens the date picker, as `due:` does. See [Line format](docs/line-format.md#recognised-keys).
 
 ## [0.8.4] - 2026-11-17
 

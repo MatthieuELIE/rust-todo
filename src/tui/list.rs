@@ -13,7 +13,8 @@ impl App {
         };
 
         let writes = match key.code {
-            KeyCode::Char('x' | 'o' | 'p' | 'u') | KeyCode::Enter => true,
+            KeyCode::Char('x') => pending != Some('g'),
+            KeyCode::Char('o' | 'p' | 'u') | KeyCode::Enter => true,
             KeyCode::Char('d') => pending == Some('d'),
             KeyCode::Char('r') => key.modifiers == KeyModifiers::CONTROL,
             _ => false,

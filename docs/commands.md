@@ -14,6 +14,7 @@ todo list +finance -@phone    # tasks with +finance and without @phone
 todo list --due               # pending tasks due today or overdue
 todo list --sleeping          # pending tasks whose t: date is after today
 todo list --done              # the tasks of done.txt
+todo list --done --since 2026-11-10  # those completed on 2026-11-10 or after
 todo reopen 2                 # move task 2 of done.txt back, pending again
 todo do 2                     # complete task 2: it moves to done.txt
 todo edit 2 "(B) Oat milk"    # replace pending task 2, its creation date kept
@@ -24,7 +25,7 @@ todo archive                  # move the done tasks to done.txt
 
 | Command | Action |
 | --- | --- |
-| `todo list [--due] [terms]`, `todo list --sleeping [terms]`, `todo list --done [terms]` | list the pending tasks, the sleeping ones, or those of `done.txt` |
+| `todo list [--due] [terms]`, `todo list --sleeping [terms]`, `todo list --done [--since <date>] [terms]` | list the pending tasks, the sleeping ones, or those of `done.txt`, from a date on with `--since` |
 | `todo add "<line>"` | append a task |
 | `todo edit <number> "<line>"`, `todo edit <term> "<line>"` | replace a pending task |
 | `todo do <number>` | complete a task: it moves to `done.txt` |

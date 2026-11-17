@@ -25,7 +25,7 @@ Messages go to stderr; what the commands print on stdout is described in [Comman
 | `nothing to do` | `list` has no pending task to show | 0 |
 | `nothing due` | `list --due` has no pending task due today or before | 0 |
 | `nothing sleeping` | `list --sleeping` has no pending task whose `t:` date is after today | 0 |
-| `nothing done` | `list --done` found no `done.txt`, or an empty one | 0 |
+| `nothing done` | `list --done` found no `done.txt`, or an empty one, or `--since` kept none of its tasks | 0 |
 | `no matching task` | `list` was given terms and no task has them | 0 |
 | `a task needs more than +projects, @contexts and key: words` | `add` or `edit` was given a text with no word that is not a `+project`, an `@context`, a `key:` word (`wait:` and a bare URL included), a priority `(A)` to `(E)` or a date; an empty text is one. An `edit` that leaves the line unchanged is not checked | 1 |
 | `cannot add a task that is already done` | `add` was given a line starting with `x `, the `x` and a space | 1 |
@@ -46,7 +46,7 @@ Messages go to stderr; what the commands print on stdout is described in [Comman
 | `could not save <path>: <reason> (file left unchanged)` | the task file or its folder cannot be written, or `done.txt` for `archive`, `do` and `reopen` | 1 |
 | `could not set up the terminal: <reason>` | `todo` was run with no command and without a terminal, from a script for instance | 1 |
 | `--all is gone: list shows the pending tasks, list --done the done ones` | `list` was given `--all` or `-a` as its first argument | 2 |
-| `error: ...`, as clap words it | the command line itself is wrong: an unknown command or argument, a missing number or text, a number that is not one, `--done` with `--due`, `--sleeping` with `--due` or `--done` | 2 |
+| `error: ...`, as clap words it | the command line itself is wrong: an unknown command or argument, a missing number or text, a number that is not one, `--done` with `--due`, `--sleeping` with `--due` or `--done`, `--since` without `--done` or with `--due` or `--sleeping`, a `--since` value that is not an existing `YYYY-MM-DD` date, as `invalid value 'tomorrow' for '--since <SINCE>': not a YYYY-MM-DD date` | 2 |
 
 A command that is refused leaves the file as it was.
 When `archive` or `do` has added to `done.txt` and the task file then cannot be saved, the done tasks are in both files: remove them from one by hand before running it again.

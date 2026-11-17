@@ -13,7 +13,7 @@ todo list +finance -@phone
 
 `+` and `@` are plain characters, so `-+work` hides the `+work` tasks.
 Terms are compared as case-insensitive literal substrings.
-`--due` keeps the pending tasks due today or past, `--sleeping` the sleeping ones, and `--done` lists `done.txt`; all three are described below.
+`--due` keeps the pending tasks due today or past, `--sleeping` the sleeping ones, and `--done` lists `done.txt`, from a date on with `--since`; all of them are described below.
 
 ## Details
 
@@ -47,6 +47,18 @@ A line of `done.txt` that is not a done task is listed as it is.
 A done one is listed as `todo` would write it, without the priority a line such as `x (A) Pay rent` holds.
 A done task is never sleeping, so its `t:` hides nothing here.
 `--done` does not combine with `--due`.
+
+### Done since a date
+
+`--since` keeps the done tasks completed on a `YYYY-MM-DD` date or after: `todo list --done --since 2026-11-10`.
+The day given is included, so today's date lists what was done today.
+A line without a completion date is left out, and so is a line that is not a done task.
+The tasks keep the order and the numbers of `done.txt`, and the terms after it narrow the period: `todo list --done --since 2026-11-10 +work @review`.
+Like the flags, it goes before the terms; further on, it is one more term.
+With none in the period, it says `nothing done`, or `no matching task` with terms.
+
+`--since` needs `--done`, and does not combine with `--due` nor with `--sleeping`.
+A value that is not an existing `YYYY-MM-DD` date, such as `tomorrow` or `2026-02-30`, is refused with a message that names it.
 
 ### Pending tasks only
 

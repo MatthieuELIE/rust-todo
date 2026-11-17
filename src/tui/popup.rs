@@ -42,7 +42,7 @@ impl App {
             popup.picker = match key.code {
                 _ if key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT) => Some(date),
                 KeyCode::Enter => {
-                    popup.editor.complete(&format!("{DUE}{date}"));
+                    popup.editor.complete_date(date);
                     None
                 }
                 KeyCode::Esc => None,
@@ -74,7 +74,7 @@ impl App {
         popup.selected = 0;
         let outcome = popup.editor.handle_key(key);
 
-        if popup.editor.wants_date() {
+        if popup.editor.date_key().is_some() {
             popup.picker = Some(today);
         }
 

@@ -1,7 +1,8 @@
 use ratatui::crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use time::Date;
 
 use crate::toast::Notice;
-use crate::todo::{DUE, WAIT};
+use crate::todo::{DUE, SLEEP, WAIT};
 
 mod find;
 mod normal;
@@ -159,9 +160,16 @@ impl Editor {
         (self.mode == Mode::Insert && (word.starts_with(['+', '@']) || word.starts_with(WAIT))).then_some(word)
     }
 
-    /// Whether the word before the cursor is a bare `due:` waiting for its date, in insert mode only.
-    pub fn wants_date(&self) -> bool {
-        self.mode == Mode::Insert && self.word() == DUE
+    /// The bare `due:` or `t:` before the cursor, waiting for its date, in insert mode only.
+    pub fn date_key(&self) -> Option<&str> {
+        let word = self.word();
+        (self.mode == Mode::Insert && [DUE, SLEEP].contains(&word)).then_some(word)
+    }
+
+    /// Writes `date` after the bare `due:` or `t:` before the cursor, as `complete` writes a name.
+    pub fn complete_date(&mut self, date: Date) {
+        let word = format!("{}{date}", self.word());
+        self.complete(&word);
     }
 
     /// The word before the cursor, empty after a space.

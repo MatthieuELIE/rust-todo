@@ -10,7 +10,7 @@ use time::Date;
 use super::style::{floating, highlight, priority, tag_style, words};
 use crate::editor::Editor;
 use crate::theme::Theme;
-use crate::todo::{DUE, Todo, parse_date};
+use crate::todo::{Todo, parse_date};
 use crate::tui::{App, Focus, Popup, SLEEPING, Target, WAITING};
 
 /// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, the terminal's cursor read back from where the text wraps, with the tag's completions or the date picker.
@@ -57,13 +57,13 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
         draw_completions(frame, theme, &names, selected, start, bounds);
     }
 
-    if let (Some(date), Some(cursor)) = (popup.picker, cursor) {
+    if let (Some(date), Some(cursor), Some(key)) = (popup.picker, cursor, popup.editor.date_key()) {
         draw_picker(
             frame,
             theme,
             date,
             today,
-            Position::new(cursor.x.saturating_sub(DUE.len() as u16), cursor.y),
+            Position::new(cursor.x.saturating_sub(key.len() as u16), cursor.y),
             bounds,
         );
     }

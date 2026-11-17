@@ -243,6 +243,21 @@ fn the_date_picker_drops_down_under_due_colon_as_a_month_from_monday_with_the_pi
 }
 
 #[test]
+fn the_date_picker_drops_down_under_t_colon_from_the_start_of_the_word() {
+    let mut app = app_of(&["Pay rent"]);
+    add_popup(&mut app, "Ship t:", 0);
+
+    if let Focus::Popup(popup) = &mut app.focus {
+        popup.picker = Some(TODAY);
+    }
+
+    let rows = rows(&render_in(&app, 60, 20));
+    let y = rows.iter().position(|row| row.contains("│Mo Tu")).expect("weekdays row");
+    let x = rows[y].split("│Mo Tu").next().expect("row").chars().count();
+    assert_eq!(cells(&rows[y - 2], x + 1, 3), "t: ");
+}
+
+#[test]
 fn the_date_picker_stays_above_the_status_bar_on_a_small_screen() {
     let mut app = app_of(&["Pay rent"]);
 

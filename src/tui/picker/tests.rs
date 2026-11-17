@@ -47,6 +47,21 @@ fn due_colon_typed_in_the_popup_opens_a_date_picker_on_today_whose_keys_move_the
 }
 
 #[test]
+fn t_colon_typed_in_the_popup_opens_the_date_picker_whose_enter_writes_the_wake_up_date() {
+    let mut app = app();
+
+    press(&mut app, "oShip at:");
+    assert_eq!(popup(&app).picker, None);
+    press(&mut app, " t:");
+    assert_eq!(popup(&app).picker, Some(TODAY));
+    press(&mut app, "l");
+    key(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+
+    assert_eq!(popup(&app).picker, None);
+    assert_eq!(popup(&app).editor.text, "Ship at: t:2026-09-27 ");
+}
+
+#[test]
 fn esc_closes_the_date_picker_on_due_colon_and_a_key_leaving_due_colon_again_reopens_it() {
     let mut app = app();
 

@@ -11,6 +11,9 @@ pub const WAIT: &str = "wait:";
 /// Key of the `key:value` holding a task's due date, as in `due:2026-10-15`.
 pub const DUE: &str = "due:";
 
+/// Key of the `key:value` holding the date a task sleeps until, as in `t:2026-11-18`.
+pub const SLEEP: &str = "t:";
+
 /// Why a task made only of non-text words is refused when typed.
 pub const NO_TEXT: &str = "a task needs more than +projects, @contexts and key: words";
 
@@ -230,6 +233,11 @@ impl Todo {
     /// Whether the task is pending with a `due:` date on `today` or before.
     pub fn is_due(&self, today: Date) -> bool {
         !self.done && self.words_after(DUE).into_iter().filter_map(parse_date).any(|due| due <= today)
+    }
+
+    /// Whether the task is pending with a `t:` date after `today`, the latest of several deciding.
+    pub fn is_sleeping(&self, today: Date) -> bool {
+        !self.done && self.words_after(SLEEP).into_iter().filter_map(parse_date).any(|date| date > today)
     }
 
     /// Whether the description holds a `wait:` key:value, what the task waits for.

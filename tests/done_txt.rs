@@ -372,3 +372,23 @@ fn list_since_without_done_is_refused_by_the_arguments() {
         assert!(error.contains(reason), "{error}");
     }
 }
+
+#[test]
+fn list_done_since_a_value_that_is_not_an_existing_date_is_refused_naming_it() {
+    let folder = folder("list-since-not-a-date");
+    let file = folder.join("todo.txt");
+    std::fs::write(&file, "Pay rent\n").unwrap();
+    std::fs::write(folder.join("done.txt"), "x 2026-11-10 Call the bank\n").unwrap();
+
+    for value in ["demain", "2026-99-99", "2026-02-30"] {
+        let output = todo(&file, &["list", "--done", "--since", value]);
+
+        let error = String::from_utf8_lossy(&output.stderr);
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert!(
+            error.contains(&format!("invalid value '{value}' for '--since <SINCE>': not a YYYY-MM-DD date")),
+            "{error}"
+        );
+    }
+}

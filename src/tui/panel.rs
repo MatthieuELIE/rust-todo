@@ -10,12 +10,13 @@ impl App {
     /// Whether a task due is left by the search, whatever the filter.
     pub(super) fn tasks_due_in_search(&self) -> bool {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
-        self.listed(&terms).iter().any(|(_, todo)| shows(todo, DUE_NOW, self.today))
+        self.listed(&terms).iter().any(|(_, todo)| shows(todo, Some(DUE_NOW), self.today))
     }
 
     /// Panel entries with their counts, search left out: `All tasks`, `Due` and `Waiting` if any task is and not in the history, then `+projects` and `@contexts`.
     pub fn filters(&self) -> Vec<(String, usize)> {
-        let shown = self.listed(&[]);
+        let mut shown = self.listed(&[]);
+        shown.retain(|(_, todo)| shows(todo, None, self.today));
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
             let mut terms: Vec<String> = shown
                 .iter()
@@ -27,7 +28,7 @@ impl App {
             terms
         };
         let mut filters = vec![("All tasks".to_string(), shown.len())];
-        let due = shown.iter().filter(|(_, todo)| shows(todo, DUE_NOW, self.today)).count();
+        let due = shown.iter().filter(|(_, todo)| shows(todo, Some(DUE_NOW), self.today)).count();
 
         if due > 0 && !self.in_history {
             filters.push((DUE_NOW.to_string(), due));
@@ -77,12 +78,17 @@ impl App {
     }
 }
 
-/// Whether the panel entry `term` keeps `todo` on screen.
-pub(super) fn shows(todo: &Todo, term: &str, today: Option<Date>) -> bool {
+/// Whether the panel entry `term`, `None` for `All tasks`, keeps `todo` on screen, a Sleeping task under none of them.
+pub(super) fn shows(todo: &Todo, term: Option<&str>, today: Option<Date>) -> bool {
+    if today.is_some_and(|today| todo.is_sleeping(today)) {
+        return false;
+    }
+
     match term {
-        WAITING => todo.is_waiting(),
-        DUE_NOW => today.is_some_and(|today| todo.is_due(today)),
-        _ => has_word(todo, term),
+        None => true,
+        Some(WAITING) => todo.is_waiting(),
+        Some(DUE_NOW) => today.is_some_and(|today| todo.is_due(today)),
+        Some(term) => has_word(todo, term),
     }
 }
 

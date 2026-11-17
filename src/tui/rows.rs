@@ -22,10 +22,7 @@ impl App {
     pub fn tasks(&self) -> Vec<(usize, &Todo)> {
         let terms: Vec<String> = self.search.split_whitespace().map(String::from).collect();
         let mut tasks = self.listed(&terms);
-
-        if let Some(filter) = &self.filter {
-            tasks.retain(|(_, todo)| shows(todo, filter, self.today));
-        }
+        tasks.retain(|(_, todo)| shows(todo, self.filter.as_deref(), self.today));
         tasks
     }
 

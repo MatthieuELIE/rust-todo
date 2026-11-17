@@ -284,3 +284,28 @@ fn a_panel_entry_counts_and_shows_the_tasks_with_that_exact_word() {
     app.filter = Some("+rust".to_string());
     assert_eq!(shown(&app), ["Learn +rust"]);
 }
+
+#[test]
+fn a_sleeping_task_is_neither_shown_nor_counted_under_all_tasks_a_project_a_context_due_or_waiting() {
+    let mut app = app_of(&[
+        "Pay +rent @home due:2026-09-01 wait:bank t:2026-09-27",
+        "Call +rent @home due:2026-09-01 wait:bank",
+        "Book +trip t:2026-10-01",
+    ]);
+
+    let counts = [("All tasks", 1), (DUE_NOW, 1), (WAITING, 1), ("+rent", 1), ("@home", 1)];
+    assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
+    assert_eq!(shown(&app), ["Call +rent @home due:2026-09-01 wait:bank"]);
+
+    for term in [DUE_NOW, WAITING, "+rent", "@home", "+trip"] {
+        app.filter = Some(term.to_string());
+        assert!(!shown(&app).iter().any(|line| line.contains(" t:")), "{term}");
+    }
+}
+
+#[test]
+fn a_task_wakes_up_on_the_day_of_its_t_date_and_sleeps_the_day_before() {
+    let app = app_of(&["Pay t:2026-09-26", "Call t:2026-09-27"]);
+
+    assert_eq!(shown(&app), ["Pay t:2026-09-26"]);
+}

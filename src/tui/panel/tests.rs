@@ -1,4 +1,4 @@
-use super::super::tests::{TODAY, app_of, history_of, key, press, shown, told};
+use super::super::tests::{TODAY, app_of, history_of, key, moved, press, shown, told};
 use super::super::*;
 use time::macros::date;
 
@@ -293,7 +293,7 @@ fn a_sleeping_task_is_neither_shown_nor_counted_under_all_tasks_a_project_a_cont
         "Book +trip t:2026-10-01",
     ]);
 
-    let counts = [("All tasks", 1), (DUE_NOW, 1), (WAITING, 1), ("+rent", 1), ("@home", 1)];
+    let counts = [("All tasks", 1), (DUE_NOW, 1), (WAITING, 1), (SLEEPING, 2), ("+rent", 1), ("@home", 1)];
     assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
     assert_eq!(shown(&app), ["Call +rent @home due:2026-09-01 wait:bank"]);
 
@@ -308,4 +308,72 @@ fn a_task_wakes_up_on_the_day_of_its_t_date_and_sleeps_the_day_before() {
     let app = app_of(&["Pay t:2026-09-26", "Call t:2026-09-27"]);
 
     assert_eq!(shown(&app), ["Pay t:2026-09-26"]);
+}
+
+#[test]
+fn sleeping_follows_waiting_and_shows_the_sleeping_tasks_alone_by_priority_under_the_search() {
+    let mut app = app_of(&[
+        "Book train t:2026-10-01",
+        "(A) Pay rent t:2026-09-27",
+        "Call bank wait:bank",
+        "Note Sleeping",
+        "(B) Book hotel t:2026-10-01",
+    ]);
+
+    let counts = [("All tasks", 2), (WAITING, 1), (SLEEPING, 3)];
+    assert_eq!(app.filters(), counts.map(|(term, count)| (term.to_string(), count)));
+
+    app.filter = Some(SLEEPING.to_string());
+    let sleeping = ["(A) Pay rent t:2026-09-27", "(B) Book hotel t:2026-10-01", "Book train t:2026-10-01"];
+    assert_eq!(shown(&app), sleeping);
+
+    app.search = "book".to_string();
+    assert_eq!(shown(&app), ["(B) Book hotel t:2026-10-01", "Book train t:2026-10-01"]);
+}
+
+#[test]
+fn sleeping_is_absent_when_no_task_sleeps_and_in_the_history_which_drops_it() {
+    let mut app = history_of(&["Pay rent t:2026-09-26"], &["x 2026-09-20 Mail t:2026-10-01"]);
+    assert_eq!(app.filters(), [("All tasks".to_string(), 1)]);
+
+    app.todos.push(Todo::from_line("Book train t:2026-10-01"));
+    app.filter = Some(SLEEPING.to_string());
+    press(&mut app, "H");
+
+    assert_eq!(app.filters(), [("All tasks".to_string(), 1)]);
+    assert_eq!(
+        (app.filter.as_deref(), shown(&app)),
+        (None, vec!["x 2026-09-20 Mail t:2026-10-01".to_string()])
+    );
+}
+
+#[test]
+fn x_dd_and_an_edit_act_on_the_tasks_shown_under_sleeping() {
+    let mut app = app_of(&["Pay rent", "Book train t:2026-10-01", "Book hotel t:2026-10-02", "Book taxi t:2026-10-03"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    app.filter = Some(SLEEPING.to_string());
+
+    assert!(press(&mut app, "x"));
+    assert!(press(&mut app, "dd"));
+    app.handle_key(enter, TODAY);
+    press(&mut app, "A now");
+    assert!(app.handle_key(enter, TODAY));
+
+    let lines: Vec<String> = app.todos.iter().map(Todo::to_line).collect();
+    assert_eq!(lines, ["Pay rent", "Book taxi t:2026-10-03 now"]);
+    assert_eq!(moved(&app), ["+x 2026-09-26 Book train t:2026-10-01"]);
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: false }));
+}
+
+#[test]
+fn a_task_added_under_sleeping_gets_nothing_and_brings_back_all_tasks_with_the_cursor_on_it() {
+    let mut app = app_of(&["Book train t:2026-10-01", "Pay rent"]);
+    app.filter = Some(SLEEPING.to_string());
+
+    press(&mut app, "oCall landlord");
+    assert!(app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY));
+
+    assert_eq!(app.todos[2].to_line(), "2026-09-26 Call landlord");
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 1));
+    assert_eq!(told(&app), Some(Notice::Added { hidden: false }));
 }

@@ -113,7 +113,7 @@ impl App {
             KeyCode::Char('H') => {
                 self.in_history = !self.in_history;
 
-                if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING)) {
+                if matches!(self.filter.as_deref(), Some(DUE_NOW | WAITING | SLEEPING)) {
                     self.filter = None;
                 }
                 self.history_read = false;

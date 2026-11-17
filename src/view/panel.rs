@@ -6,13 +6,14 @@ use ratatui::widgets::{List, ListState};
 use time::Date;
 
 use super::style::{arrow, card, highlight, icon, tag_style};
-use crate::tui::{App, DUE_NOW, Focus, WAITING};
+use crate::tui::{App, DUE_NOW, Focus, SLEEPING, WAITING};
 
 const PROJECTS_ICON: char = '\u{f07b}';
 const CONTEXTS_ICON: char = '\u{f1fa}';
 const ALL_TASKS_ICON: char = '\u{f0ca}';
 const DUE_ICON: char = '\u{f073}';
 const WAITING_ICON: char = '\u{f252}';
+const SLEEPING_ICON: char = '\u{f186}';
 
 /// Width of the filter panel's card, its borders included.
 pub(super) const PANEL_WIDTH: u16 = 22;
@@ -76,6 +77,7 @@ fn panel(app: &App) -> (Vec<Line<'static>>, Option<usize>) {
             "All tasks" => icon(app.icons, ALL_TASKS_ICON),
             DUE_NOW => icon(app.icons, DUE_ICON),
             WAITING => icon(app.icons, WAITING_ICON),
+            SLEEPING => icon(app.icons, SLEEPING_ICON),
             _ => String::new(),
         };
 

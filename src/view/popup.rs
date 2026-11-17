@@ -11,7 +11,7 @@ use super::style::{floating, highlight, priority, tag_style, words};
 use crate::editor::Editor;
 use crate::theme::Theme;
 use crate::todo::{DUE, Todo, parse_date};
-use crate::tui::{App, Focus, Popup, Target, WAITING};
+use crate::tui::{App, Focus, Popup, SLEEPING, Target, WAITING};
 
 /// Draws the popup centred in `bounds`, titled by the task edited or the term an add gets, the terminal's cursor read back from where the text wraps, with the tag's completions or the date picker.
 pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Rect, today: Date) {
@@ -19,7 +19,7 @@ pub(super) fn draw_popup(frame: &mut Frame, app: &App, popup: &Popup, bounds: Re
 
     let title = match (&popup.target, app.filter.as_deref()) {
         (Target::Edit(number), _) => Line::from(format!(" EDIT {number} ")),
-        (Target::Add, Some(term)) if term != WAITING => {
+        (Target::Add, Some(term)) if term != WAITING && term != SLEEPING => {
             Line::from_iter([" ADD (".into(), Span::styled(term.to_string(), tag_style(theme, term)), ") ".into()])
         }
         (Target::Add, _) => Line::from(" ADD "),

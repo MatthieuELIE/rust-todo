@@ -13,7 +13,7 @@ impl App {
     pub(super) fn add(&mut self, text: &str, today: Date) -> Saved {
         match Todo::new_from_input(text, today) {
             Ok(mut todo) => {
-                if self.filter.as_deref() == Some(WAITING) {
+                if matches!(self.filter.as_deref(), Some(WAITING | SLEEPING)) {
                     self.filter = None;
                 } else if self.filter.as_deref() == Some(DUE_NOW) {
                     let dated = |word: &str| word.strip_prefix(DUE).is_some_and(|value| !value.is_empty());

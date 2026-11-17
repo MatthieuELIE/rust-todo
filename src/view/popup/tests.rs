@@ -1,7 +1,7 @@
 use super::super::tests::{MOCHA, TODAY, add_popup, app_of, render, render_in, render_with_cursor, rows};
 use crate::editor::{Editor, Mode};
 use crate::theme::Theme;
-use crate::tui::{App, DUE_NOW, Focus, Popup, Target, WAITING};
+use crate::tui::{App, DUE_NOW, Focus, Popup, SLEEPING, Target, WAITING};
 use ratatui::buffer::Buffer;
 use ratatui::crossterm::event::{KeyCode, KeyEvent};
 use ratatui::layout::Position;
@@ -285,9 +285,13 @@ fn the_popup_of_an_add_under_due_names_the_entry() {
 }
 
 #[test]
-fn the_popup_is_titled_by_the_number_of_the_task_edited_and_leaves_waiting_out_of_an_add() {
-    let mut app = app_of(&["Pay rent wait:bank"]);
+fn the_popup_is_titled_by_the_number_of_the_task_edited_and_leaves_waiting_and_sleeping_out_of_an_add() {
+    let mut app = app_of(&["Pay rent wait:bank", "Book train t:2026-10-01"]);
     let titled = |app: &App, title: &str| rows(&render_in(app, 50, 8)).iter().any(|row| row.contains(title));
+
+    app.filter = Some(SLEEPING.to_string());
+    add_popup(&mut app, "Call", 0);
+    assert!(titled(&app, "╭ ADD ─"));
 
     app.filter = Some(WAITING.to_string());
     add_popup(&mut app, "Call", 0);

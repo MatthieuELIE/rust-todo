@@ -6,6 +6,9 @@ pub const WAITING: &str = "Waiting";
 /// Name of the panel entry listing the tasks due today or before.
 pub const DUE_NOW: &str = "Due";
 
+/// Panel entry of the Sleeping tasks, under `Waiting`, the only one that shows them.
+pub const SLEEPING: &str = "Sleeping";
+
 impl App {
     /// Whether a task due is left by the search, whatever the filter.
     pub(super) fn tasks_due_in_search(&self) -> bool {
@@ -13,10 +16,9 @@ impl App {
         self.listed(&terms).iter().any(|(_, todo)| shows(todo, Some(DUE_NOW), self.today))
     }
 
-    /// Panel entries with their counts, search left out: `All tasks`, `Due` and `Waiting` if any task is and not in the history, then `+projects` and `@contexts`.
+    /// Panel entries with their counts, search left out: `All tasks`, `Due`, `Waiting` and `Sleeping` if any task is and not in the history, then `+projects` and `@contexts`.
     pub fn filters(&self) -> Vec<(String, usize)> {
-        let mut shown = self.listed(&[]);
-        shown.retain(|(_, todo)| shows(todo, None, self.today));
+        let (shown, sleeping): (Vec<_>, Vec<_>) = self.listed(&[]).into_iter().partition(|(_, todo)| shows(todo, None, self.today));
         let terms = |sigil: char, names: fn(&Todo) -> Vec<&str>| {
             let mut terms: Vec<String> = shown
                 .iter()
@@ -38,6 +40,10 @@ impl App {
 
         if waiting > 0 && !self.in_history {
             filters.push((WAITING.to_string(), waiting));
+        }
+
+        if !sleeping.is_empty() && !self.in_history {
+            filters.push((SLEEPING.to_string(), sleeping.len()));
         }
 
         for term in terms('+', Todo::projects).into_iter().chain(terms('@', Todo::contexts)) {
@@ -78,14 +84,15 @@ impl App {
     }
 }
 
-/// Whether the panel entry `term`, `None` for `All tasks`, keeps `todo` on screen, a Sleeping task under none of them.
+/// Whether the panel entry `term`, `None` for `All tasks`, keeps `todo` on screen, a Sleeping task only under `Sleeping`.
 pub(super) fn shows(todo: &Todo, term: Option<&str>, today: Option<Date>) -> bool {
     if today.is_some_and(|today| todo.is_sleeping(today)) {
-        return false;
+        return term == Some(SLEEPING);
     }
 
     match term {
         None => true,
+        Some(SLEEPING) => false,
         Some(WAITING) => todo.is_waiting(),
         Some(DUE_NOW) => today.is_some_and(|today| todo.is_due(today)),
         Some(term) => has_word(todo, term),

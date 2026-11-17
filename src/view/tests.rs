@@ -256,7 +256,7 @@ fn the_error_screen_shows_the_message_and_how_to_leave() {
     assert_eq!(rows[..2], [" could not read todo.txt", " press any key to quit"]);
 }
 
-const GLYPHS: [char; 6] = ['\u{f07b}', '\u{f1fa}', '\u{f05a}', '\u{f0ca}', '\u{f073}', '\u{f252}'];
+const GLYPHS: [char; 7] = ['\u{f07b}', '\u{f1fa}', '\u{f05a}', '\u{f0ca}', '\u{f073}', '\u{f252}', '\u{f186}'];
 
 /// The private-use glyphs on screen with their position.
 pub(super) fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
@@ -273,7 +273,7 @@ pub(super) fn glyph_cells(buffer: &Buffer) -> Vec<(char, u16, u16)> {
 }
 
 pub(super) fn app_with_every_entry() -> App {
-    app_of(&["(A) Call due:2026-09-01 wait:bank +app @work", "Pay due:2026-09-26"])
+    app_of(&["(A) Call due:2026-09-01 wait:bank +app @work", "Pay due:2026-09-26", "Book t:2026-10-01"])
 }
 
 #[test]
@@ -284,15 +284,15 @@ fn without_icons_no_cell_is_in_the_private_use_area() {
 }
 
 #[test]
-fn with_icons_the_six_glyphs_stand_before_their_word_in_its_style() {
+fn with_icons_the_seven_glyphs_stand_before_their_word_in_its_style() {
     let mut app = app_with_every_entry();
     app.icons = true;
 
     let buffer = render_in(&app, 109, 36);
 
     let found = glyph_cells(&buffer);
-    let words = ["PROJECTS", "CONTEXTS", "DETAILS", "All tasks", "Due", "Waiting"];
-    assert_eq!(found.len(), 6);
+    let words = ["PROJECTS", "CONTEXTS", "DETAILS", "All tasks", "Due", "Waiting", "Sleeping"];
+    assert_eq!(found.len(), 7);
 
     for (glyph, word) in GLYPHS.iter().zip(words) {
         let &(_, x, y) = found.iter().find(|(found, ..)| found == glyph).unwrap();

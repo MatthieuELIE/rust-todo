@@ -40,14 +40,19 @@ pub(super) fn object(chars: &[char], at: usize, big: bool, around: bool) -> Rang
     start..end
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum Class {
+    Blank,
+    Word,
+    Punctuation,
+}
+
 /// Class of a character for word motions: blank, word (letter, digit, `_`) or punctuation; `big` makes every non-blank a word.
-fn class(c: char, big: bool) -> u8 {
-    if c.is_whitespace() {
-        0
-    } else if big || c.is_alphanumeric() || c == '_' {
-        1
-    } else {
-        2
+fn class(c: char, big: bool) -> Class {
+    match c {
+        c if c.is_whitespace() => Class::Blank,
+        c if big || c.is_alphanumeric() || c == '_' => Class::Word,
+        _ => Class::Punctuation,
     }
 }
 
@@ -56,7 +61,7 @@ fn next_start(chars: &[char], at: usize, big: bool) -> usize {
     let class = |i: usize| class(chars[i], big);
     let mut i = at;
 
-    if i < chars.len() && class(i) != 0 {
+    if i < chars.len() && class(i) != Class::Blank {
         let word = class(i);
 
         while i < chars.len() && class(i) == word {
@@ -64,7 +69,7 @@ fn next_start(chars: &[char], at: usize, big: bool) -> usize {
         }
     }
 
-    while i < chars.len() && class(i) == 0 {
+    while i < chars.len() && class(i) == Class::Blank {
         i += 1;
     }
     i
@@ -75,7 +80,7 @@ fn previous_start(chars: &[char], at: usize, big: bool) -> usize {
     let class = |i: usize| class(chars[i], big);
     let mut i = at.saturating_sub(1);
 
-    while i > 0 && class(i) == 0 {
+    while i > 0 && class(i) == Class::Blank {
         i -= 1;
     }
 
@@ -89,7 +94,7 @@ fn previous_start(chars: &[char], at: usize, big: bool) -> usize {
 fn next_end(chars: &[char], at: usize, big: bool) -> usize {
     let mut i = at + 1;
 
-    while i < chars.len() && class(chars[i], big) == 0 {
+    while i < chars.len() && class(chars[i], big) == Class::Blank {
         i += 1;
     }
     if i < chars.len() { run_end(chars, i, big) } else { at }

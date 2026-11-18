@@ -37,13 +37,16 @@ impl Editor {
         let mut copy = None;
 
         match code {
-            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some(Operator::Delete | Operator::Change | Operator::Yank)) && scope.is_none() => {
+            code if matches!(pending, Some(Operator::Delete | Operator::Change | Operator::Yank))
+                && scope.is_none()
+                && Scope::from_code(code).is_some() =>
+            {
                 self.pending = pending;
-                self.scope = Some(key);
+                self.scope = Scope::from_code(code);
             }
             _ if matches!(pending, Some(Operator::Delete | Operator::Change | Operator::Yank)) => {
                 let range = match code {
-                    KeyCode::Char(w @ ('w' | 'W')) if scope.is_some() => Some(object(&chars, at, w == 'W', scope == Some('a'))),
+                    KeyCode::Char(w @ ('w' | 'W')) if scope.is_some() => Some(object(&chars, at, w == 'W', scope == Some(Scope::Around))),
                     _ if scope.is_some() => None,
                     KeyCode::Char(c) if pending.map(Operator::key) == Some(c) => Some(0..len),
                     KeyCode::Char(w @ ('w' | 'W')) if pending == Some(Operator::Change) && chars.get(at).is_some_and(|c| !c.is_whitespace()) => {

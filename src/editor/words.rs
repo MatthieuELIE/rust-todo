@@ -2,6 +2,34 @@ use std::ops::Range;
 
 use super::*;
 
+/// How much of a word an object takes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) enum Scope {
+    /// `i`: the word alone.
+    Inner,
+    /// `a`: the word and its blanks.
+    Around,
+}
+
+impl Scope {
+    /// The scope typed with `code`, if there is one.
+    pub(super) const fn from_code(code: KeyCode) -> Option<Self> {
+        match code {
+            KeyCode::Char('i') => Some(Self::Inner),
+            KeyCode::Char('a') => Some(Self::Around),
+            _ => None,
+        }
+    }
+
+    /// The key that types the scope.
+    pub(super) const fn key(self) -> char {
+        match self {
+            Self::Inner => 'i',
+            Self::Around => 'a',
+        }
+    }
+}
+
 /// Where the motion key `code` takes a cursor at `at`, the length of `chars` when it runs past the text; `None` for any other key.
 pub(super) fn motion(chars: &[char], at: usize, code: KeyCode) -> Option<usize> {
     Some(match code {

@@ -10,7 +10,7 @@ mod operator;
 mod visual;
 mod words;
 
-use {find::Search, operator::Operator};
+use {find::Search, operator::Operator, words::Scope};
 
 /// What a key did to the line being edited.
 #[derive(Clone, PartialEq, Debug)]
@@ -53,7 +53,7 @@ pub struct Editor {
     /// Character the selection started on in visual mode, the cursor being its other end.
     anchor: usize,
     /// `i` or `a` typed after `d`, `c` or `y`, waiting for the `w` or `W` of its word.
-    scope: Option<char>,
+    scope: Option<Scope>,
     /// `f`, `F`, `t` or `T` waiting for the character to find.
     finding: Option<Search>,
     /// Last search as its kind and character, kept even when it failed, for `;` and `,`.
@@ -139,7 +139,12 @@ impl Editor {
 
     /// Keys typed so far of a command still waiting for its end, as `d` or `ci`.
     pub fn pending(&self) -> String {
-        self.pending.map(Operator::key).iter().chain(&self.scope).chain(self.finding.map(Search::key).iter()).collect()
+        self.pending
+            .map(Operator::key)
+            .iter()
+            .chain(self.scope.map(Scope::key).iter())
+            .chain(self.finding.map(Search::key).iter())
+            .collect()
     }
 
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.

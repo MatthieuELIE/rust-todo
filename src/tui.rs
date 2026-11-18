@@ -107,7 +107,7 @@ pub struct App {
     /// Position of the selected row among the tasks on screen.
     pub cursor: usize,
     /// First key of a two-key command (`gg`, `gx`, `dd`, `yy`, `p` and a letter, `zM`, `zR`, `za`) waiting for its second key.
-    pending: Option<char>,
+    pending: Option<Prefix>,
     /// Set once the user asked to leave.
     pub quit: bool,
     /// The instant of the current turn of the loop, brought by `tick`; a toast started without it counts from the clock.
@@ -160,7 +160,7 @@ impl App {
     pub fn pending(&self) -> String {
         match &self.focus {
             Focus::Popup(popup) => popup.editor.pending(),
-            _ => self.pending.iter().collect(),
+            _ => self.pending.map(Prefix::key).into_iter().collect(),
         }
     }
 
@@ -220,7 +220,7 @@ impl App {
             && key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT)
             && key.code != KeyCode::Char('r')
         {
-            if pending == Some('p') {
+            if pending == Some(Prefix::P) {
                 self.notify(Notice::NotPriority);
             }
             return false;
@@ -280,6 +280,7 @@ mod open;
 mod panel;
 mod picker;
 mod popup;
+mod prefix;
 mod rows;
 mod search;
 
@@ -287,6 +288,7 @@ pub use open::Opening;
 pub use panel::{DUE_NOW, SLEEPING, WAITING};
 use panel::{missing_word, shows};
 pub use popup::{Popup, Target};
+use prefix::Prefix;
 
 #[cfg(test)]
 mod tests;

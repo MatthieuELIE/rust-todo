@@ -6,8 +6,11 @@ use crate::todo::{DUE, SLEEP, WAIT};
 
 mod find;
 mod normal;
+mod operator;
 mod visual;
 mod words;
+
+use operator::Operator;
 
 /// What a key did to the line being edited.
 #[derive(Clone, PartialEq, Debug)]
@@ -46,7 +49,7 @@ pub struct Editor {
     /// Whether keys are typed or are commands.
     pub mode: Mode,
     /// Key (`d`, `c`, `y`, `p`) waiting for its motion or priority; after `d`, `c` or `y`, a key completing no command only drops it.
-    pending: Option<char>,
+    pending: Option<Operator>,
     /// Character the selection started on in visual mode, the cursor being its other end.
     anchor: usize,
     /// `i` or `a` typed after `d`, `c` or `y`, waiting for the `w` or `W` of its word.
@@ -77,7 +80,7 @@ impl Editor {
     /// Applies one key press to the text and tells whether editing goes on.
     pub fn handle_key(&mut self, key: KeyEvent) -> Outcome {
         let modified = key.modifiers.intersects(KeyModifiers::CONTROL | KeyModifiers::ALT);
-        if self.pending == Some('p') && (modified || !matches!(key.code, KeyCode::Char('a'..='e' | ' '))) {
+        if self.pending == Some(Operator::Priority) && (modified || !matches!(key.code, KeyCode::Char('a'..='e' | ' '))) {
             self.pending = None;
             return Outcome::Notice(Notice::NotPriority);
         }
@@ -136,7 +139,7 @@ impl Editor {
 
     /// Keys typed so far of a command still waiting for its end, as `d` or `ci`.
     pub fn pending(&self) -> String {
-        self.pending.iter().chain(&self.scope).chain(&self.finding).collect()
+        self.pending.map(Operator::key).iter().chain(&self.scope).chain(&self.finding).collect()
     }
 
     /// Inserts `text` at the cursor, which moves past it, staying on a character in normal mode.

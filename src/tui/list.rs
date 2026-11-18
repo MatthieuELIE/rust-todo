@@ -2,7 +2,7 @@ use super::*;
 
 impl App {
     /// Applies a key typed in the list, `pending` being the first key of a two-key command; tells whether to write.
-    pub(super) fn list_key(&mut self, key: KeyEvent, pending: Option<char>, today: Date) -> bool {
+    pub(super) fn list_key(&mut self, key: KeyEvent, pending: Option<Prefix>, today: Date) -> bool {
         let rows = self.rows();
         let last = rows.len().saturating_sub(1);
         let row = rows.get(self.cursor).copied();
@@ -13,9 +13,9 @@ impl App {
         };
 
         let writes = match key.code {
-            KeyCode::Char('x') => pending != Some('g'),
+            KeyCode::Char('x') => pending != Some(Prefix::G),
             KeyCode::Char('o' | 'p' | 'u') | KeyCode::Enter => true,
-            KeyCode::Char('d') => pending == Some('d'),
+            KeyCode::Char('d') => pending == Some(Prefix::D),
             KeyCode::Char('r') => key.modifiers == KeyModifiers::CONTROL,
             _ => false,
         };
@@ -28,7 +28,7 @@ impl App {
         let mut write = false;
 
         match key.code {
-            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => {
+            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some(Prefix::P) => {
                 let priority = (c != ' ').then(|| c.to_ascii_uppercase());
                 if let Some(number) = selected
                     && let todo = &mut self.todos[number - 1]
@@ -40,15 +40,15 @@ impl App {
                     write = true;
                 }
             }
-            _ if pending == Some('p') => self.notify(Notice::NotPriority),
+            _ if pending == Some(Prefix::P) => self.notify(Notice::NotPriority),
             KeyCode::Char('q') => self.quit = true,
             KeyCode::Char('j') | KeyCode::Down => self.cursor = (self.cursor + 1).min(last),
             KeyCode::Char('k') | KeyCode::Up => self.cursor = self.cursor.saturating_sub(1),
-            KeyCode::Char('p') => self.pending = Some('p'),
-            KeyCode::Char('M') if pending == Some('z') => self.fold_all(row),
-            KeyCode::Char('R') if pending == Some('z') => self.unfold_all(row),
-            KeyCode::Char('a') if pending == Some('z') => self.toggle_fold(row),
-            KeyCode::Char('z') => self.pending = Some('z'),
+            KeyCode::Char('p') => self.pending = Some(Prefix::P),
+            KeyCode::Char('M') if pending == Some(Prefix::Z) => self.fold_all(row),
+            KeyCode::Char('R') if pending == Some(Prefix::Z) => self.unfold_all(row),
+            KeyCode::Char('a') if pending == Some(Prefix::Z) => self.toggle_fold(row),
+            KeyCode::Char('z') => self.pending = Some(Prefix::Z),
             KeyCode::Char('u') => write = self.step(true),
             KeyCode::Char('r') if key.modifiers == KeyModifiers::CONTROL => write = self.step(false),
             KeyCode::Char('r') if self.in_history && key.modifiers.is_empty() => {
@@ -56,10 +56,10 @@ impl App {
                     write = self.reopen(number);
                 }
             }
-            KeyCode::Char('g') if pending == Some('g') => self.cursor = 0,
-            KeyCode::Char('g') => self.pending = Some('g'),
+            KeyCode::Char('g') if pending == Some(Prefix::G) => self.cursor = 0,
+            KeyCode::Char('g') => self.pending = Some(Prefix::G),
             KeyCode::Char('G') => self.cursor = last,
-            KeyCode::Char('x') if pending == Some('g') => self.open_selected(),
+            KeyCode::Char('x') if pending == Some(Prefix::G) => self.open_selected(),
             KeyCode::Char('x') => {
                 if let Some(number) = selected {
                     let mut todo = self.todos.remove(number - 1);
@@ -69,19 +69,19 @@ impl App {
                     write = true;
                 }
             }
-            KeyCode::Char('d') if pending == Some('d') => {
+            KeyCode::Char('d') if pending == Some(Prefix::D) => {
                 if let Some(number) = selected {
                     self.todos.remove(number - 1);
                     self.notify(Notice::Deleted);
                     write = true;
                 }
             }
-            KeyCode::Char('d') => self.pending = Some('d'),
-            KeyCode::Char('y') if pending == Some('y') => match self.selected_task() {
+            KeyCode::Char('d') => self.pending = Some(Prefix::D),
+            KeyCode::Char('y') if pending == Some(Prefix::Y) => match self.selected_task() {
                 Some(todo) => self.copy = Some(Clip::Task(todo.to_line())),
                 None => self.notify(Notice::NoTaskUnderCursor),
             },
-            KeyCode::Char('y') => self.pending = Some('y'),
+            KeyCode::Char('y') => self.pending = Some(Prefix::Y),
             KeyCode::Char('o') => {
                 self.focus = Focus::Popup(Popup {
                     editor: Editor::default(),

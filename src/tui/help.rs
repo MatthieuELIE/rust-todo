@@ -8,7 +8,7 @@ impl App {
     }
 
     /// Applies a key typed in the help: `j`/`k` and `gg`/`G` scroll within the lines the last drawing left out, `Esc`, `Enter`, `?` and `q` close it, back to the focus it covered.
-    pub(super) fn help_key(&mut self, key: KeyEvent, pending: Option<char>) {
+    pub(super) fn help_key(&mut self, key: KeyEvent, pending: Option<Prefix>) {
         let Focus::Help(scroll) = &mut self.focus else {
             unreachable!("the help is open");
         };
@@ -19,8 +19,8 @@ impl App {
             KeyCode::Esc | KeyCode::Enter | KeyCode::Char('?' | 'q') => self.focus = std::mem::take(&mut self.under_help),
             KeyCode::Char('j') | KeyCode::Down => *scroll = (*scroll + 1).min(max),
             KeyCode::Char('k') | KeyCode::Up => *scroll = scroll.saturating_sub(1).min(max),
-            KeyCode::Char('g') if pending == Some('g') => *scroll = 0,
-            KeyCode::Char('g') => self.pending = Some('g'),
+            KeyCode::Char('g') if pending == Some(Prefix::G) => *scroll = 0,
+            KeyCode::Char('g') => self.pending = Some(Prefix::G),
             KeyCode::Char('G') => *scroll = max,
             _ => {}
         }

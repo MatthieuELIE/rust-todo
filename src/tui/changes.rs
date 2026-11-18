@@ -94,22 +94,19 @@ impl App {
             (&mut self.redo, &mut self.undo, Notice::ChangeRedone, Notice::NothingToRedo)
         };
 
-        match from.pop() {
-            Some((todos, moved)) => {
-                to.push((std::mem::replace(&mut self.todos, todos), moved.clone()));
-                self.moves.extend(moved.map(|moved| match moved {
-                    Move::Append(todo) if back => Move::Remove(todo, None),
-                    Move::Remove(todo, _) if back => Move::Append(todo),
-                    moved => moved,
-                }));
-                self.notify(done);
-                true
-            }
-            None => {
-                self.notify(none);
-                false
-            }
-        }
+        let Some((todos, moved)) = from.pop() else {
+            self.notify(none);
+            return false;
+        };
+
+        to.push((std::mem::replace(&mut self.todos, todos), moved.clone()));
+        self.moves.extend(moved.map(|moved| match moved {
+            Move::Append(todo) if back => Move::Remove(todo, None),
+            Move::Remove(todo, _) if back => Move::Append(todo),
+            moved => moved,
+        }));
+        self.notify(done);
+        true
     }
 }
 

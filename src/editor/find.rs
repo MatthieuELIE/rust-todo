@@ -35,7 +35,7 @@ fn find(chars: &[char], at: usize, kind: char, target: char, repeat: bool) -> Op
 
 impl Editor {
     /// Moves the cursor to the character `target` found as `kind` says, or after `d`, `c` or `y` (`pending`) acts up to it; nothing happens when it is absent.
-    pub(super) fn seek(&mut self, chars: &[char], pending: Option<char>, kind: char, target: char, repeat: bool) -> Option<String> {
+    pub(super) fn seek(&mut self, chars: &[char], pending: Option<Operator>, kind: char, target: char, repeat: bool) -> Option<String> {
         let at = self.cursor;
         let to = find(chars, at, kind, target, repeat)?;
 

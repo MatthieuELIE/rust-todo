@@ -1,6 +1,7 @@
 use super::*;
 
 use super::find::repeated;
+use super::operator::Operator;
 use super::words::{motion, object, run_end};
 use crate::todo::Todo;
 
@@ -10,7 +11,7 @@ impl Editor {
         let chars: Vec<char> = self.text.chars().collect();
         let (len, at) = (chars.len(), self.cursor);
         let (pending, scope, finding) = (self.pending.take(), self.scope.take(), self.finding.take());
-        let free = scope.is_none() && matches!(pending, None | Some('d' | 'c' | 'y'));
+        let free = scope.is_none() && matches!(pending, None | Some(Operator::Delete | Operator::Change | Operator::Yank));
 
         let search = match (finding, code) {
             (Some(kind), KeyCode::Char(c)) => {
@@ -36,16 +37,16 @@ impl Editor {
         let mut copy = None;
 
         match code {
-            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some('d' | 'c' | 'y')) && scope.is_none() => {
+            KeyCode::Char(key @ ('i' | 'a')) if matches!(pending, Some(Operator::Delete | Operator::Change | Operator::Yank)) && scope.is_none() => {
                 self.pending = pending;
                 self.scope = Some(key);
             }
-            _ if matches!(pending, Some('d' | 'c' | 'y')) => {
+            _ if matches!(pending, Some(Operator::Delete | Operator::Change | Operator::Yank)) => {
                 let range = match code {
                     KeyCode::Char(w @ ('w' | 'W')) if scope.is_some() => Some(object(&chars, at, w == 'W', scope == Some('a'))),
                     _ if scope.is_some() => None,
-                    KeyCode::Char(c) if pending == Some(c) => Some(0..len),
-                    KeyCode::Char(w @ ('w' | 'W')) if pending == Some('c') && chars.get(at).is_some_and(|c| !c.is_whitespace()) => {
+                    KeyCode::Char(c) if pending.map(Operator::key) == Some(c) => Some(0..len),
+                    KeyCode::Char(w @ ('w' | 'W')) if pending == Some(Operator::Change) && chars.get(at).is_some_and(|c| !c.is_whitespace()) => {
                         Some(at..run_end(&chars, at, w == 'W') + 1)
                     }
                     KeyCode::Char('e' | 'E') => motion(&chars, at, code).map(|end| at..(end + 1).min(len)),
@@ -56,8 +57,8 @@ impl Editor {
                     copy = self.operate(&chars, op, range);
                 }
             }
-            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some('p') => self.set_priority(c),
-            KeyCode::Char(op @ ('d' | 'c' | 'y' | 'p')) => self.pending = Some(op),
+            KeyCode::Char(c @ ('a'..='e' | ' ')) if pending == Some(Operator::Priority) => self.set_priority(c),
+            KeyCode::Char(key) if Operator::from_key(key).is_some() => self.pending = Operator::from_key(key),
             KeyCode::Char('v') if pending.is_none() => {
                 self.anchor = at;
                 self.mode = Mode::Visual;
@@ -92,15 +93,15 @@ impl Editor {
     }
 
     /// Applies `d`, `c` or `y` (`op`) to `range`, and returns what `y` copies.
-    pub(super) fn operate(&mut self, chars: &[char], op: char, range: std::ops::Range<usize>) -> Option<String> {
+    pub(super) fn operate(&mut self, chars: &[char], op: Operator, range: std::ops::Range<usize>) -> Option<String> {
         match op {
-            'y' => Some(self.yank(chars, range)),
-            'c' => {
+            Operator::Yank => Some(self.yank(chars, range)),
+            Operator::Change => {
                 self.remove(range.start, range.end);
                 self.mode = Mode::Insert;
                 None
             }
-            _ => {
+            Operator::Delete | Operator::Priority => {
                 self.remove(range.start, range.end);
                 self.clamp_cursor();
                 None

@@ -22,12 +22,14 @@ pub(super) fn repeated(key: char, (kind, target): (char, char)) -> (char, char) 
 /// Where `f`, `F`, `t` or `T` takes a cursor at `at` to `target`; a repeat of `t` or `T` skips the character next to the cursor.
 fn find(chars: &[char], at: usize, kind: char, target: char, repeat: bool) -> Option<usize> {
     let skip = usize::from(repeat && matches!(kind, 't' | 'T'));
-    if matches!(kind, 'f' | 't') {
-        let i = (at + 1 + skip..chars.len()).find(|&i| chars[i] == target)?;
-        Some(if kind == 't' { i - 1 } else { i })
-    } else {
-        let i = (0..at.saturating_sub(skip)).rev().find(|&i| chars[i] == target)?;
-        Some(if kind == 'T' { i + 1 } else { i })
+    let forward = || (at + 1 + skip..chars.len()).find(|&i| chars[i] == target);
+    let backward = || (0..at.saturating_sub(skip)).rev().find(|&i| chars[i] == target);
+
+    match kind {
+        'f' => forward(),
+        't' => forward().map(|i| i - 1),
+        'F' => backward(),
+        _ => backward().map(|i| i + 1),
     }
 }
 
@@ -42,7 +44,10 @@ impl Editor {
             return None;
         };
 
-        let range = if matches!(kind, 'f' | 't') { at..to + 1 } else { to..at };
+        let range = match kind {
+            'f' | 't' => at..to + 1,
+            _ => to..at,
+        };
 
         self.operate(chars, op, range)
     }

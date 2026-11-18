@@ -201,6 +201,7 @@ The panel on the left lists these entries:
 - every `+project` and `@context` of the tasks shown, under `PROJECTS` and `CONTEXTS` headers, with how many tasks each shows
 
 Moving through it with `j` and `k`, or the arrows, filters the list, `Esc` goes back to `All tasks`, and `Tab` or `Enter` returns to the list.
+When the last task of the selected entry goes, the panel goes back to `All tasks`.
 `?` shows the keys and `q` quits, as in the list.
 
 A panel entry shows the tasks with that exact word, case included: `+rust` leaves out `+rust-todo`, and `+Books` and `+books` are two entries.

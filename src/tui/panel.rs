@@ -61,6 +61,13 @@ impl App {
         }
     }
 
+    /// Brings the panel back to `All tasks` when the entry of the filter is no longer among its entries.
+    pub(super) fn drop_gone_filter(&mut self) {
+        if self.filter_row(&self.filters()).is_none() {
+            self.filter = None;
+        }
+    }
+
     /// Applies a key typed in the panel, the list back on its first row when the filter changes.
     pub(super) fn panel_key(&mut self, key: KeyEvent) {
         let filters = self.filters();

@@ -19,8 +19,8 @@ impl Editor {
                 Some((kind, c, false))
             }
             (Some(_), _) => return None,
-            (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) if free => {
-                (self.pending, self.finding) = (pending, Some(kind));
+            (None, code) if free && Search::from_code(code).is_some() => {
+                (self.pending, self.finding) = (pending, Search::from_code(code));
                 return None;
             }
             (None, KeyCode::Char(r @ (';' | ','))) if free => self.find.map(|last| {

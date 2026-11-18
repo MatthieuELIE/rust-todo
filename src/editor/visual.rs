@@ -26,7 +26,7 @@ impl Editor {
                 }
                 self.mode = Mode::Normal;
             }
-            (None, KeyCode::Char(kind @ ('f' | 'F' | 't' | 'T'))) => self.finding = Some(kind),
+            (None, code) if Search::from_code(code).is_some() => self.finding = Search::from_code(code),
             (None, KeyCode::Char(r @ (';' | ','))) => {
                 if let Some(last) = self.find {
                     let (kind, c) = repeated(r, last);

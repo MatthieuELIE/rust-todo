@@ -231,8 +231,105 @@ fn a_task_added_under_due_is_due_today_unless_it_carries_a_due_date() {
 }
 
 #[test]
-fn an_edit_that_leaves_the_panel_filter_is_saved_but_said_hidden() {
+fn dd_on_the_last_task_of_a_context_brings_the_panel_back_to_all_tasks() {
+    let mut app = app_of(&["Pay rent", "Call @phone"]);
+    app.filter = Some("@phone".to_string());
+
+    assert!(press(&mut app, "dd"));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(told(&app), Some(Notice::Deleted));
+}
+
+#[test]
+fn x_on_the_last_task_due_waiting_or_sleeping_brings_the_panel_back_to_all_tasks() {
+    for (entry, line) in [
+        (DUE_NOW, "Call due:2026-09-26"),
+        (WAITING, "Mail wait:bank"),
+        (SLEEPING, "Book t:2026-10-01"),
+    ] {
+        let mut app = app_of(&["Pay rent", line]);
+        app.filter = Some(entry.to_string());
+
+        assert!(press(&mut app, "x"), "{entry}");
+
+        assert_eq!((app.filter.as_deref(), app.cursor), (None, 0), "{entry}");
+    }
+}
+
+#[test]
+fn an_x_typed_in_the_popup_on_the_last_task_of_a_project_brings_the_panel_back_to_all_tasks() {
+    let mut app = app_of(&["Pay rent", "Note +home"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    app.filter = Some("+home".to_string());
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "Ix ");
+    assert!(app.handle_key(enter, TODAY));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(shown(&app), ["Pay rent"]);
+    assert_eq!(told(&app), Some(Notice::Done));
+}
+
+#[test]
+fn u_taking_back_the_last_task_of_a_project_brings_the_panel_back_to_all_tasks() {
+    let mut app = app_of(&["Pay rent"]);
+
+    press(&mut app, "oNote +home");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+    app.filter = Some("+home".to_string());
+    assert!(press(&mut app, "u"));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(told(&app), Some(Notice::ChangeUndone));
+}
+
+#[test]
+fn u_bringing_back_the_last_task_of_a_project_leaves_the_panel_on_all_tasks_and_redo_brings_it_back_there() {
+    let mut app = app_of(&["Pay rent", "Note +home"]);
+    app.filter = Some("+home".to_string());
+
+    press(&mut app, "xu");
+    assert_eq!(
+        (app.filter.as_deref(), shown(&app)),
+        (None, vec!["Pay rent".to_string(), "Note +home".to_string()])
+    );
+
+    app.filter = Some("+home".to_string());
+    assert!(app.handle_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::CONTROL), TODAY));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(told(&app), Some(Notice::ChangeRedone));
+}
+
+#[test]
+fn reopening_the_last_task_of_a_project_in_the_history_brings_the_panel_back_to_all_tasks() {
+    let mut app = history_of(&["Pay rent"], &["x 2026-09-20 Old +home", "x 2026-09-21 Paid"]);
+
+    press(&mut app, "H");
+    app.filter = Some("+home".to_string());
+    assert!(press(&mut app, "r"));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(told(&app), Some(Notice::Reopened));
+}
+
+#[test]
+fn a_search_finding_nothing_under_an_entry_with_tasks_keeps_the_filter() {
     let mut app = app_of(&["Note +home", "Pay rent"]);
+    app.filter = Some("+home".to_string());
+
+    press(&mut app, "/zzz");
+    app.handle_key(KeyEvent::from(KeyCode::Enter), TODAY);
+
+    assert_eq!(app.filter.as_deref(), Some("+home"));
+    assert!(shown(&app).is_empty());
+}
+
+#[test]
+fn an_edit_that_takes_the_last_task_out_of_the_panel_filter_shows_it_under_all_tasks() {
+    let mut app = app_of(&["Pay rent", "Note +home"]);
     let enter = KeyEvent::from(KeyCode::Enter);
     app.filter = Some("+home".to_string());
 
@@ -240,10 +337,36 @@ fn an_edit_that_leaves_the_panel_filter_is_saved_but_said_hidden() {
     press(&mut app, "Cfree");
     assert!(app.handle_key(enter, TODAY));
 
-    assert_eq!(app.todos[0].to_line(), "free");
-    assert_eq!(app.filter.as_deref(), Some("+home"));
-    assert!(shown(&app).is_empty());
+    assert_eq!(app.todos[1].to_line(), "free");
+    assert_eq!(app.filter, None);
+    assert_eq!((shown(&app), app.cursor), (vec!["Pay rent".to_string(), "free".to_string()], 1));
+    assert_eq!(told(&app), Some(Notice::Updated { hidden: false }));
+}
+
+#[test]
+fn an_edit_that_takes_a_task_out_of_a_panel_filter_keeping_others_is_said_hidden() {
+    let mut app = app_of(&["Note +home", "Mop +home"]);
+    let enter = KeyEvent::from(KeyCode::Enter);
+    app.filter = Some("+home".to_string());
+
+    app.handle_key(enter, TODAY);
+    press(&mut app, "Cfree");
+    assert!(app.handle_key(enter, TODAY));
+
+    assert_eq!((app.filter.as_deref(), shown(&app)), (Some("+home"), vec!["Mop +home".to_string()]));
     assert_eq!(told(&app), Some(Notice::Updated { hidden: true }));
+}
+
+#[test]
+fn x_on_the_last_task_of_a_project_brings_the_panel_back_to_all_tasks_on_the_first_row() {
+    let mut app = app_of(&["Pay rent", "Note +home", "Call bank"]);
+    app.filter = Some("+home".to_string());
+
+    assert!(press(&mut app, "x"));
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(shown(&app), ["Pay rent", "Call bank"]);
+    assert_eq!(told(&app), Some(Notice::Done));
 }
 
 #[test]

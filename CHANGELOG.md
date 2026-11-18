@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- When the last task of the entry selected in the filter panel of the interactive list goes, by `x`, `dd`, an edit, `u`, `Ctrl-R`, a reopen or a reload of the changed file, the panel goes back to `All tasks` instead of showing an empty list until `Esc`; an edited task it shows again is said updated, not hidden by the filter. See [Interactive list](docs/interactive-list.md#filter-panel).
+
 ## [0.9.1] - 2026-11-18
 
 ### Changed

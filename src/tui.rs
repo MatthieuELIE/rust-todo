@@ -178,6 +178,11 @@ impl App {
         let history = (self.undo.len(), self.redo.len());
         let queued = self.moves.len();
         let write = self.apply(key, today);
+
+        if write {
+            self.drop_gone_filter();
+        }
+
         self.forget_gone_folds();
 
         if write && history == (self.undo.len(), self.redo.len()) {

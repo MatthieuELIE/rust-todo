@@ -66,6 +66,7 @@ impl App {
         }
 
         self.todos[number - 1] = todo;
+        self.drop_gone_filter();
         let hidden = !self.follow(number);
         self.notify(Notice::Updated { hidden });
         Saved::Written

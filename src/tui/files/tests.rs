@@ -77,6 +77,18 @@ fn a_reload_keeps_the_cursor_row_and_says_so_through_the_next_key() {
 }
 
 #[test]
+fn a_reload_without_the_last_task_of_the_panel_filter_brings_the_panel_back_to_all_tasks() {
+    let mut app = app_of(&["Pay rent", "Note +home"]);
+    app.filter = Some("+home".to_string());
+
+    app.reload(vec![Todo::from_line("Pay rent"), Todo::from_line("Call bank")]);
+
+    assert_eq!((app.filter.as_deref(), app.cursor), (None, 0));
+    assert_eq!(shown(&app), ["Pay rent", "Call bank"]);
+    assert_eq!(told(&app), Some(Notice::Reloaded));
+}
+
+#[test]
 fn done_txt_is_read_when_the_list_opens_at_each_h_and_at_a_reload_and_not_in_between() {
     let folder = folder("history");
     let (file, done) = (folder.join("todo.txt"), folder.join("done.txt"));

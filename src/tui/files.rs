@@ -131,6 +131,7 @@ impl App {
         self.history_read = false;
         self.forget_gone_folds();
         self.clamp_cursor();
+        self.drop_gone_filter();
         self.notify(Notice::Reloaded);
 
         let focus = if matches!(self.focus, Focus::Help(_)) {

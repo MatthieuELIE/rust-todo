@@ -111,6 +111,7 @@ With the `catppuccin-mocha` theme, it takes Mocha's mantle (`#181825`), the back
 Text is greyer the less it needs reading: labels, section names and the history, then dates, counts and `key:value` words.
 The panel, the list and the details sit each in its own rounded card, a column or a row apart, the card that gets the keys bordered in peach.
 The popups float over them on a lighter background.
+In a terminal of fewer than 30 rows, the details card is hidden and the list takes the whole height: at 80×24, eleven tasks in four priority groups fit on screen.
 
 The row under the cursor is marked `→`.
 It is peach on a lighter background where the keys go, the list or the panel after `Tab`, and grey without background in the other.
@@ -183,10 +184,11 @@ Folds are not remembered: the list opens unfolded, and a group that leaves the s
 Under the list, a `DETAILS` card shows the task under the cursor.
 It holds its priority, its text without the `key:value` words ending it, its creation date and `due:` value, coloured and, once late, bold as in the list, its projects and contexts, and its other `key:value` words.
 A task of the history shows its completion date in place of the priority, and its `due:` date is not coloured.
+A task with no priority leaves the first row empty, without its `Priority` label, and a task with no `due:` shows no `Due` label beside its creation date.
 
-A long text wraps, the lines after the first aligned under the value, and the card grows with it by taking rows from the list, which keeps 5 rows.
+A long text wraps, the lines after the first aligned under the value, and the card grows with it only into the rows the list leaves empty below its last row, so the list does not move when the cursor passes over a long task.
 A text still too long ends with `…` on its last line, and any other value too long for its place ends with `…`.
-The zone stays empty when the cursor is on a folded group, and it is hidden when the list would be left with fewer than 5 rows with the text on one line.
+The zone stays empty when the cursor is on a folded group, and it is hidden in a terminal of fewer than 30 rows.
 
 ### Filter panel
 

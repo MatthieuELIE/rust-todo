@@ -69,14 +69,17 @@ pub(super) fn draw_details(frame: &mut Frame, theme: &Theme, icons: bool, todo: 
 
     if todo.done {
         detail(frame, theme, "Done", date(todo.completed), first_row);
-    } else {
-        let priority = todo.priority.map(|letter| badge(theme, letter));
-        detail(frame, theme, "Priority", priority.into_iter().collect(), first_row);
+    } else if let Some(letter) = todo.priority {
+        detail(frame, theme, "Priority", vec![badge(theme, letter)], first_row);
     }
 
     draw_text(frame, theme, text_of(theme, todo, today), text_row);
     detail(frame, theme, "Created", date(todo.created), created_area);
-    detail(frame, theme, "Due", due.into_iter().collect(), due_area);
+
+    if let Some(due) = due {
+        detail(frame, theme, "Due", vec![due], due_area);
+    }
+
     detail(frame, theme, "Projects", tags('+', todo.projects()), projects_area);
     detail(frame, theme, "Contexts", tags('@', todo.contexts()), contexts_area);
     draw_cut(frame, others, key_values_row);

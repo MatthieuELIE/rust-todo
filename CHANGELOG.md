@@ -3,6 +3,12 @@
 Notable changes to `todo`, most recent first.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- In a terminal of fewer than 30 rows the interactive list hides its details card and takes the whole height, so eleven tasks in four priority groups fit at 80×24; from 30 rows the card grows with a long text only into the rows the list leaves empty, ending it with `…`, so the list no longer moves under the cursor, and it leaves out the `Priority` label of a task with no priority and the `Due` label of a task with no `due:`. See [Interactive list](docs/interactive-list.md#details-card).
+
 ## [0.9.2] - 2026-11-19
 
 ### Changed

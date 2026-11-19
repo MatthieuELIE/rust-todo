@@ -9,13 +9,13 @@ use crate::theme::Theme;
 use crate::tui::{App, Focus};
 use details::{DETAILS_HEIGHT, details_height, draw_details};
 use help::draw_help;
-use list::draw_list;
+use list::{draw_list, lines_height};
 use panel::{PANEL_WIDTH, draw_panel};
 use popup::draw_popup;
 use status::draw_status;
 
-/// Fewest rows the list keeps inside its card; on a screen too low for them and the detail card, that card is hidden.
-const MIN_LIST_ROWS: u16 = 5;
+/// Fewest terminal rows that show the detail card; on a lower screen the list takes the whole height.
+const DETAILS_MIN_SCREEN_ROWS: u16 = 30;
 
 /// Draws the filter panel and the task list above the status bar, due dates against `today`; `scroll` keeps the list's offset between frames.
 pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
@@ -27,9 +27,9 @@ pub fn draw(frame: &mut Frame, app: &App, scroll: &mut ListState, today: Date) {
 
     draw_panel(frame, app, panel_area);
 
-    if list_area.height >= MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT {
-        let spare = list_area.height - (MIN_LIST_ROWS + 2 + 1 + DETAILS_HEIGHT);
-        let height = details_height(theme, app.selected_task(), list_area.width, spare, today);
+    if frame.area().height >= DETAILS_MIN_SCREEN_ROWS {
+        let empty = list_area.height.saturating_sub(lines_height(app) + 2 + 1 + DETAILS_HEIGHT);
+        let height = details_height(theme, app.selected_task(), list_area.width, empty, today);
         let [list_area, details_area] = Layout::vertical([Constraint::Fill(1), Constraint::Length(height)])
             .spacing(1)
             .areas(list_area);

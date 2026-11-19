@@ -78,7 +78,7 @@ fn the_details_card_under_the_list_shows_the_task_under_the_cursor_in_mocha() {
             format!(" DETAILS {}", "─".repeat(41)),
             " Priority   A".to_string(),
             " Text      Appeler +client pour le devis @work".to_string(),
-            format!("{:<25} Due", " Created   2026-09-01"),
+            " Created   2026-09-01".to_string(),
             format!("{:<25} Contexts  @work", " Projects  +client"),
             " wait:figma".to_string(),
         ]
@@ -127,10 +127,10 @@ fn a_text_too_long_for_its_place_wraps_under_the_value_and_grows_the_card_in_moc
         list_rows(&buffer)[23..29],
         [
             format!(" DETAILS {}", "─".repeat(41)),
-            " Priority".to_string(),
+            String::new(),
             " Text      Appeler le client pour le devis du".to_string(),
             "           printemps prochain +client".to_string(),
-            format!("{:<25} Due", " Created"),
+            " Created".to_string(),
             format!("{:<25} Contexts", " Projects  +client"),
         ]
     );
@@ -204,6 +204,23 @@ fn the_details_show_the_due_date_beside_the_creation_date_and_the_other_key_valu
     assert_eq!(zone[2], format!("{:<25} Due       2026-10-15", " Created   2026-09-01"));
     assert_eq!(zone[4], " wait:figma  rec:1w");
     assert_eq!((buffer[(25, 29)].fg, buffer[(30, 29)].fg), (MOCHA.tertiary, MOCHA.primary));
+}
+
+#[test]
+fn a_task_with_no_due_date_shows_no_due_label_in_the_details() {
+    let rows = list_rows(&render_in(&app_of(&["(A) 2026-09-01 Ship it"]), 75, 32));
+
+    assert_eq!(rows[27], " Created   2026-09-01");
+}
+
+#[test]
+fn a_task_with_no_priority_leaves_the_first_row_of_the_details_empty_and_the_text_on_the_second() {
+    let rows = list_rows(&render_in(&app_of(&["Ship it"]), 75, 32));
+
+    assert_eq!(
+        rows[24..27],
+        [format!(" DETAILS {}", "─".repeat(41)), String::new(), " Text      Ship it".to_string()]
+    );
 }
 
 #[test]

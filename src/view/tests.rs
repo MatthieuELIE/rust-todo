@@ -204,7 +204,7 @@ fn the_history_shows_its_lines_and_the_panel_in_light_grey_not_struck_through_an
     app.set_history(Ok("x 2026-09-28 2026-09-01 Ship it +work @desk due:2026-09-20\n".to_string()));
     app.handle_key(KeyEvent::from(KeyCode::Char('H')), TODAY);
 
-    let buffer = render_in(&app, 75, 18);
+    let buffer = render_in(&app, 75, 32);
 
     let line = "→   1  x 2026-09-28 2026-09-01 Ship it +work @desk";
     assert_eq!(list_rows(&buffer)[1], line);
@@ -227,12 +227,12 @@ fn the_history_shows_its_lines_and_the_panel_in_light_grey_not_struck_through_an
         (buffer[(3, 1)].fg, buffer[(3, 4)].fg, buffer[(3, 7)].fg),
         (MOCHA.secondary, MOCHA.secondary, MOCHA.secondary)
     );
-    assert_eq!(list_rows(&buffer)[11], " Done      2026-09-28");
+    assert_eq!(list_rows(&buffer)[25], " Done      2026-09-28");
     assert_eq!(
-        (buffer[(35, 12)].fg, buffer[(35, 14)].fg, buffer[(60, 14)].fg),
+        (buffer[(35, 26)].fg, buffer[(35, 28)].fg, buffer[(60, 28)].fg),
         (MOCHA.primary, MOCHA.project, MOCHA.context)
     );
-    assert!(!rows(&buffer)[17].contains("+done"));
+    assert!(!rows(&buffer)[31].contains("+done"));
 }
 
 #[test]

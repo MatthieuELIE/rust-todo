@@ -58,6 +58,14 @@ pub(super) fn draw_list(frame: &mut Frame, app: &App, area: Rect, scroll: &mut L
     }
 }
 
+/// Rows the list's lines take inside its card: a task or header each, a blank line before each header but the first.
+pub(super) fn lines_height(app: &App) -> u16 {
+    let shown = app.shown();
+    let blanks = shown.iter().skip(1).filter(|shown| matches!(shown, Shown::Header(..))).count();
+
+    (shown.len() + blanks) as u16
+}
+
 /// The number column in front of a listed task.
 pub fn number(number: usize) -> String {
     format!("{number:>3}  ")
